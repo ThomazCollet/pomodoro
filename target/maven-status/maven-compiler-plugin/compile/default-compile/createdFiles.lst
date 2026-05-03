@@ -1,0 +1,6 @@
+com\thomazcollet\PomodoroApplication.class
+com\thomazcollet\service\PomodoroService.class
+module-info.class
+com\thomazcollet\service\TimerState.class
+com\thomazcollet\ui\Dummy.class
+com\thomazcollet\domain\model\PomodoroSession.class

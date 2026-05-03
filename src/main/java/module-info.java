@@ -8,7 +8,7 @@ module com.thomazcollet.pomodoro {
 
     // 2. Abrir pacotes para o JavaFX
     // O JavaFX precisa de reflexão para acessar seus controladores e arquivos FXML
-    opens com.thomazcollet to javafx.fxml;
+    opens com.thomazcollet to javafx.fxml; 
     opens com.thomazcollet.ui to javafx.fxml;
 
     // 3. Exportar pacotes
