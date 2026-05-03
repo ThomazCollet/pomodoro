@@ -97,6 +97,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.3.0</version>
+                <configuration>
+                    <useModulePath>false</useModulePath> <!-- Isso resolve o erro de inicialização da JVM -->
+                </configuration>
             </plugin>
         </plugins>
     </build>
