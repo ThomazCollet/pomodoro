@@ -2,19 +2,17 @@ package com.thomazcollet.domain.model;
 
 import java.time.LocalDateTime;
 
-public class PomodoroSession {
-    private LocalDateTime startTime;
-    private int durationMinutes;
-    private String type; // "FOCUS" ou "BREAK"
-
-    public PomodoroSession(LocalDateTime startTime, int durationMinutes, String type) {
-        this.startTime = startTime;
-        this.durationMinutes = durationMinutes;
-        this.type = type;
+/**
+ * Representa uma sessão concluída de Pomodoro.
+ * Definida como record para garantir imutabilidade e concisão.
+ */
+public record PomodoroSession(
+    LocalDateTime startTime,
+    int durationMinutes,
+    SessionType type // Usando o Enum que sugerimos
+) {
+    // Você pode adicionar métodos lógicos aqui, se precisar
+    public boolean isLongSession() {
+        return durationMinutes >= 25;
     }
-
-    // Getters
-    public LocalDateTime getStartTime() { return startTime; }
-    public int getDurationMinutes() { return durationMinutes; }
-    public String getType() { return type; }
 }

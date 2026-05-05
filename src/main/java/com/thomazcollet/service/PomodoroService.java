@@ -20,7 +20,7 @@ public class PomodoroService {
     private final ScheduledExecutorService executor;
     private ScheduledFuture<?> task;
     
-    // TimerListener é a interface que sua UI (Controller) vai implementar
+    // TimerListener é a interface a UI (Controller) vai implementar
     private final TimerChangeListener listener;
 
     // Volatile garante que a mudança de estado seja visível imediatamente entre threads
