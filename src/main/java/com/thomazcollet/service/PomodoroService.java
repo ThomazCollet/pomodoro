@@ -1,6 +1,5 @@
 package com.thomazcollet.service;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,15 +18,23 @@ public class PomodoroService {
     private final int initialSeconds;
     private final ScheduledExecutorService executor;
     private ScheduledFuture<?> task;
-    
+
     // TimerListener é a interface a UI (Controller) vai implementar
     private final TimerChangeListener listener;
 
-    // Volatile garante que a mudança de estado seja visível imediatamente entre threads
+    // Volatile garante que a mudança de estado seja visível imediatamente entre
+    // threads
     private volatile int remainingSeconds;
     private volatile TimerState timerState;
 
     public PomodoroService(int initialSeconds, TimerChangeListener listener) {
+        if (initialSeconds <= 0) {
+            throw new IllegalArgumentException("O tempo inicial deve ser positivo."); // Fail-Fast
+        }
+        if (listener == null) {
+            throw new IllegalArgumentException("O listener de eventos não pode ser nulo.");
+        }
+
         this.initialSeconds = initialSeconds;
         this.remainingSeconds = initialSeconds;
         this.listener = listener;
@@ -55,12 +62,13 @@ public class PomodoroService {
             remainingSeconds--;
             // Em vez de System.out, usamos o listener para atualizar a UI
             listener.onTick(remainingSeconds);
-            
+
         }, 0, 1, TimeUnit.SECONDS);
     }
 
     public void pause() {
-        if (timerState != TimerState.RUNNING) return;
+        if (timerState != TimerState.RUNNING)
+            return;
 
         cancelTask();
         timerState = TimerState.PAUSED;
