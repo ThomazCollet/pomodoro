@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.infra.database.DatabaseInitializerTest" time="0.459" tests="1" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.infra.database.DatabaseInitializerTest" time="0.627" tests="1" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -15,7 +15,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="BR"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk-21\bin"/>
-    <property name="sun.java.command" value="C:\Users\DaniC\AppData\Local\Temp\surefire5671448813036724126\surefirebooter-20260506020102017_3.jar C:\Users\DaniC\AppData\Local\Temp\surefire5671448813036724126 2026-05-06T02-01-01_795-jvmRun1 surefire-20260506020102017_1tmp surefire_0-20260506020102017_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\DaniC\AppData\Local\Temp\surefire14149827935997936638\surefirebooter-20260506022518052_3.jar C:\Users\DaniC\AppData\Local\Temp\surefire14149827935997936638 2026-05-06T02-25-16_869-jvmRun1 surefire-20260506022518052_1tmp surefire_0-20260506022518052_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\target\test-classes;C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\target\classes;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-controls\21\javafx-controls-21.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-controls\21\javafx-controls-21-win.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-graphics\21\javafx-graphics-21.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-graphics\21\javafx-graphics-21-win.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-base\21\javafx-base-21.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-base\21\javafx-base-21-win.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-fxml\21\javafx-fxml-21.jar;C:\Users\DaniC\.m2\repository\org\openjfx\javafx-fxml\21\javafx-fxml-21-win.jar;C:\Users\DaniC\.m2\repository\org\xerial\sqlite-jdbc\3.45.3.0\sqlite-jdbc-3.45.3.0.jar;C:\Users\DaniC\.m2\repository\org\slf4j\slf4j-api\2.0.13\slf4j-api-2.0.13.jar;C:\Users\DaniC\.m2\repository\ch\qos\logback\logback-classic\1.5.6\logback-classic-1.5.6.jar;C:\Users\DaniC\.m2\repository\ch\qos\logback\logback-core\1.5.6\logback-core-1.5.6.jar;C:\Users\DaniC\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.17.1\jackson-databind-2.17.1.jar;C:\Users\DaniC\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.17.1\jackson-annotations-2.17.1.jar;C:\Users\DaniC\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.17.1\jackson-core-2.17.1.jar;C:\Users\DaniC\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.11.0\junit-jupiter-api-5.11.0.jar;C:\Users\DaniC\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\DaniC\.m2\repository\org\junit\platform\junit-platform-commons\1.11.0\junit-platform-commons-1.11.0.jar;C:\Users\DaniC\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\DaniC\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.11.0\junit-jupiter-engine-5.11.0.jar;C:\Users\DaniC\.m2\repository\org\junit\platform\junit-platform-engine\1.11.0\junit-platform-engine-1.11.0.jar;C:\Users\DaniC\.m2\repository\org\mockito\mockito-junit-jupiter\5.11.0\mockito-junit-jupiter-5.11.0.jar;C:\Users\DaniC\.m2\repository\org\mockito\mockito-core\5.11.0\mockito-core-5.11.0.jar;C:\Users\DaniC\.m2\repository\net\bytebuddy\byte-buddy\1.14.12\byte-buddy-1.14.12.jar;C:\Users\DaniC\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.12\byte-buddy-agent-1.14.12.jar;C:\Users\DaniC\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\DaniC\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.11.0\junit-jupiter-params-5.11.0.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\DaniC\AppData\Local\Temp\surefire5671448813036724126\surefirebooter-20260506020102017_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\DaniC\AppData\Local\Temp\surefire14149827935997936638\surefirebooter-20260506022518052_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.5+9-LTS-239"/>
@@ -58,9 +58,9 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="shouldInitializeDatabaseAndCreateTables" classname="com.thomazcollet.infra.database.DatabaseInitializerTest" time="0.454">
-    <system-out><![CDATA[02:01:03.638 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Iniciando verificação e configuração do banco de dados...
-02:01:03.932 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Banco de dados verificado com sucesso.
+  <testcase name="shouldInitializeDatabaseAndCreateTables" classname="com.thomazcollet.infra.database.DatabaseInitializerTest" time="0.62">
+    <system-out><![CDATA[02:25:20.450 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Iniciando verificação e configuração do banco de dados...
+02:25:20.816 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Banco de dados verificado com sucesso.
 ]]></system-out>
   </testcase>
 </testsuite>
