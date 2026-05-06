@@ -1,19 +1,24 @@
+/**
+ * Configuração modular do projeto Pomodoro.
+ * Estabelece as dependências de runtime, permissões de reflexão para frameworks 
+ * e a exposição da API do sistema.
+ */
 module com.thomazcollet.pomodoro {
-    // 1. Módulos necessários (Dependências)
+    // Dependências de Terceiros e JDK
     requires javafx.controls;
     requires javafx.fxml;
     requires org.slf4j;
     requires com.fasterxml.jackson.databind;
     requires java.sql;
 
-    // 2. Acesso para Reflexão (FUNDAMENTAL PARA TESTES)
-    // Abrir o pacote de forma geral resolve o conflito com o "unnamed module" do JUnit
+    // Permissões de Introspecção e Reflexão
+    // Aberto para permitir que frameworks de teste (JUnit/Mockito) acessem a camada de serviço
     opens com.thomazcollet.service; 
 
-    // O JavaFX precisa de reflexão para acessar seus controladores e arquivos FXML
+    // Aberto para o JavaFX permitir o mapeamento de Controllers e carregamento de FXML
     opens com.thomazcollet to javafx.fxml;
     opens com.thomazcollet.ui to javafx.fxml;
 
-    // 3. Exportar pacotes
+    // Exportação da API Pública do Módulo
     exports com.thomazcollet;
 }
