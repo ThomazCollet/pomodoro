@@ -62,7 +62,7 @@ public class PomodoroService {
             remainingSeconds--;
             listener.onTick(remainingSeconds);
         }, 0, 1, TimeUnit.SECONDS);
-    } // Verifique se esta chave fecha o método start() no seu arquivo
+    } 
 
     public void pause() {
         if (timerState != TimerState.RUNNING) {
