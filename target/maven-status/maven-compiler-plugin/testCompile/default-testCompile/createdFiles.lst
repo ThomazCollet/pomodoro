@@ -1,3 +1,4 @@
+com\thomazcollet\infra\database\SQLiteProfileRepositoryTest.class
 com\thomazcollet\infra\database\DatabaseInitializerTest.class
 com\thomazcollet\service\PomodoroServiceTest.class
 com\thomazcollet\AppTest.class

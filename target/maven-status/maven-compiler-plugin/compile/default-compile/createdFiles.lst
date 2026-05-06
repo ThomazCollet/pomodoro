@@ -1,4 +1,5 @@
 com\thomazcollet\domain\model\Profile.class
+com\thomazcollet\domain\repository\ProfileRepository.class
 com\thomazcollet\domain\model\TimerState.class
 com\thomazcollet\domain\exception\TimerStateException.class
 com\thomazcollet\ui\Dummy.class
@@ -12,4 +13,5 @@ module-info.class
 com\thomazcollet\domain\exception\DatabaseInitializationException.class
 com\thomazcollet\infra\handler\GlobalExceptionHandler.class
 com\thomazcollet\service\PomodoroService.class
+com\thomazcollet\infra\database\SQLiteProfileRepository.class
 com\thomazcollet\service\TimerChangeListener.class

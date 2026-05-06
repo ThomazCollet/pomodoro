@@ -5,8 +5,8 @@ import java.util.Objects;
 
 /**
  * Representa um perfil de configuração do usuário para sessões de Pomodoro.
- * Esta classe é o espelho da tabela 'profiles' no banco de dados e garante
- * a integridade dos dados através de validações internas.
+ * Esta classe garante a integridade dos dados através de validações internas
+ * seguindo o princípio Fail-Fast.
  */
 public class Profile {
 
@@ -21,13 +21,13 @@ public class Profile {
     }
 
     /**
-     * Construtor completo para dados vindos do banco.
-     * Note que o ID e a Data são atribuídos diretamente pois confiamos no banco,
-     * mas os outros campos passam pela validação dos setters.
+     * Construtor completo para reconstrução de objetos vindos da camada de persistência.
+     * Atribui o createdAt diretamente para evitar conflitos de precisão de milissegundos
+     * entre a JVM e o banco de dados.
      */
     public Profile(Long id, String name, int workDuration, int shortBreak, int longBreak, LocalDateTime createdAt) {
         this.id = id;
-        this.setCreatedAt(createdAt); // Valida se não está no futuro
+        this.createdAt = createdAt; 
         this.setName(name);
         this.setWorkDuration(workDuration);
         this.setShortBreak(shortBreak);
@@ -35,8 +35,8 @@ public class Profile {
     }
 
     /**
-     * Construtor para novos perfis.
-     * O uso dos métodos SET garante o princípio Fail-Fast na criação do objeto.
+     * Construtor para novos perfis criados pela aplicação.
+     * Os métodos de validação garantem que o objeto nunca nasça em estado inválido.
      */
     public Profile(String name, int workDuration, int shortBreak, int longBreak) {
         this.setName(name);
@@ -109,8 +109,11 @@ public class Profile {
         return createdAt;
     }
 
+    /**
+     * Define a data de criação com uma margem de tolerância para sincronia de relógio.
+     */
     public void setCreatedAt(LocalDateTime createdAt) {
-        if (createdAt != null && createdAt.isAfter(LocalDateTime.now())) {
+        if (createdAt != null && createdAt.isAfter(LocalDateTime.now().plusSeconds(10))) {
             throw new IllegalArgumentException("A data de criação não pode estar no futuro.");
         }
         this.createdAt = createdAt;
@@ -125,13 +128,11 @@ public class Profile {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         Profile profile = (Profile) o;
-        if (id == null || profile.id == null)
-            return false;
+        // Perfis sem ID são considerados diferentes a menos que sejam a mesma instância
+        if (id == null || profile.id == null) return false;
         return Objects.equals(id, profile.id);
     }
 
