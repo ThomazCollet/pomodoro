@@ -1,6 +1,6 @@
 package com.thomazcollet.infra.handler;
 
-import com.thomazcollet.domain.exeption.PomodoroException;
+import com.thomazcollet.domain.exception.PomodoroException;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;

@@ -1,4 +1,4 @@
-package com.thomazcollet.domain.exeption;
+package com.thomazcollet.domain.exception;
 
 import java.time.LocalDateTime;
 

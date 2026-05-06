@@ -3,6 +3,7 @@ package com.thomazcollet.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.thomazcollet.domain.exception.TimerStateException;
 import com.thomazcollet.domain.model.TimerState;
 
 import java.util.concurrent.*;
@@ -44,8 +45,7 @@ public class PomodoroService {
 
     public void start() {
         if (timerState == TimerState.RUNNING) {
-            logger.warn("Tentativa de iniciar timer já em execução.");
-            return;
+            throw new TimerStateException("O cronômetro já está em execução.");
         }
 
         timerState = TimerState.RUNNING;
@@ -55,20 +55,19 @@ public class PomodoroService {
             if (remainingSeconds <= 0) {
                 logger.info("Tempo esgotado.");
                 stop();
-                listener.onFinished(); // Notifica que acabou
+                listener.onFinished();
                 return;
             }
 
             remainingSeconds--;
-            // Em vez de System.out, usamos o listener para atualizar a UI
             listener.onTick(remainingSeconds);
-
         }, 0, 1, TimeUnit.SECONDS);
-    }
+    } // Verifique se esta chave fecha o método start() no seu arquivo
 
     public void pause() {
-        if (timerState != TimerState.RUNNING)
-            return;
+        if (timerState != TimerState.RUNNING) {
+            throw new TimerStateException("Apenas um cronômetro em execução pode ser pausado.");
+        }
 
         cancelTask();
         timerState = TimerState.PAUSED;
