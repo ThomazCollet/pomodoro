@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.AppTest" time="0.118" tests="1" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.service.PomodoroServiceTest" time="2.105" tests="5" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -58,5 +58,28 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="shouldAnswerWithTrue" classname="com.thomazcollet.AppTest" time="0.064"/>
+  <testcase name="shouldThrowExceptionWhenStartingAlreadyRunningTimer" classname="com.thomazcollet.service.PomodoroServiceTest" time="2.054">
+    <system-out><![CDATA[23:31:15.694 [main] INFO com.thomazcollet.service.PomodoroService -- Timer iniciado: 1500 segundos restantes.
+]]></system-out>
+    <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\DaniC\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.12\byte-buddy-agent-1.14.12.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+  <testcase name="shouldResetStateAndTimeWhenStopped" classname="com.thomazcollet.service.PomodoroServiceTest" time="0.011">
+    <system-out><![CDATA[23:31:15.720 [main] INFO com.thomazcollet.service.PomodoroService -- Timer iniciado: 1500 segundos restantes.
+23:31:15.721 [main] INFO com.thomazcollet.service.PomodoroService -- Timer resetado para o estado inicial.
+]]></system-out>
+  </testcase>
+  <testcase name="shouldThrowExceptionWhenPausingStoppedTimer" classname="com.thomazcollet.service.PomodoroServiceTest" time="0.009"/>
+  <testcase name="shouldPauseTimerWhenRunning" classname="com.thomazcollet.service.PomodoroServiceTest" time="0.008">
+    <system-out><![CDATA[23:31:15.744 [main] INFO com.thomazcollet.service.PomodoroService -- Timer iniciado: 1500 segundos restantes.
+23:31:15.745 [main] INFO com.thomazcollet.service.PomodoroService -- Timer pausado em 1500 segundos.
+]]></system-out>
+  </testcase>
+  <testcase name="shouldStartTimerSuccessfullyAndChangeStateToRunning" classname="com.thomazcollet.service.PomodoroServiceTest" time="0.005">
+    <system-out><![CDATA[23:31:15.752 [main] INFO com.thomazcollet.service.PomodoroService -- Timer iniciado: 1500 segundos restantes.
+]]></system-out>
+  </testcase>
 </testsuite>

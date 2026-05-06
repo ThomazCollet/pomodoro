@@ -1,6 +1,12 @@
-com\thomazcollet\PomodoroApplication.class
-com\thomazcollet\service\PomodoroService.class
+com\thomazcollet\domain\exception\ErrorResponse.class
+com\thomazcollet\domain\exception\PomodoroException.class
+com\thomazcollet\domain\model\TimerState.class
 module-info.class
-com\thomazcollet\service\TimerState.class
+com\thomazcollet\domain\exception\TimerStateException.class
 com\thomazcollet\ui\Dummy.class
 com\thomazcollet\domain\model\PomodoroSession.class
+com\thomazcollet\infra\handler\GlobalExceptionHandler.class
+com\thomazcollet\PomodoroApplication.class
+com\thomazcollet\service\PomodoroService.class
+com\thomazcollet\domain\model\SessionType.class
+com\thomazcollet\service\TimerChangeListener.class
