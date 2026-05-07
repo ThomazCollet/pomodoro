@@ -25,9 +25,9 @@ public class PomodoroService {
 
     private Profile currentProfile;
     private SessionType currentSessionType;
-    
+
     private volatile int remainingSeconds;
-    private int totalSessionDuration; 
+    private int totalSessionDuration;
     private volatile TimerState timerState;
 
     public PomodoroService(Profile profile, TimerChangeListener listener, FocusSessionService focusSessionService) {
@@ -40,7 +40,7 @@ public class PomodoroService {
         this.focusSessionService = focusSessionService;
         this.executor = Executors.newSingleThreadScheduledExecutor();
         this.timerState = TimerState.STOPPED;
-        
+
         prepareSession(SessionType.FOCUS);
     }
 
@@ -82,14 +82,14 @@ public class PomodoroService {
     private void handleSessionCompletion() {
         cancelTask();
         timerState = TimerState.STOPPED;
-        
+
         // Finaliza com sucesso (completed = true)
         focusSessionService.finalizeCurrentSession(totalSessionDuration, true);
-        
+
         logger.info("Sessão de {} finalizada com sucesso.", currentSessionType);
-        
-        SessionType nextType = (currentSessionType == SessionType.FOCUS) 
-                ? SessionType.SHORT_BREAK 
+
+        SessionType nextType = (currentSessionType == SessionType.FOCUS)
+                ? SessionType.SHORT_BREAK
                 : SessionType.FOCUS;
 
         listener.onFinished();
@@ -125,6 +125,20 @@ public class PomodoroService {
         }
     }
 
+    public void skip() {
+        cancelTask();
+        timerState = TimerState.STOPPED;
+
+        // Define qual seria a próxima sessão
+        SessionType nextType = (currentSessionType == SessionType.FOCUS)
+                ? SessionType.SHORT_BREAK
+                : SessionType.FOCUS;
+
+        prepareSession(nextType);
+        listener.onTick(remainingSeconds); // Atualiza a UI com o novo tempo
+        logger.info("Sessão pulada. Próxima etapa: {}", nextType);
+    }
+
     public void shutdown() {
         executor.shutdown();
         logger.info("Executor do Pomodoro finalizado.");
@@ -132,9 +146,21 @@ public class PomodoroService {
 
     // --- Getters ---
 
-    public int getRemainingSeconds() { return remainingSeconds; }
-    public TimerState getTimerState() { return timerState; }
-    public SessionType getCurrentSessionType() { return currentSessionType; }
+    public int getRemainingSeconds() {
+        return remainingSeconds;
+    }
+
+    public TimerState getTimerState() {
+        return timerState;
+    }
+
+    public SessionType getCurrentSessionType() {
+        return currentSessionType;
+    }
+
+    public int getTotalSessionDuration() {
+        return totalSessionDuration;
+    }
 
     public void updateProfile(Profile newProfile) {
         this.currentProfile = newProfile;

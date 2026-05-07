@@ -1,8 +1,12 @@
-/* Paleta de Cores:
+/* Paleta Catppuccin Mocha:
    Background: #1e1e2e
    Sidebar: #181825
    Text: #cdd6f4
-   Accent: #89b4fa
+   Green (Start): #a6e3a1
+   Yellow (Pause): #f9e2af
+   Red (Erro/Crítico): #f38ba8
+   Mauve (Skip): #cba6f7
+   Overlay/Neutral (Reset): #6c7086
 */
 
 .root {
@@ -24,6 +28,7 @@
     -fx-letter-spacing: 2px;
 }
 
+/* --- Menu Lateral --- */
 .menu-button {
     -fx-background-color: transparent;
     -fx-text-fill: #a6adc8;
@@ -45,11 +50,12 @@
 }
 
 .streak-label {
-    -fx-text-fill: #fab387;
+    -fx-text-fill: #fab387; /* Peach */
     -fx-font-weight: bold;
     -fx-padding: 0 0 20 0;
 }
 
+/* --- Tela do Timer --- */
 .timer-text {
     -fx-font-size: 80px;
     -fx-font-weight: bold;
@@ -57,24 +63,74 @@
 }
 
 .status-label {
-    -fx-text-fill: #a6adc8;
+    -fx-text-fill: #bac2de;
     -fx-font-size: 20px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 3px;
 }
 
+/* --- Botões de Ação --- */
 .action-button {
-    -fx-pref-width: 120;
-    -fx-padding: 12 20;
+    -fx-pref-width: 110;
+    -fx-padding: 12 15;
     -fx-font-weight: bold;
     -fx-background-radius: 10;
     -fx-cursor: hand;
+    -fx-transition: 0.2s;
 }
 
-.start-button { -fx-background-color: #a6e3a1; -fx-text-fill: #1e1e2e; }
-.pause-button { -fx-background-color: #f9e2af; -fx-text-fill: #1e1e2e; }
-.stop-button  { -fx-background-color: #f38ba8; -fx-text-fill: #1e1e2e; }
+/* Cores dos Botões */
+.start-button { 
+    -fx-background-color: #a6e3a1; 
+    -fx-text-fill: #1e1e2e; 
+}
+.pause-button { 
+    -fx-background-color: #f9e2af; 
+    -fx-text-fill: #1e1e2e; 
+}
+.reset-button { 
+    -fx-background-color: #6c7086; /* Neutro (Overlay) */
+    -fx-text-fill: #dce0e8; 
+}
+.skip-button { 
+    -fx-background-color: #cba6f7; /* Mauve/Roxo */
+    -fx-text-fill: #1e1e2e; 
+}
 
 .action-button:hover {
-    -fx-opacity: 0.8;
+    -fx-opacity: 0.85;
+    /* Um leve brilho no hover para dar feedback */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 0);
+}
+
+/* Estilo para os Alertas (Modais) - Opcional se quiser estilizar o Alert */
+.dialog-pane {
+    -fx-background-color: #1e1e2e;
+}
+.dialog-pane .label {
+    -fx-text-fill: white;
+}
+.dialog-pane .button {
+    -fx-background-color: #313244;
+    -fx-text-fill: white;
+}
+
+/* Estilização do Alerta */
+.custom-alert {
+    -fx-background-color: #1e1e2e; /* Mesma cor do fundo do app */
+}
+
+.custom-alert > .label.content {
+    -fx-text-fill: #cdd6f4; /* Cor do texto claro */
+    -fx-font-size: 14px;
+}
+
+.custom-alert .button {
+    -fx-background-color: #313244;
+    -fx-text-fill: white;
+    -fx-cursor: hand;
+}
+
+.custom-alert .button:hover {
+    -fx-background-color: #45475a;
 }
