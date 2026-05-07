@@ -4,6 +4,7 @@ C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\jav
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\infra\database\SQLiteFocusSessionRepository.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\service\FocusSessionService.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\domain\model\TimerState.java
+C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\ui\controller\MainController.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\ui\Dummy.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\service\TimerChangeListener.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\service\PomodoroService.java
@@ -11,6 +12,7 @@ C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\jav
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\domain\exception\PomodoroException.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\domain\model\Profile.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\infra\database\DatabaseInitializer.java
+C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\ui\controller\TimerController.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\infra\database\SQLiteProfileRepository.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\domain\model\SessionType.java
 C:\Users\DaniC\OneDrive\Área de Trabalho\Projeto Pomodoro\pomodoro\src\main\java\com\thomazcollet\PomodoroApplication.java

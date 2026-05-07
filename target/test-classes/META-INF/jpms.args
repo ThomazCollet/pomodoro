@@ -1,0 +1,4 @@
+--patch-module
+com.thomazcollet.pomodoro=_
+--add-reads
+com.thomazcollet.pomodoro=ALL-UNNAMED

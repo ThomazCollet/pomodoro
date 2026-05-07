@@ -36,7 +36,7 @@ public class SQLiteProfileRepositoryTest {
         
         Optional<Profile> savedProfile = repository.findById(profile.getId());
         assertTrue(savedProfile.isPresent());
-        assertEquals("Estudos Java", savedProfile.get().getName());
+        assertEquals("Estudos Java", savedProfile.get().getUsername());
     }
 
     @Test

@@ -11,7 +11,8 @@ import java.util.Objects;
 public class Profile {
 
     private Long id;
-    private String name;
+    private String username;
+    private String imagePath;
     private int workDuration;
     private int shortBreak;
     private int longBreak;
@@ -21,14 +22,15 @@ public class Profile {
     }
 
     /**
-     * Construtor completo para reconstrução de objetos vindos da camada de persistência.
-     * Atribui o createdAt diretamente para evitar conflitos de precisão de milissegundos
-     * entre a JVM e o banco de dados.
+     * Construtor completo para reconstrução de objetos vindos da camada de
+     * persistência.
      */
-    public Profile(Long id, String name, int workDuration, int shortBreak, int longBreak, LocalDateTime createdAt) {
+    public Profile(Long id, String username, String imagePath, int workDuration, int shortBreak, int longBreak,
+            LocalDateTime createdAt) {
         this.id = id;
-        this.createdAt = createdAt; 
-        this.setName(name);
+        this.createdAt = createdAt;
+        this.setUsername(username);
+        this.setImagePath(imagePath);
         this.setWorkDuration(workDuration);
         this.setShortBreak(shortBreak);
         this.setLongBreak(longBreak);
@@ -36,10 +38,9 @@ public class Profile {
 
     /**
      * Construtor para novos perfis criados pela aplicação.
-     * Os métodos de validação garantem que o objeto nunca nasça em estado inválido.
      */
-    public Profile(String name, int workDuration, int shortBreak, int longBreak) {
-        this.setName(name);
+    public Profile(String username, int workDuration, int shortBreak, int longBreak) {
+        this.setUsername(username);
         this.setWorkDuration(workDuration);
         this.setShortBreak(shortBreak);
         this.setLongBreak(longBreak);
@@ -55,18 +56,27 @@ public class Profile {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getUsername() {
+        return username;
     }
 
-    public void setName(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("O nome do perfil não pode estar vazio.");
+    public void setUsername(String username) {
+        if (username == null || username.trim().isEmpty()) {
+            throw new IllegalArgumentException("O nome de usuário não pode estar vazio.");
         }
-        if (name.length() > 20) {
-            throw new IllegalArgumentException("O nome do perfil deve ter no máximo 20 caracteres.");
+        if (username.length() > 20) {
+            throw new IllegalArgumentException("O nome de usuário deve ter no máximo 20 caracteres.");
         }
-        this.name = name.trim();
+        this.username = username.trim();
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        // Por enquanto aceitamos null (que indicará o uso da letra inicial)
+        this.imagePath = imagePath != null ? imagePath.trim() : null;
     }
 
     public int getWorkDuration() {
@@ -109,11 +119,9 @@ public class Profile {
         return createdAt;
     }
 
-    /**
-     * Define a data de criação com uma margem de tolerância para sincronia de relógio.
-     */
     public void setCreatedAt(LocalDateTime createdAt) {
-        if (createdAt != null && createdAt.isAfter(LocalDateTime.now().plusSeconds(10))) {
+        // driver/banco
+        if (createdAt != null && createdAt.isAfter(LocalDateTime.now().plusMinutes(1))) {
             throw new IllegalArgumentException("A data de criação não pode estar no futuro.");
         }
         this.createdAt = createdAt;
@@ -123,16 +131,18 @@ public class Profile {
 
     @Override
     public String toString() {
-        return "Profile{id=" + id + ", name='" + name + "', work=" + workDuration + "m}";
+        return "Profile{id=" + id + ", username='" + username + "', work=" + workDuration + "m}";
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Profile profile = (Profile) o;
-        // Perfis sem ID são considerados diferentes a menos que sejam a mesma instância
-        if (id == null || profile.id == null) return false;
+        if (id == null || profile.id == null)
+            return false;
         return Objects.equals(id, profile.id);
     }
 

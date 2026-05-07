@@ -2,7 +2,6 @@ package com.thomazcollet.infra.database;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import com.thomazcollet.domain.exception.DatabaseInitializationException;
 
 import java.sql.Connection;
@@ -23,16 +22,18 @@ public class DatabaseInitializer {
     public static void initialize() {
         logger.info("Iniciando verificação e configuração do banco de dados...");
 
+        // Adicionados atributos: username (antigo name) e image_path
         String setupSql = """
                 PRAGMA foreign_keys = ON;
 
                 CREATE TABLE IF NOT EXISTS profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    work_duration INTEGER NOT NULL,
-                    short_break INTEGER NOT NULL,
-                    long_break INTEGER NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    username TEXT NOT NULL,
+                    image_path TEXT,
+                    work_duration INTEGER NOT NULL DEFAULT 25,
+                    short_break INTEGER NOT NULL DEFAULT 5,
+                    long_break INTEGER NOT NULL DEFAULT 15,
+                    created_at DATETIME DEFAULT (datetime('now', 'localtime'))
                 );
 
                 CREATE TABLE IF NOT EXISTS focus_sessions (
@@ -59,7 +60,6 @@ public class DatabaseInitializer {
 
         } catch (SQLException e) {
             logger.error("ERRO CRÍTICO: Falha ao inicializar o banco de dados SQLite.", e);
-            // Trocando por uma exceção de domínio mais específica
             throw new DatabaseInitializationException("Falha ao configurar tabelas iniciais", e);
         }
     }

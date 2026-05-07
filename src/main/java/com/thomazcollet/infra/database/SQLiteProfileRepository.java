@@ -12,22 +12,23 @@ public class SQLiteProfileRepository implements ProfileRepository {
 
     @Override
     public void save(Profile profile) {
+        // Atualizado para incluir image_path e usar o nome correto username
         String sql = """
-            INSERT INTO profiles (name, work_duration, short_break, long_break)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO profiles (username, image_path, work_duration, short_break, long_break)
+            VALUES (?, ?, ?, ?, ?)
             """;
             
         try (Connection conn = DatabaseInitializer.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
-            pstmt.setString(1, profile.getName());
-            pstmt.setInt(2, profile.getWorkDuration());
-            pstmt.setInt(3, profile.getShortBreak());
-            pstmt.setInt(4, profile.getLongBreak());
+            pstmt.setString(1, profile.getUsername());
+            pstmt.setString(2, profile.getImagePath());
+            pstmt.setInt(3, profile.getWorkDuration());
+            pstmt.setInt(4, profile.getShortBreak());
+            pstmt.setInt(5, profile.getLongBreak());
             
             pstmt.executeUpdate();
 
-            // Recupera o ID gerado pelo SQLite e atualiza o objeto
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     profile.setId(generatedKeys.getLong(1));
@@ -87,15 +88,17 @@ public class SQLiteProfileRepository implements ProfileRepository {
         }
     }
 
-    // Helper para converter a linha do banco no nosso objeto de domínio
+    // Mapeia os novos campos do ResultSet para o objeto Profile
     private Profile mapResultSetToProfile(ResultSet rs) throws SQLException {
-        return new Profile(
-            rs.getLong("id"),
-            rs.getString("name"),
-            rs.getInt("work_duration"),
-            rs.getInt("short_break"),
-            rs.getInt("long_break"),
-            rs.getTimestamp("created_at").toLocalDateTime()
-        );
+        Profile profile = new Profile();
+        profile.setId(rs.getLong("id"));
+        profile.setUsername(rs.getString("username")); // Coluna alterada
+        profile.setImagePath(rs.getString("image_path")); // Nova coluna
+        profile.setWorkDuration(rs.getInt("work_duration"));
+        profile.setShortBreak(rs.getInt("short_break"));
+        profile.setLongBreak(rs.getInt("long_break"));
+        profile.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime().withNano(0));
+        
+        return profile;
     }
 }
