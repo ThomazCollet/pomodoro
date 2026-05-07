@@ -1,8 +1,6 @@
 package com.thomazcollet.infra.handler;
 
-import com.thomazcollet.domain.exception.DatabaseInitializationException;
-import com.thomazcollet.domain.exception.PomodoroException;
-import com.thomazcollet.domain.exception.TimerStateException;
+import com.thomazcollet.domain.exception.*;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -18,13 +16,16 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     public static void handle(Throwable e) {
-        // Logamos sempre a stacktrace completa para debug profissional
         logger.error("Exceção capturada pelo Handler Global: ", e);
 
-        // Garantimos que o alerta seja executado na Thread da UI do JavaFX
         Platform.runLater(() -> {
             if (e instanceof DatabaseInitializationException) {
-                handleDatabaseError((DatabaseInitializationException) e);
+                handleCriticalError("Banco de Dados", e.getMessage(), true);
+            } else if (e instanceof ProfileInitializationException) {
+                // Se o perfil falhar na carga inicial, o app não tem contexto para rodar
+                handleCriticalError("Perfil de Usuário", e.getMessage(), true);
+            } else if (e instanceof ProfileNotFoundException) {
+                showWarning("Usuário não Encontrado", e.getMessage());
             } else if (e instanceof TimerStateException) {
                 showWarning("Estado do Timer", e.getMessage());
             } else if (e instanceof PomodoroException) {
@@ -32,21 +33,26 @@ public class GlobalExceptionHandler {
             } else if (e instanceof IllegalArgumentException) {
                 showError("Argumento Inválido", e.getMessage());
             } else {
-                showError("Erro Crítico", "Ocorreu um erro inesperado no sistema: " + e.getMessage());
+                showError("Erro Crítico", "Ocorreu um erro inesperado: " + e.getMessage());
             }
         });
     }
 
-    private static void handleDatabaseError(DatabaseInitializationException e) {
+    /**
+     * Centraliza erros que impedem o funcionamento do App (Fail-Fast).
+     */
+    private static void handleCriticalError(String area, String message, boolean exit) {
         Alert alert = new Alert(AlertType.ERROR);
         alert.setTitle("Falha Crítica de Infraestrutura");
-        alert.setHeaderText("Não foi possível inicializar o Banco de Dados");
-        alert.setContentText(e.getMessage() + "\n\nA aplicação será encerrada por segurança.");
-
-        // Em erros de inicialização de banco, o app não deve continuar
+        alert.setHeaderText("Erro em: " + area);
+        alert.setContentText(message + (exit ? "\n\nA aplicação será encerrada por segurança." : ""));
+        
         alert.showAndWait();
-        logger.error("Encerrando aplicação devido a falha crítica no banco.");
-        System.exit(1);
+        
+        if (exit) {
+            logger.error("Encerrando aplicação devido a falha crítica em {}.", area);
+            System.exit(1);
+        }
     }
 
     private static void showWarning(String title, String content) {

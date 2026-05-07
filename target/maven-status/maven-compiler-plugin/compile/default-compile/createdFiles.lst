@@ -1,11 +1,14 @@
 com\thomazcollet\domain\model\Profile.class
+com\thomazcollet\service\ProfileService.class
 com\thomazcollet\domain\repository\ProfileRepository.class
 com\thomazcollet\domain\model\TimerState.class
 com\thomazcollet\domain\repository\FocusSessionRepository.class
 com\thomazcollet\ui\Dummy.class
 com\thomazcollet\domain\model\FocusSession.class
 com\thomazcollet\PomodoroApplication.class
+com\thomazcollet\domain\exception\ProfileInitializationException.class
 com\thomazcollet\domain\exception\ErrorResponse.class
+com\thomazcollet\domain\exception\ProfileNotFoundException.class
 module-info.class
 com\thomazcollet\service\FocusSessionService.class
 com\thomazcollet\infra\database\SQLiteFocusSessionRepository.class
