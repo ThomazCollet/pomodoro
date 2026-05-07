@@ -49,3 +49,32 @@
     -fx-font-weight: bold;
     -fx-padding: 0 0 20 0;
 }
+
+.timer-text {
+    -fx-font-size: 80px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.status-label {
+    -fx-text-fill: #a6adc8;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 3px;
+}
+
+.action-button {
+    -fx-pref-width: 120;
+    -fx-padding: 12 20;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+.start-button { -fx-background-color: #a6e3a1; -fx-text-fill: #1e1e2e; }
+.pause-button { -fx-background-color: #f9e2af; -fx-text-fill: #1e1e2e; }
+.stop-button  { -fx-background-color: #f38ba8; -fx-text-fill: #1e1e2e; }
+
+.action-button:hover {
+    -fx-opacity: 0.8;
+}
