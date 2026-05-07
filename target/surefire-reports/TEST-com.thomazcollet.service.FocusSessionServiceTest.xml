@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.infra.database.SQLiteProfileRepositoryTest" time="1.092" tests="3" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.service.FocusSessionServiceTest" time="3.473" tests="4" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -58,19 +58,28 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="shouldDeleteProfile" classname="com.thomazcollet.infra.database.SQLiteProfileRepositoryTest" time="0.332">
-    <system-out><![CDATA[21:31:23.709 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Iniciando verificação e configuração do banco de dados...
-21:31:23.763 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Banco de dados verificado com sucesso.
+  <testcase name="shouldClearActiveSessionAfterFinalization" classname="com.thomazcollet.service.FocusSessionServiceTest" time="3.433">
+    <system-out><![CDATA[21:31:28.262 [main] INFO com.thomazcollet.service.FocusSessionService -- Registro de sessão iniciado: FOCUS (ID: null)
+21:31:28.265 [main] INFO com.thomazcollet.service.FocusSessionService -- Sessão finalizada e persistida: FOCUS (ID: null, Completada: true)
+21:31:28.265 [main] WARN com.thomazcollet.service.FocusSessionService -- Tentativa de finalizar uma sessão sem nenhuma ativa em memória.
+]]></system-out>
+    <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\DaniC\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.12\byte-buddy-agent-1.14.12.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+  <testcase name="shouldCreateAndSaveNewSessionOnStart" classname="com.thomazcollet.service.FocusSessionServiceTest" time="0.01">
+    <system-out><![CDATA[21:31:28.304 [main] INFO com.thomazcollet.service.FocusSessionService -- Registro de sessão iniciado: FOCUS (ID: null)
 ]]></system-out>
   </testcase>
-  <testcase name="shouldFindAllProfiles" classname="com.thomazcollet.infra.database.SQLiteProfileRepositoryTest" time="0.392">
-    <system-out><![CDATA[21:31:24.043 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Iniciando verificação e configuração do banco de dados...
-21:31:24.284 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Banco de dados verificado com sucesso.
+  <testcase name="shouldUpdateExistingSessionWithFinalizationData" classname="com.thomazcollet.service.FocusSessionServiceTest" time="0.015">
+    <system-out><![CDATA[21:31:28.318 [main] INFO com.thomazcollet.service.FocusSessionService -- Registro de sessão iniciado: FOCUS (ID: null)
+21:31:28.319 [main] INFO com.thomazcollet.service.FocusSessionService -- Sessão finalizada e persistida: FOCUS (ID: null, Completada: true)
 ]]></system-out>
   </testcase>
-  <testcase name="shouldSaveProfileAndGenerateId" classname="com.thomazcollet.infra.database.SQLiteProfileRepositoryTest" time="0.361">
-    <system-out><![CDATA[21:31:24.435 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Iniciando verificação e configuração do banco de dados...
-21:31:24.668 [main] INFO com.thomazcollet.infra.database.DatabaseInitializer -- Banco de dados verificado com sucesso.
+  <testcase name="shouldNotCallRepositoryWhenFinalizingWithoutActiveSession" classname="com.thomazcollet.service.FocusSessionServiceTest" time="0.006">
+    <system-out><![CDATA[21:31:28.332 [main] WARN com.thomazcollet.service.FocusSessionService -- Tentativa de finalizar uma sessão sem nenhuma ativa em memória.
 ]]></system-out>
   </testcase>
 </testsuite>

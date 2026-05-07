@@ -13,6 +13,8 @@ import com.thomazcollet.domain.model.TimerState;
 import com.thomazcollet.domain.exception.TimerStateException;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PomodoroServiceTest {
@@ -20,22 +22,29 @@ class PomodoroServiceTest {
     @Mock
     private TimerChangeListener listener;
 
+    @Mock
+    private FocusSessionService focusSessionService; // Novo mock necessário
+
     private PomodoroService service;
     private Profile testProfile;
 
     @BeforeEach
     void setUp() {
-        // Criamos um perfil de teste com tempos curtos (em minutos)
+        // Criamos um perfil de teste e injetamos o mock do focusSessionService
         testProfile = new Profile("Work", 25, 5, 15);
-        service = new PomodoroService(testProfile, listener);
+        testProfile.setId(1L); // Importante setar ID para o service usar
+
+        service = new PomodoroService(testProfile, listener, focusSessionService);
     }
 
     @Test
-    @DisplayName("Deve iniciar o timer com sucesso e mudar o estado para RUNNING")
-    void shouldStartTimerSuccessfullyAndChangeStateToRunning() {
+    @DisplayName("Deve iniciar o timer e registrar o início da sessão no FocusSessionService")
+    void shouldStartTimerAndRegisterInService() {
         service.start();
+
         assertEquals(TimerState.RUNNING, service.getTimerState());
-        assertEquals(SessionType.FOCUS, service.getCurrentSessionType());
+        // Verifica se o serviço de persistência foi avisado do início
+        verify(focusSessionService, times(1)).startSession(eq(1L), eq(SessionType.FOCUS));
     }
 
     @Test
@@ -52,41 +61,35 @@ class PomodoroServiceTest {
     }
 
     @Test
-    @DisplayName("Deve pausar o timer corretamente quando ele estiver rodando")
-    void shouldPauseTimerWhenRunning() {
+    @DisplayName("Deve pausar o timer sem finalizar a sessão no banco")
+    void shouldPauseTimerWithoutFinalizing() {
         service.start();
         service.pause();
+
         assertEquals(TimerState.PAUSED, service.getTimerState());
+        // Não deve ter chamado o finalize ainda, pois é apenas um pause
+        verify(focusSessionService, never()).finalizeCurrentSession(anyInt(), anyBoolean());
     }
 
     @Test
-    @DisplayName("Deve resetar para o início do Foco ao chamar stop")
-    void shouldResetToFocusStartWhenStopped() {
+    @DisplayName("Deve finalizar a sessão como não completada ao chamar stop")
+    void shouldFinalizeAsNotCompletedWhenStopped() {
         service.start();
         service.stop();
-        
+
         assertEquals(TimerState.STOPPED, service.getTimerState());
-        assertEquals(SessionType.FOCUS, service.getCurrentSessionType());
-        assertEquals(1500, service.getRemainingSeconds());
+        // Verifica se finalizou a sessão marcando como false (interrompida)
+        verify(focusSessionService).finalizeCurrentSession(anyInt(), eq(false));
     }
 
     @Test
-    @DisplayName("Deve alternar para Pausa Curta automaticamente quando o Foco terminar")
-    void shouldTransitionToShortBreakWhenFocusFinishes() {
-        // Forçamos o tempo para 0 para simular o término (acesso via reflexão ou método específico)
-        // Como o handleSessionCompletion é private, testamos o efeito colateral de terminar o tempo
-        // Para este teste unitário ser simples, podemos usar um método de conveniência se necessário,
-        // mas aqui vamos focar na regra: após o término, o próximo tipo deve ser SHORT_BREAK.
-        
-        // Simulação manual da transição que ocorre no final da task
-        service.stop(); // Garante estado limpo
-        
-        // Se você quiser testar a transição real, o ideal é que handleSessionCompletion 
-        // fosse package-private ou testado via integração. 
-        // Mas para validar a lógica que escrevemos:
-        assertEquals(SessionType.FOCUS, service.getCurrentSessionType());
-        
-        // A lógica de transição no código novo diz: se FOCUS -> SHORT_BREAK
-        // Vamos apenas garantir que o serviço inicia em FOCUS.
+    @DisplayName("Deve manter o estado consistente ao atualizar o perfil")
+    void shouldKeepStateConsistentWhenUpdatingProfile() {
+        Profile newProfile = new Profile("Short", 10, 2, 5);
+        newProfile.setId(1L);
+
+        service.updateProfile(newProfile);
+
+        assertEquals(600, service.getRemainingSeconds()); // 10min
     }
 }
