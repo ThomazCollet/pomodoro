@@ -15,27 +15,35 @@ public class ProfileService {
     private final ProfileRepository repository;
     private Profile activeProfile;
 
+    private static final String[] AVATAR_COLORS = {
+            "#FF5733", "#33FF57", "#3357FF", "#F333FF",
+            "#FF33A1", "#33FFF6", "#F6FF33", "#A133FF"
+    };
+
     public ProfileService(ProfileRepository repository) {
         this.repository = repository;
     }
 
     /**
-     * Inicializa o sistema de perfis. 
+     * Inicializa o sistema de perfis.
      * Se não houver perfis, cria o primeiro automaticamente.
-     * @throws ProfileInitializationException se houver falha na persistência do perfil inicial.
+     * 
+     * @throws ProfileInitializationException se houver falha na persistência do
+     *                                        perfil inicial.
      */
     public Profile ensureProfileExists() {
         try {
             List<Profile> profiles = repository.findAll();
-            
+
             if (profiles.isEmpty()) {
                 logger.info("Nenhum perfil encontrado. Gerando perfil inicial...");
                 Profile newProfile = generateDefaultProfile();
                 repository.save(newProfile);
-                
+
                 // Validação Fail-Fast: se o ID for nulo, a persistência falhou silenciosamente
                 if (newProfile.getId() == null) {
-                    throw new ProfileInitializationException("Falha crítica: Perfil gerado mas não persistido corretamente.");
+                    throw new ProfileInitializationException(
+                            "Falha crítica: Perfil gerado mas não persistido corretamente.");
                 }
 
                 this.activeProfile = newProfile;
@@ -45,7 +53,7 @@ public class ProfileService {
             this.activeProfile = profiles.get(0); // Assume o perfil mais recente como ativo
             logger.info("Perfil carregado: {}", activeProfile.getUsername());
             return activeProfile;
-            
+
         } catch (Exception e) {
             logger.error("Erro durante a inicialização do perfil de usuário", e);
             throw new ProfileInitializationException("Não foi possível carregar ou criar um perfil de usuário.", e);
@@ -54,7 +62,9 @@ public class ProfileService {
 
     /**
      * Retorna o perfil ativo em memória.
-     * @throws ProfileNotFoundException se o perfil ainda não tiver sido inicializado.
+     * 
+     * @throws ProfileNotFoundException se o perfil ainda não tiver sido
+     *                                  inicializado.
      */
     public Profile getActiveProfile() {
         if (activeProfile == null) {
@@ -65,7 +75,8 @@ public class ProfileService {
 
     private Profile generateDefaultProfile() {
         String randomName = "User_" + UUID.randomUUID().toString().substring(0, 5);
-        // Atributos padrão: nome aleatório, 25min foco, 5min pausa curta, 15min pausa longa
+        // Atributos padrão: nome aleatório, 25min foco, 5min pausa curta, 15min pausa
+        // longa
         return new Profile(randomName, 25, 5, 15);
     }
 
@@ -79,5 +90,24 @@ public class ProfileService {
         repository.save(profile);
         this.activeProfile = profile;
         logger.info("Perfil '{}' atualizado com sucesso.", profile.getUsername());
+    }
+
+    /**
+     * Retorna a cor hexadecimal para o avatar baseada no nome do usuário.
+     */
+    public String getAvatarColor() {
+        Profile profile = getActiveProfile();
+        int hash = profile.getUsername().hashCode();
+        // Garante que o índice seja positivo e dentro do range da lista de cores
+        int index = Math.abs(hash) % AVATAR_COLORS.length;
+        return AVATAR_COLORS[index];
+    }
+
+    /**
+     * Retorna apenas a primeira letra do nome de usuário para exibição no avatar.
+     */
+    public String getProfileInitial() {
+        String name = getActiveProfile().getUsername();
+        return name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase();
     }
 }

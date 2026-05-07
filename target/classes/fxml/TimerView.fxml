@@ -5,7 +5,7 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.geometry.Insets?>
 
-<VBox alignment="CENTER" spacing="40.0" styleClass="content-pane" 
+<VBox alignment="CENTER" spacing="50.0" styleClass="content-pane" 
       xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
       fx:controller="com.thomazcollet.ui.controller.TimerController">
     
@@ -16,19 +16,18 @@
     <Label fx:id="lblStatus" text="HORA DE FOCAR" styleClass="status-label" />
 
     <StackPane>
-        <Circle radius="150.0" stroke="#313244" strokeWidth="15.0" fill="TRANSPARENT" />
+        <Circle radius="160.0" stroke="#313244" strokeWidth="8.0" fill="TRANSPARENT" />
         
-        <Arc fx:id="arcProgress" radiusX="150.0" radiusY="150.0" startAngle="90.0" length="360.0" 
-             stroke="#89b4fa" strokeWidth="15.0" fill="TRANSPARENT" strokeLineCap="ROUND" />
+        <Arc fx:id="arcProgress" radiusX="160.0" radiusY="160.0" startAngle="90.0" length="360.0" 
+             stroke="#89b4fa" strokeWidth="12.0" fill="TRANSPARENT" strokeLineCap="ROUND" />
 
         <Label fx:id="lblTime" text="25:00" styleClass="timer-text" />
     </StackPane>
 
-    <HBox alignment="CENTER" spacing="20.0">
+    <HBox alignment="CENTER" spacing="25.0">
         <Button fx:id="btnStart" text="START" styleClass="action-button, start-button" />
         <Button fx:id="btnPause" text="PAUSE" styleClass="action-button, pause-button" />
-        <Button fx:id="btnReset" text="RESET" styleClass="action-button, stop-button" />
+        <Button fx:id="btnReset" text="RESET" styleClass="action-button, reset-button" />
         <Button fx:id="btnSkip" text="SKIP" styleClass="action-button, skip-button" />
     </HBox>
-
 </VBox>

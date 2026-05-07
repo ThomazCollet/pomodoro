@@ -3,24 +3,37 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.Circle?>
 
 <BorderPane fx:id="mainContainer" prefHeight="700.0" prefWidth="1000.0" 
             xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
             fx:controller="com.thomazcollet.ui.controller.MainController">
    
    <left>
-      <VBox prefWidth="220.0" styleClass="sidebar" spacing="20.0">
+      <VBox prefWidth="220.0" styleClass="sidebar" spacing="15.0" alignment="TOP_CENTER">
          <padding>
             <Insets top="40.0" left="20.0" right="20.0" />
          </padding>
          
-         <Label text="POMODORO" styleClass="logo-text" />
-         
-         <Separator opacity="0.2" />
+         <StackPane alignment="CENTER" maxWidth="Infinity">
+            <Circle fx:id="avatarCircle" radius="28.0" />
+            <Label fx:id="initialLabel" text="?" styleClass="avatar-text" />
+            <VBox.margin>
+               <Insets bottom="25.0" />
+            </VBox.margin>
+         </StackPane>
 
-         <Button fx:id="btnTimer" text="⏱ Timer" styleClass="menu-button" maxWidth="Infinity" />
-         <Button fx:id="btnStats" text="📊 Estatísticas" styleClass="menu-button" maxWidth="Infinity" />
-         <Button fx:id="btnSettings" text="⚙ Configurações" styleClass="menu-button" maxWidth="Infinity" />
+         <Label text="POMODORO" styleClass="logo-text">
+            <VBox.margin>
+               <Insets bottom="10.0" />
+            </VBox.margin>
+         </Label>
+         
+         <Separator opacity="0.1" maxWidth="140.0" />
+
+         <Button fx:id="btnTimer" text="⏱  Timer" styleClass="menu-button" maxWidth="180.0" />
+         <Button fx:id="btnStats" text="📊  Estatísticas" styleClass="menu-button" maxWidth="180.0" />
+         <Button fx:id="btnSettings" text="⚙  Configurações" styleClass="menu-button" maxWidth="180.0" />
          
          <Region VBox.vgrow="ALWAYS" />
          

@@ -1,12 +1,6 @@
-/* Paleta Catppuccin Mocha:
-   Background: #1e1e2e
-   Sidebar: #181825
-   Text: #cdd6f4
-   Green (Start): #a6e3a1
-   Yellow (Pause): #f9e2af
-   Red (Erro/Crítico): #f38ba8
-   Mauve (Skip): #cba6f7
-   Overlay/Neutral (Reset): #6c7086
+/* Paleta Catppuccin Mocha Refinada
+   Background: #1e1e2e | Sidebar: #181825 | Text: #cdd6f4
+   Accents: Blue (#89b4fa), Mauve (#cba6f7), Peach (#fab387)
 */
 
 .root {
@@ -21,26 +15,27 @@
     -fx-background-color: #1e1e2e;
 }
 
+/* --- Cabeçalho e Logo --- */
 .logo-text {
-    -fx-text-fill: #cdd6f4;
-    -fx-font-size: 22px;
+    -fx-text-fill: #b4befe; /* Tom Mauve mais suave para elegância */
+    -fx-font-size: 18px;    /* Tamanho reduzido para não competir com o cronômetro */
     -fx-font-weight: bold;
-    -fx-letter-spacing: 2px;
+    -fx-letter-spacing: 3px;
 }
 
 /* --- Menu Lateral --- */
 .menu-button {
     -fx-background-color: transparent;
-    -fx-text-fill: #a6adc8;
-    -fx-font-size: 16px;
+    -fx-text-fill: #9399b2; /* Inativo mais discreto */
+    -fx-font-size: 15px;
     -fx-alignment: CENTER_LEFT;
-    -fx-padding: 10 15;
-    -fx-background-radius: 8;
+    -fx-padding: 12 20;
+    -fx-background-radius: 12; /* Cantos mais modernos e arredondados */
     -fx-cursor: hand;
 }
 
 .menu-button:hover {
-    -fx-background-color: #313244;
+    -fx-background-color: rgba(49, 50, 68, 0.5);
     -fx-text-fill: #f5e0dc;
 }
 
@@ -57,78 +52,87 @@
 
 /* --- Tela do Timer --- */
 .timer-text {
-    -fx-font-size: 80px;
+    -fx-font-size: 85px; /* Ligeiramente maior para impacto */
     -fx-font-weight: bold;
     -fx-text-fill: white;
 }
 
 .status-label {
     -fx-text-fill: #bac2de;
-    -fx-font-size: 20px;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 3px;
+    -fx-letter-spacing: 4px;
 }
 
 /* --- Botões de Ação --- */
 .action-button {
-    -fx-pref-width: 110;
-    -fx-padding: 12 15;
+    -fx-pref-width: 120;
+    -fx-padding: 14 18;
     -fx-font-weight: bold;
-    -fx-background-radius: 10;
+    -fx-background-radius: 15; /* Botões em formato "pill" */
     -fx-cursor: hand;
-    -fx-transition: 0.2s;
 }
 
-/* Cores dos Botões */
-.start-button { 
-    -fx-background-color: #a6e3a1; 
-    -fx-text-fill: #1e1e2e; 
+.start-button {
+    -fx-background-color: #a6e3a1;
+    -fx-text-fill: #1e1e2e;
 }
-.pause-button { 
-    -fx-background-color: #f9e2af; 
-    -fx-text-fill: #1e1e2e; 
+
+.pause-button {
+    -fx-background-color: #f9e2af;
+    -fx-text-fill: #1e1e2e;
 }
-.reset-button { 
-    -fx-background-color: #6c7086; /* Neutro (Overlay) */
-    -fx-text-fill: #dce0e8; 
+
+.reset-button {
+    -fx-background-color: #6c7086;
+    -fx-text-fill: #dce0e8;
 }
-.skip-button { 
-    -fx-background-color: #cba6f7; /* Mauve/Roxo */
-    -fx-text-fill: #1e1e2e; 
+
+.skip-button {
+    -fx-background-color: #cba6f7;
+    -fx-text-fill: #1e1e2e;
 }
 
 .action-button:hover {
     -fx-opacity: 0.85;
-    /* Um leve brilho no hover para dar feedback */
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 0);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 10, 0, 0, 0);
 }
 
-/* Estilo para os Alertas (Modais) - Opcional se quiser estilizar o Alert */
+/* --- Avatar do Usuário --- */
+.avatar-text {
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI Black", sans-serif; /* Mais peso na inicial */
+    -fx-font-size: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 3, 0, 0, 1);
+}
+
+.avatar-circle:hover {
+    -fx-opacity: 0.9;
+    -fx-cursor: hand;
+}
+
+/* --- Diálogos e Alertas --- */
 .dialog-pane {
     -fx-background-color: #1e1e2e;
 }
+
 .dialog-pane .label {
     -fx-text-fill: white;
 }
-.dialog-pane .button {
-    -fx-background-color: #313244;
-    -fx-text-fill: white;
-}
 
-/* Estilização do Alerta */
 .custom-alert {
-    -fx-background-color: #1e1e2e; /* Mesma cor do fundo do app */
+    -fx-background-color: #1e1e2e;
 }
 
 .custom-alert > .label.content {
-    -fx-text-fill: #cdd6f4; /* Cor do texto claro */
+    -fx-text-fill: #cdd6f4;
     -fx-font-size: 14px;
 }
 
 .custom-alert .button {
     -fx-background-color: #313244;
     -fx-text-fill: white;
-    -fx-cursor: hand;
+    -fx-background-radius: 8;
 }
 
 .custom-alert .button:hover {
