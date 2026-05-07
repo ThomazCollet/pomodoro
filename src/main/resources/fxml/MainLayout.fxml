@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane fx:id="mainContainer" prefHeight="700.0" prefWidth="1000.0" 
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="com.thomazcollet.ui.controller.MainController">
+   
+   <left>
+      <VBox prefWidth="220.0" styleClass="sidebar" spacing="20.0">
+         <padding>
+            <Insets top="40.0" left="20.0" right="20.0" />
+         </padding>
+         
+         <Label text="POMODORO" styleClass="logo-text" />
+         
+         <Separator opacity="0.2" />
+
+         <Button fx:id="btnTimer" text="⏱ Timer" styleClass="menu-button" maxWidth="Infinity" />
+         <Button fx:id="btnStats" text="📊 Estatísticas" styleClass="menu-button" maxWidth="Infinity" />
+         <Button fx:id="btnSettings" text="⚙ Configurações" styleClass="menu-button" maxWidth="Infinity" />
+         
+         <Region VBox.vgrow="ALWAYS" />
+         
+         <Label text="Streak: 🔥 5 dias" styleClass="streak-label" />
+      </VBox>
+   </left>
+
+   <center>
+      <StackPane fx:id="contentArea" styleClass="content-pane">
+         <Label text="Selecione uma opção no menu" style="-fx-text-fill: white; -fx-font-size: 18px;" />
+      </StackPane>
+   </center>
+   
+</BorderPane>

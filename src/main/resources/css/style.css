@@ -1,0 +1,51 @@
+/* Paleta de Cores:
+   Background: #1e1e2e
+   Sidebar: #181825
+   Text: #cdd6f4
+   Accent: #89b4fa
+*/
+
+.root {
+    -fx-font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.sidebar {
+    -fx-background-color: #181825;
+}
+
+.content-pane {
+    -fx-background-color: #1e1e2e;
+}
+
+.logo-text {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 2px;
+}
+
+.menu-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a6adc8;
+    -fx-font-size: 16px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 15;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.menu-button:hover {
+    -fx-background-color: #313244;
+    -fx-text-fill: #f5e0dc;
+}
+
+.menu-button:focused {
+    -fx-background-color: #89b4fa;
+    -fx-text-fill: #1e1e2e;
+}
+
+.streak-label {
+    -fx-text-fill: #fab387;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 20 0;
+}
