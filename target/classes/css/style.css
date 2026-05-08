@@ -1,10 +1,11 @@
-/* Paleta Catppuccin Mocha Refinada
-   Background: #1e1e2e | Sidebar: #181825 | Text: #cdd6f4
-   Accents: Blue (#89b4fa), Mauve (#cba6f7), Peach (#fab387)
+/* POMODORO FOCUS - Catppuccin Mocha Theme
+   Organizado por Thomaz Collet
 */
 
+/* --- Configurações Globais --- */
 .root {
     -fx-font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    -fx-background-color: #1e1e2e;
 }
 
 .sidebar {
@@ -15,10 +16,10 @@
     -fx-background-color: #1e1e2e;
 }
 
-/* --- Cabeçalho e Logo --- */
+/* --- Identidade Visual --- */
 .logo-text {
-    -fx-text-fill: #b4befe; /* Tom Mauve mais suave para elegância */
-    -fx-font-size: 18px;    /* Tamanho reduzido para não competir com o cronômetro */
+    -fx-text-fill: #b4befe;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 3px;
 }
@@ -26,12 +27,13 @@
 /* --- Menu Lateral --- */
 .menu-button {
     -fx-background-color: transparent;
-    -fx-text-fill: #9399b2; /* Inativo mais discreto */
+    -fx-text-fill: #9399b2;
     -fx-font-size: 15px;
     -fx-alignment: CENTER_LEFT;
     -fx-padding: 12 20;
-    -fx-background-radius: 12; /* Cantos mais modernos e arredondados */
+    -fx-background-radius: 12;
     -fx-cursor: hand;
+    -fx-transition: 0.2s;
 }
 
 .menu-button:hover {
@@ -45,32 +47,84 @@
 }
 
 .streak-label {
-    -fx-text-fill: #fab387; /* Peach */
+    -fx-text-fill: #fab387;
     -fx-font-weight: bold;
-    -fx-padding: 0 0 20 0;
 }
 
-/* --- Tela do Timer --- */
+/* --- Avatar e Interação --- */
+.avatar-container {
+    -fx-cursor: hand;
+}
+
+.avatar-container:hover {
+    -fx-opacity: 0.85;
+}
+
+.avatar-text {
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI Black", sans-serif;
+    -fx-font-size: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0, 0, 1);
+}
+
+/* --- O NOVO POPUP (Efeito de Elevação) --- */
+.profile-popover {
+    /* Cor levemente mais clara que o fundo para dar contraste */
+    -fx-background-color: #24273a;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(137, 180, 250, 0.2);
+    /* Borda azul bem sutil */
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 25;
+
+    /* Sombra de Profundidade: Suave e espalhada */
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.6), 30, 0, 0, 15);
+}
+
+.popover-name {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.stats-grid {
+    -fx-hgap: 25;
+    -fx-vgap: 15;
+    -fx-padding: 15 0;
+}
+
+.stat-label {
+    -fx-text-fill: #a6adc8;
+    -fx-font-size: 11px;
+    -fx-text-transform: uppercase;
+}
+
+.stat-value {
+    -fx-text-fill: #89b4fa;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* --- Timer e Botões --- */
 .timer-text {
-    -fx-font-size: 85px; /* Ligeiramente maior para impacto */
+    -fx-font-size: 85px;
     -fx-font-weight: bold;
     -fx-text-fill: white;
 }
 
-.status-label {
-    -fx-text-fill: #bac2de;
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-    -fx-letter-spacing: 4px;
-}
-
-/* --- Botões de Ação --- */
 .action-button {
     -fx-pref-width: 120;
     -fx-padding: 14 18;
     -fx-font-weight: bold;
-    -fx-background-radius: 15; /* Botões em formato "pill" */
+    -fx-background-radius: 15;
     -fx-cursor: hand;
+}
+
+.action-button:hover {
+    -fx-opacity: 0.9;
+    /* Sombra ao passar o mouse para dar feedback de clique */
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 8, 0, 0, 4);
 }
 
 .start-button {
@@ -93,103 +147,56 @@
     -fx-text-fill: #1e1e2e;
 }
 
-.action-button:hover {
-    -fx-opacity: 0.85;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 10, 0, 0, 0);
-}
-
-/* --- Avatar do Usuário --- */
-.avatar-text {
-    -fx-text-fill: white;
-    -fx-font-family: "Segoe UI Black", sans-serif; /* Mais peso na inicial */
-    -fx-font-size: 24px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 3, 0, 0, 1);
-}
-
-.avatar-circle:hover {
-    -fx-opacity: 0.9;
-    -fx-cursor: hand;
-}
-
-/* --- Diálogos e Alertas (Refinado) --- */
+/* --- Diálogos (Alertas) --- */
 .my-dialog.dialog-pane {
-    -fx-background-color: #1e1e2e; /* Background do conteúdo */
+    -fx-background-color: #1e1e2e;
 }
 
-/* Garante que o cabeçalho e a área de botões também fiquem escuros */
-.my-dialog.dialog-pane > .expandable-content,
-.my-dialog.dialog-pane > .button-bar,
-.my-dialog.dialog-pane > .header-panel {
+.my-dialog.dialog-pane>.header-panel,
+.my-dialog.dialog-pane>.button-bar {
     -fx-background-color: #1e1e2e;
 }
 
 .my-dialog .label {
-    -fx-text-fill: #cdd6f4; /* Texto principal no tom da paleta */
-    -fx-font-size: 14px;
+    -fx-text-fill: #cdd6f4;
 }
 
-/* Estilização dos botões específicos do Alerta */
 .my-dialog .button {
     -fx-background-color: #313244;
     -fx-text-fill: #cdd6f4;
-    -fx-background-radius: 8;
-    -fx-padding: 8 20;
+    -fx-background-radius: 10;
     -fx-cursor: hand;
 }
 
 .my-dialog .button:hover {
     -fx-background-color: #45475a;
-    -fx-text-fill: white;
 }
 
-/* No seu TimerController, você pode adicionar classes via código ou usar estes seletores */
-.my-dialog .button:default {
-    -fx-base: #a6e3a1; /* Tom verde para o botão de confirmação (Sim) */
-    -fx-text-fill: #1e1e2e;
-}
-
-.my-dialog .button:cancel {
-    -fx-base: #f38ba8; /* Tom avermelhado para o cancelar (Não) */
-}
-
-/* --- Ajuste Fino de Alinhamento e Estilo --- */
-.my-dialog.dialog-pane .button-bar > .container {
-    -fx-alignment: CENTER; /* Centraliza os botões Sim e Não */
-    -fx-padding: 10;
-}
-
-.my-dialog.dialog-pane .button-bar {
-    -fx-background-color: #1e1e2e; /* Garante que a barra de botões não fique branca */
-}
-
-/* Força o estilo mesmo que o JavaFX tente usar o nativo */
-.my-dialog.dialog-pane .button {
-    -fx-background-color: #313244 !important;
-    -fx-text-fill: #cdd6f4 !important;
-    -fx-background-radius: 8 !important;
-    -fx-min-width: 80px;
-}
-
-.my-dialog.dialog-pane .button:hover {
-    -fx-background-color: #45475a !important;
-}
-
-.pip-container {
-    -fx-spacing: 10;
-    -fx-alignment: CENTER;
-    -fx-padding: 20 0 0 0;
-}
-
+/* --- Pips (Indicadores de Sessão) --- */
 .pip {
-    -fx-fill: #313244; /* Cor apagada (Surface0 do Catppuccin) */
+    -fx-fill: #313244;
     -fx-stroke: #45475a;
     -fx-stroke-width: 1;
 }
 
 .pip-active {
-    -fx-fill: #a6e3a1; /* Verde para foco concluído */
+    -fx-fill: #a6e3a1;
 }
 
 .pip-current {
-    -fx-fill: #89b4fa; /* Azul para a sessão atual */
+    -fx-fill: #89b4fa;
+}
+
+.sync-button {
+    -fx-background-color: #313244;
+    -fx-text-fill: #cdd6f4;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
+}
+
+/* Efeito de Hover para o botão de sincronização */
+.sync-button:hover {
+    -fx-background-color: #45475a; /* Cor Surface1 do Catppuccin */
+    -fx-text-fill: #f5e0dc;        /* Cor Rosewater para um destaque sutil */
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 5, 0, 0, 2);
 }

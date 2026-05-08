@@ -15,9 +15,9 @@
             <Insets top="40.0" left="20.0" right="20.0" />
          </padding>
          
-         <StackPane alignment="CENTER" maxWidth="Infinity">
+         <StackPane fx:id="avatarContainer" alignment="CENTER" maxWidth="Infinity" styleClass="avatar-container">
             <Circle fx:id="avatarCircle" radius="28.0" />
-            <Label fx:id="initialLabel" text="?" styleClass="avatar-text" />
+            <Label fx:id="initialLabel" text="?" styleClass="avatar-text" mouseTransparent="true" />
             <VBox.margin>
                <Insets bottom="25.0" />
             </VBox.margin>
