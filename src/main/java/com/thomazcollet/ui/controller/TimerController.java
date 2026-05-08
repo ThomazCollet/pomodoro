@@ -6,12 +6,11 @@ import com.thomazcollet.service.PomodoroService;
 import com.thomazcollet.service.TimerChangeListener;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.shape.Arc;
+import javafx.scene.shape.Circle;
+import javafx.scene.media.AudioClip;
 
 import java.util.Optional;
 
@@ -21,38 +20,31 @@ import java.util.Optional;
  */
 public class TimerController implements TimerChangeListener {
 
-    @FXML
-    private Label lblTime;
-    @FXML
-    private Label lblStatus;
-    @FXML
-    private Arc arcProgress;
-    @FXML
-    private Button btnStart, btnPause, btnReset, btnSkip;
+    @FXML private Label lblTime;
+    @FXML private Label lblStatus;
+    @FXML private Arc arcProgress;
+    @FXML private Button btnStart, btnPause, btnReset, btnSkip;
+    @FXML private HBox hboxPips; // Adicione este ID no seu FXML abaixo dos botões
 
     private PomodoroService pomodoroService;
 
     public void setPomodoroService(PomodoroService service) {
         this.pomodoroService = service;
         updateDisplay(service.getRemainingSeconds());
+        updateSessionPips(); // Inicializa os pips ao carregar o serviço
     }
 
     @FXML
     public void initialize() {
-        // Verificações defensivas para evitar NullPointerException caso o FXML esteja
-        // desalinhado
-        if (btnStart != null)
-            btnStart.setOnAction(e -> handleStart());
-        if (btnPause != null)
-            btnPause.setOnAction(e -> pomodoroService.pause());
-        if (btnReset != null)
-            btnReset.setOnAction(e -> handleReset());
-        if (btnSkip != null)
-            btnSkip.setOnAction(e -> handleSkip());
+        if (btnStart != null) btnStart.setOnAction(e -> handleStart());
+        if (btnPause != null) btnPause.setOnAction(e -> pomodoroService.pause());
+        if (btnReset != null) btnReset.setOnAction(e -> handleReset());
+        if (btnSkip != null) btnSkip.setOnAction(e -> handleSkip());
     }
 
     private void handleStart() {
         try {
+            playFeedbackSound(); // Feedback auditivo de início
             pomodoroService.start();
             updateUIState();
         } catch (Exception e) {
@@ -61,12 +53,10 @@ public class TimerController implements TimerChangeListener {
     }
 
     private void handleReset() {
-        if (pomodoroService.getTimerState() == TimerState.STOPPED)
-            return;
+        if (pomodoroService.getTimerState() == TimerState.STOPPED) return;
 
         boolean wasRunning = pomodoroService.getTimerState() == TimerState.RUNNING;
-        if (wasRunning)
-            pomodoroService.pause();
+        if (wasRunning) pomodoroService.pause();
 
         boolean confirmed = showConfirmationDialog(
                 "Reiniciar Cronômetro",
@@ -78,15 +68,13 @@ public class TimerController implements TimerChangeListener {
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
         } else if (wasRunning) {
-            // Retoma automaticamente se o usuário desistir do reset
             pomodoroService.start();
         }
     }
 
     private void handleSkip() {
         boolean wasRunning = pomodoroService.getTimerState() == TimerState.RUNNING;
-        if (wasRunning)
-            pomodoroService.pause();
+        if (wasRunning) pomodoroService.pause();
 
         boolean confirmed = showConfirmationDialog(
                 "Pular Etapa",
@@ -97,15 +85,24 @@ public class TimerController implements TimerChangeListener {
             updateUIState();
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
+            updateSessionPips(); // Atualiza os pips ao pular
         } else if (wasRunning) {
-            // Retoma automaticamente se o usuário desistir de pular
             pomodoroService.start();
         }
     }
 
-    /**
-     * Exibe um diálogo de confirmação estilizado e gerencia a suspensão do timer.
-     */
+    private void playFeedbackSound() {
+        try {
+            // Certifique-se de ter um arquivo curto em src/main/resources/sounds/start.wav
+            String path = getClass().getResource("/sounds/start.wav").toExternalForm();
+            AudioClip clip = new AudioClip(path);
+            clip.play();
+        } catch (Exception e) {
+            // Silencioso se o arquivo não existir, evitando crash
+            System.out.println("Aviso: Som de feedback não encontrado.");
+        }
+    }
+
     private boolean showConfirmationDialog(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(title);
@@ -116,7 +113,6 @@ public class TimerController implements TimerChangeListener {
         alert.getDialogPane().getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
         alert.getDialogPane().getStyleClass().add("my-dialog");
 
-        // Mudamos o ButtonData para que eles fiquem juntos no centro
         ButtonType btnYes = new ButtonType("Sim", ButtonBar.ButtonData.YES);
         ButtonType btnNo = new ButtonType("Não", ButtonBar.ButtonData.NO);
         alert.getButtonTypes().setAll(btnYes, btnNo);
@@ -143,6 +139,7 @@ public class TimerController implements TimerChangeListener {
             lblStatus.setText("SESSÃO CONCLUÍDA!");
             updateDisplay(0);
             arcProgress.setLength(0);
+            updateSessionPips(); // Atualiza os pips ao concluir sessão
         });
     }
 
@@ -156,11 +153,35 @@ public class TimerController implements TimerChangeListener {
         double totalSeconds = pomodoroService.getTotalSessionDuration();
         double percentage = (double) seconds / totalSeconds;
         double angle = percentage * 360;
-
         arcProgress.setLength(angle);
 
-        // Atualiza a cor do arco baseada no tipo de sessão
         String color = (pomodoroService.getCurrentSessionType() == SessionType.FOCUS) ? "#89b4fa" : "#a6e3a1";
         arcProgress.setStyle("-fx-stroke: " + color + ";");
+    }
+
+    /**
+     * Atualiza visualmente os Pips (indicadores de ciclo).
+     * Assume um ciclo de 4 sessões de foco antes da pausa longa.
+     */
+    public void updateSessionPips() {
+        if (hboxPips == null) return;
+
+        Platform.runLater(() -> {
+            hboxPips.getChildren().clear();
+            int currentSessionInCycle = pomodoroService.getSessionsInCycle(); // Você precisará expor isso no Service
+            
+            for (int i = 0; i < 4; i++) {
+                Circle pip = new Circle(6);
+                pip.getStyleClass().add("pip");
+
+                if (i < currentSessionInCycle) {
+                    pip.getStyleClass().add("pip-active"); // Sessões já concluídas
+                } else if (i == currentSessionInCycle && pomodoroService.getCurrentSessionType() == SessionType.FOCUS) {
+                    pip.getStyleClass().add("pip-current"); // Foco atual
+                }
+                
+                hboxPips.getChildren().add(pip);
+            }
+        });
     }
 }

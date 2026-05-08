@@ -92,4 +92,65 @@ class PomodoroServiceTest {
 
         assertEquals(600, service.getRemainingSeconds()); // 10min
     }
+
+    @Test
+    @DisplayName("Deve incrementar o ciclo de sessões visual (Pips) ao finalizar foco")
+    void deveIncrementarCicloAoFinalizarFoco() {
+        // Forçamos a conclusão de uma sessão de foco
+        // Como o handleSessionCompletion é private, testamos via skip() que também
+        // chama incrementCycle()
+        service.skip();
+
+        assertEquals(1, service.getSessionsInCycle(), "O ciclo deveria estar em 1 após o primeiro skip de foco");
+    }
+
+    @Test
+    @DisplayName("Deve resetar o ciclo visual após 4 sessões de foco")
+    void deveResetarCicloAposQuatroFocos() {
+        // Simula 4 conclusões de foco
+        for (int i = 0; i < 4; i++) {
+            service.skip(); // Foco -> Break
+            service.skip(); // Break -> Foco
+        }
+
+        // Após 4 focos, o contador deve ter voltado a 0 (reiniciando o ciclo dos pips)
+        assertEquals(0, service.getSessionsInCycle());
+    }
+
+    @Test
+    @DisplayName("Deve alternar para LONG_BREAK após o 4º pomodoro de foco")
+    void deveAlternarParaLongBreakAposQuartoFoco() {
+        // 1º, 2º e 3º focos concluídos
+        for (int i = 0; i < 3; i++) {
+            service.skip(); // Foco -> Break
+            service.skip(); // Break -> Foco
+        }
+
+        // Agora estamos no 4º Foco. Ao concluir (skip), ele deve ir para LONG_BREAK
+        service.skip();
+
+        assertEquals(SessionType.LONG_BREAK, service.getCurrentSessionType(),
+                "Deveria ser pausa longa após 4 ciclos de foco");
+    }
+
+    @Test
+    @DisplayName("Deve atualizar as durações quando o perfil for alterado")
+    void deveAtualizarDuracoesAoMudarPerfil() {
+        Profile novoPerfil = new Profile();
+        novoPerfil.setWorkDuration(45); // Novo tempo de 45 min
+
+        service.updateProfile(novoPerfil);
+
+        assertEquals(45 * 60, service.getRemainingSeconds(),
+                "O tempo restante deveria ter sido atualizado para 45 minutos");
+    }
+
+    @Test
+    @DisplayName("Deve resetar o ciclo de pips ao dar STOP")
+    void deveResetarPipsAoPararTimer() {
+        service.skip(); // Ciclo vai para 1
+        service.stop();
+
+        assertEquals(0, service.getSessionsInCycle(), "O STOP deve zerar o progresso do ciclo");
+    }
 }

@@ -173,3 +173,23 @@
 .my-dialog.dialog-pane .button:hover {
     -fx-background-color: #45475a !important;
 }
+
+.pip-container {
+    -fx-spacing: 10;
+    -fx-alignment: CENTER;
+    -fx-padding: 20 0 0 0;
+}
+
+.pip {
+    -fx-fill: #313244; /* Cor apagada (Surface0 do Catppuccin) */
+    -fx-stroke: #45475a;
+    -fx-stroke-width: 1;
+}
+
+.pip-active {
+    -fx-fill: #a6e3a1; /* Verde para foco concluído */
+}
+
+.pip-current {
+    -fx-fill: #89b4fa; /* Azul para a sessão atual */
+}

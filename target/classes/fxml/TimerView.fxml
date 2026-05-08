@@ -30,4 +30,7 @@
         <Button fx:id="btnReset" text="RESET" styleClass="action-button, reset-button" />
         <Button fx:id="btnSkip" text="SKIP" styleClass="action-button, skip-button" />
     </HBox>
+
+    <HBox fx:id="hboxPips" alignment="CENTER" spacing="12.0" styleClass="pip-container" />
+    
 </VBox>

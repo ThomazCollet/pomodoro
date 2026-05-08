@@ -19,10 +19,12 @@ public class ProfileService {
             "#FF5733", "#33FF57", "#3357FF", "#F333FF",
             "#FF33A1", "#33FFF6", "#F6FF33", "#A133FF"
     };
+    
 
     public ProfileService(ProfileRepository repository) {
         this.repository = repository;
     }
+
 
     /**
      * Inicializa o sistema de perfis.

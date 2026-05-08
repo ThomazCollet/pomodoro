@@ -12,7 +12,6 @@ import java.util.concurrent.*;
 
 /**
  * Service responsável pela orquestração do tempo e transição de estados.
- * Agora integrado com FocusSessionService para persistência de histórico.
  */
 public class PomodoroService {
 
@@ -22,6 +21,8 @@ public class PomodoroService {
     private ScheduledFuture<?> task;
     private final TimerChangeListener listener;
     private final FocusSessionService focusSessionService;
+
+    private int sessionsInCycle = 0; // Contador de 0 a 3 para os Pips
 
     private Profile currentProfile;
     private SessionType currentSessionType;
@@ -60,20 +61,16 @@ public class PomodoroService {
             throw new TimerStateException("O cronômetro já está em execução.");
         }
 
-        // Se estiver iniciando do zero (STOPPED), registra o início no banco
         if (timerState == TimerState.STOPPED) {
             focusSessionService.startSession(currentProfile.getId(), currentSessionType);
         }
 
         timerState = TimerState.RUNNING;
-        logger.info("Timer iniciado para {}: {} segundos restantes.", currentSessionType, remainingSeconds);
-
         task = executor.scheduleAtFixedRate(() -> {
             if (remainingSeconds <= 0) {
                 handleSessionCompletion();
                 return;
             }
-
             remainingSeconds--;
             listener.onTick(remainingSeconds);
         }, 0, 1, TimeUnit.SECONDS);
@@ -83,40 +80,69 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
 
-        // Finaliza com sucesso (completed = true)
+        // Se terminou um FOCO, incrementamos o ciclo para os Pips
+        if (currentSessionType == SessionType.FOCUS) {
+            incrementCycle();
+        }
+
         focusSessionService.finalizeCurrentSession(totalSessionDuration, true);
 
-        logger.info("Sessão de {} finalizada com sucesso.", currentSessionType);
-
-        SessionType nextType = (currentSessionType == SessionType.FOCUS)
-                ? SessionType.SHORT_BREAK
-                : SessionType.FOCUS;
+        // Lógica de próxima sessão (Se for o 4º foco, vai para Long Break)
+        SessionType nextType;
+        if (currentSessionType == SessionType.FOCUS) {
+            nextType = (sessionsInCycle == 0) ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
+        } else {
+            nextType = SessionType.FOCUS;
+        }
 
         listener.onFinished();
         prepareSession(nextType);
     }
 
-    public void pause() {
-        if (timerState != TimerState.RUNNING) {
-            throw new TimerStateException("Apenas um cronômetro em execução pode ser pausado.");
+    public void incrementCycle() {
+        sessionsInCycle++;
+        if (sessionsInCycle > 3) {
+            sessionsInCycle = 0;
+        }
+        logger.info("Ciclo incrementado: {}/4 sessões de foco concluídas.", sessionsInCycle == 0 ? 4 : sessionsInCycle);
+    }
+
+    public void skip() {
+        cancelTask();
+        timerState = TimerState.STOPPED;
+
+        SessionType nextType;
+
+        if (currentSessionType == SessionType.FOCUS) {
+            incrementCycle();
+            // Se após o incremento o ciclo resetou para 0, significa que completamos o 4º
+            // foco
+            nextType = (sessionsInCycle == 0) ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
+        } else {
+            nextType = SessionType.FOCUS;
         }
 
+        prepareSession(nextType);
+        listener.onTick(remainingSeconds);
+        logger.info("Sessão pulada. Próxima etapa: {}", nextType);
+    }
+
+    public void pause() {
+        if (timerState != TimerState.RUNNING)
+            return;
         cancelTask();
         timerState = TimerState.PAUSED;
-        logger.info("Timer pausado em {} segundos.", remainingSeconds);
     }
 
     public void stop() {
         if (timerState != TimerState.STOPPED) {
-            // Calcula quanto tempo foi percorrido antes de interromper
             int elapsed = totalSessionDuration - remainingSeconds;
             focusSessionService.finalizeCurrentSession(elapsed, false);
         }
-
         cancelTask();
         timerState = TimerState.STOPPED;
+        sessionsInCycle = 0; // Reset do ciclo visual
         prepareSession(SessionType.FOCUS);
-        logger.info("Timer resetado para o início do ciclo de Foco.");
     }
 
     private void cancelTask() {
@@ -125,26 +151,32 @@ public class PomodoroService {
         }
     }
 
-    public void skip() {
-        cancelTask();
-        timerState = TimerState.STOPPED;
-
-        // Define qual seria a próxima sessão
-        SessionType nextType = (currentSessionType == SessionType.FOCUS)
-                ? SessionType.SHORT_BREAK
-                : SessionType.FOCUS;
-
-        prepareSession(nextType);
-        listener.onTick(remainingSeconds); // Atualiza a UI com o novo tempo
-        logger.info("Sessão pulada. Próxima etapa: {}", nextType);
-    }
-
     public void shutdown() {
         executor.shutdown();
-        logger.info("Executor do Pomodoro finalizado.");
+    }
+
+    /**
+     * Atualiza o perfil do usuário e reajusta as configurações de tempo.
+     * Útil quando o usuário altera as preferências de duração.
+     */
+    public void updateProfile(Profile newProfile) {
+        if (newProfile == null)
+            return;
+
+        this.currentProfile = newProfile;
+
+        // Se o timer estiver parado, já prepara a próxima sessão com o novo tempo
+        if (timerState == TimerState.STOPPED) {
+            prepareSession(currentSessionType);
+        }
+
+        logger.info("Perfil atualizado no serviço. Novas durações aplicadas.");
     }
 
     // --- Getters ---
+    public int getSessionsInCycle() {
+        return sessionsInCycle;
+    }
 
     public int getRemainingSeconds() {
         return remainingSeconds;
@@ -160,12 +192,5 @@ public class PomodoroService {
 
     public int getTotalSessionDuration() {
         return totalSessionDuration;
-    }
-
-    public void updateProfile(Profile newProfile) {
-        this.currentProfile = newProfile;
-        if (timerState == TimerState.STOPPED) {
-            prepareSession(currentSessionType);
-        }
     }
 }
