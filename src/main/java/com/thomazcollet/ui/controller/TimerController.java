@@ -16,14 +16,19 @@ import javafx.scene.shape.Arc;
 import java.util.Optional;
 
 /**
- * Controller responsável por gerenciar a visualização do Timer e sincronizar a UI com o PomodoroService.
+ * Controller responsável por gerenciar a visualização do Timer e sincronizar a
+ * UI com o PomodoroService.
  */
 public class TimerController implements TimerChangeListener {
 
-    @FXML private Label lblTime;
-    @FXML private Label lblStatus;
-    @FXML private Arc arcProgress;
-    @FXML private Button btnStart, btnPause, btnReset, btnSkip;
+    @FXML
+    private Label lblTime;
+    @FXML
+    private Label lblStatus;
+    @FXML
+    private Arc arcProgress;
+    @FXML
+    private Button btnStart, btnPause, btnReset, btnSkip;
 
     private PomodoroService pomodoroService;
 
@@ -34,11 +39,16 @@ public class TimerController implements TimerChangeListener {
 
     @FXML
     public void initialize() {
-        // Verificações defensivas para evitar NullPointerException caso o FXML esteja desalinhado
-        if (btnStart != null) btnStart.setOnAction(e -> handleStart());
-        if (btnPause != null) btnPause.setOnAction(e -> pomodoroService.pause());
-        if (btnReset != null) btnReset.setOnAction(e -> handleReset());
-        if (btnSkip != null) btnSkip.setOnAction(e -> handleSkip());
+        // Verificações defensivas para evitar NullPointerException caso o FXML esteja
+        // desalinhado
+        if (btnStart != null)
+            btnStart.setOnAction(e -> handleStart());
+        if (btnPause != null)
+            btnPause.setOnAction(e -> pomodoroService.pause());
+        if (btnReset != null)
+            btnReset.setOnAction(e -> handleReset());
+        if (btnSkip != null)
+            btnSkip.setOnAction(e -> handleSkip());
     }
 
     private void handleStart() {
@@ -51,15 +61,16 @@ public class TimerController implements TimerChangeListener {
     }
 
     private void handleReset() {
-        if (pomodoroService.getTimerState() == TimerState.STOPPED) return;
+        if (pomodoroService.getTimerState() == TimerState.STOPPED)
+            return;
 
         boolean wasRunning = pomodoroService.getTimerState() == TimerState.RUNNING;
-        if (wasRunning) pomodoroService.pause();
+        if (wasRunning)
+            pomodoroService.pause();
 
         boolean confirmed = showConfirmationDialog(
                 "Reiniciar Cronômetro",
-                "Deseja realmente reiniciar a sessão atual? Todo o progresso não salvo será perdido."
-        );
+                "Deseja realmente reiniciar a sessão atual? Todo o progresso não salvo será perdido.");
 
         if (confirmed) {
             pomodoroService.stop();
@@ -74,12 +85,12 @@ public class TimerController implements TimerChangeListener {
 
     private void handleSkip() {
         boolean wasRunning = pomodoroService.getTimerState() == TimerState.RUNNING;
-        if (wasRunning) pomodoroService.pause();
+        if (wasRunning)
+            pomodoroService.pause();
 
         boolean confirmed = showConfirmationDialog(
                 "Pular Etapa",
-                "Deseja avançar para a próxima fase do ciclo?"
-        );
+                "Deseja avançar para a próxima fase do ciclo?");
 
         if (confirmed) {
             pomodoroService.skip();
@@ -100,14 +111,14 @@ public class TimerController implements TimerChangeListener {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
-        alert.setGraphic(null); // Remove o ícone padrão para um visual mais limpo
+        alert.setGraphic(null);
 
-        // Aplica o CSS customizado
         alert.getDialogPane().getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
         alert.getDialogPane().getStyleClass().add("my-dialog");
 
-        ButtonType btnYes = new ButtonType("Sim");
-        ButtonType btnNo = new ButtonType("Não", ButtonBar.ButtonData.CANCEL_CLOSE);
+        // Mudamos o ButtonData para que eles fiquem juntos no centro
+        ButtonType btnYes = new ButtonType("Sim", ButtonBar.ButtonData.YES);
+        ButtonType btnNo = new ButtonType("Não", ButtonBar.ButtonData.NO);
         alert.getButtonTypes().setAll(btnYes, btnNo);
 
         Optional<ButtonType> result = alert.showAndWait();

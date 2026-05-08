@@ -111,30 +111,65 @@
     -fx-cursor: hand;
 }
 
-/* --- Diálogos e Alertas --- */
-.dialog-pane {
+/* --- Diálogos e Alertas (Refinado) --- */
+.my-dialog.dialog-pane {
+    -fx-background-color: #1e1e2e; /* Background do conteúdo */
+}
+
+/* Garante que o cabeçalho e a área de botões também fiquem escuros */
+.my-dialog.dialog-pane > .expandable-content,
+.my-dialog.dialog-pane > .button-bar,
+.my-dialog.dialog-pane > .header-panel {
     -fx-background-color: #1e1e2e;
 }
 
-.dialog-pane .label {
-    -fx-text-fill: white;
-}
-
-.custom-alert {
-    -fx-background-color: #1e1e2e;
-}
-
-.custom-alert > .label.content {
-    -fx-text-fill: #cdd6f4;
+.my-dialog .label {
+    -fx-text-fill: #cdd6f4; /* Texto principal no tom da paleta */
     -fx-font-size: 14px;
 }
 
-.custom-alert .button {
+/* Estilização dos botões específicos do Alerta */
+.my-dialog .button {
     -fx-background-color: #313244;
-    -fx-text-fill: white;
+    -fx-text-fill: #cdd6f4;
     -fx-background-radius: 8;
+    -fx-padding: 8 20;
+    -fx-cursor: hand;
 }
 
-.custom-alert .button:hover {
+.my-dialog .button:hover {
     -fx-background-color: #45475a;
+    -fx-text-fill: white;
+}
+
+/* No seu TimerController, você pode adicionar classes via código ou usar estes seletores */
+.my-dialog .button:default {
+    -fx-base: #a6e3a1; /* Tom verde para o botão de confirmação (Sim) */
+    -fx-text-fill: #1e1e2e;
+}
+
+.my-dialog .button:cancel {
+    -fx-base: #f38ba8; /* Tom avermelhado para o cancelar (Não) */
+}
+
+/* --- Ajuste Fino de Alinhamento e Estilo --- */
+.my-dialog.dialog-pane .button-bar > .container {
+    -fx-alignment: CENTER; /* Centraliza os botões Sim e Não */
+    -fx-padding: 10;
+}
+
+.my-dialog.dialog-pane .button-bar {
+    -fx-background-color: #1e1e2e; /* Garante que a barra de botões não fique branca */
+}
+
+/* Força o estilo mesmo que o JavaFX tente usar o nativo */
+.my-dialog.dialog-pane .button {
+    -fx-background-color: #313244 !important;
+    -fx-text-fill: #cdd6f4 !important;
+    -fx-background-radius: 8 !important;
+    -fx-min-width: 80px;
+}
+
+.my-dialog.dialog-pane .button:hover {
+    -fx-background-color: #45475a !important;
 }
