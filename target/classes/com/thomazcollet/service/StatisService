@@ -1,0 +1,21 @@
+package com.thomazcollet.domain.service;
+
+import com.thomazcollet.domain.dto.FocusStatistics;
+import com.thomazcollet.domain.repository.FocusSessionRepository;
+import com.thomazcollet.domain.repository.ProfileRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class StatsService {
+    private static final Logger logger = LoggerFactory.getLogger(StatsService.class);
+    
+    private final FocusSessionRepository sessionRepository;
+    private final ProfileRepository profileRepository;
+
+    public StatsService(FocusSessionRepository sessionRepository, ProfileRepository profileRepository) {
+        this.sessionRepository = sessionRepository;
+        this.profileRepository = profileRepository;
+    }
+
+    // Aqui entraremos com as partes 1, 2, 3 e 4
+}

@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SQLiteFocusSessionRepository implements FocusSessionRepository {
 
@@ -85,6 +87,56 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         return sessions;
     }
 
+    @Override
+    public long sumDurationSecondsByProfileIdAndPeriod(Long profileId, LocalDateTime start, LocalDateTime end) {
+        String sql = """
+                SELECT SUM(duration_seconds) FROM focus_sessions
+                WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1
+                AND start_timestamp BETWEEN ? AND ?
+                """;
+        try (Connection conn = DatabaseInitializer.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, profileId);
+            pstmt.setString(2, start.toString());
+            pstmt.setString(3, end.toString());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next())
+                    return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao somar duração por período", e);
+        }
+        return 0;
+    }
+
+    @Override
+    public Map<String, Integer> getDailyFocusSummary(Long profileId, int daysToLookBack) {
+        Map<String, Integer> summary = new HashMap<>();
+        String sql = """
+                SELECT date(start_timestamp) as day, SUM(duration_seconds) as total
+                FROM focus_sessions
+                WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1
+                GROUP BY day
+                ORDER BY day DESC LIMIT ?
+                """;
+        
+        try (Connection conn = DatabaseInitializer.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setLong(1, profileId);
+            pstmt.setInt(2, daysToLookBack);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    summary.put(rs.getString("day"), rs.getInt("total"));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar resumo diário de foco", e);
+        }
+        return summary;
+    }
+
     private FocusSession mapResultSetToFocusSession(ResultSet rs) throws SQLException {
         return new FocusSession(
                 rs.getLong("id"),
@@ -93,7 +145,6 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 LocalDateTime.parse(rs.getString("start_timestamp")),
                 rs.getString("end_timestamp") != null ? LocalDateTime.parse(rs.getString("end_timestamp")) : null,
                 rs.getInt("duration_seconds"),
-                rs.getBoolean("completed")
-        );
+                rs.getBoolean("completed"));
     }
 }

@@ -1,11 +1,17 @@
 /* POMODORO FOCUS - Catppuccin Mocha Theme
-   Organizado por Thomaz Collet
+   Organizado por Thomaz Collet 
 */
 
 /* --- Configurações Globais --- */
 .root {
     -fx-font-family: "Segoe UI", Helvetica, Arial, sans-serif;
     -fx-background-color: #1e1e2e;
+}
+
+/* Garante que ScrollPanes não herdem fundo branco do sistema */
+.scroll-pane {
+    -fx-background: #1e1e2e;
+    -fx-background-color: transparent;
 }
 
 .sidebar {
@@ -33,7 +39,6 @@
     -fx-padding: 12 20;
     -fx-background-radius: 12;
     -fx-cursor: hand;
-    -fx-transition: 0.2s;
 }
 
 .menu-button:hover {
@@ -51,14 +56,9 @@
     -fx-font-weight: bold;
 }
 
-/* --- Avatar e Interação --- */
-.avatar-container {
-    -fx-cursor: hand;
-}
-
-.avatar-container:hover {
-    -fx-opacity: 0.85;
-}
+/* --- Avatar e Popover --- */
+.avatar-container { -fx-cursor: hand; }
+.avatar-container:hover { -fx-opacity: 0.85; }
 
 .avatar-text {
     -fx-text-fill: white;
@@ -67,18 +67,13 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0, 0, 1);
 }
 
-/* --- O NOVO POPUP (Efeito de Elevação) --- */
 .profile-popover {
-    /* Cor levemente mais clara que o fundo para dar contraste */
     -fx-background-color: #24273a;
     -fx-background-radius: 20;
     -fx-border-color: rgba(137, 180, 250, 0.2);
-    /* Borda azul bem sutil */
     -fx-border-radius: 20;
     -fx-border-width: 1;
     -fx-padding: 25;
-
-    /* Sombra de Profundidade: Suave e espalhada */
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.6), 30, 0, 0, 15);
 }
 
@@ -88,30 +83,79 @@
     -fx-font-weight: bold;
 }
 
-.stats-grid {
-    -fx-hgap: 25;
-    -fx-vgap: 15;
-    -fx-padding: 15 0;
+.sync-button {
+    -fx-background-color: #313244;
+    -fx-text-fill: #cdd6f4;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
 }
 
-.stat-label {
-    -fx-text-fill: #a6adc8;
-    -fx-font-size: 11px;
-    -fx-text-transform: uppercase;
+.sync-button:hover {
+    -fx-background-color: #45475a;
+    -fx-text-fill: #f5e0dc;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 5, 0, 0, 2);
 }
 
-.stat-value {
-    -fx-text-fill: #89b4fa;
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
+/* --- Dashboard de Estatísticas --- */
+.stats-container {
+    -fx-background-color: #1e1e2e;
 }
 
-/* --- Timer e Botões --- */
-.timer-text {
-    -fx-font-size: 85px;
-    -fx-font-weight: bold;
-    -fx-text-fill: white;
+.stats-card {
+    -fx-background-color: #313244;
+    -fx-padding: 20;
+    -fx-background-radius: 15;
+    -fx-spacing: 5;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 5);
 }
+
+.stat-card-title { -fx-text-fill: #a6adc8; -fx-font-size: 12px; -fx-font-weight: bold; }
+.stat-card-value { -fx-text-fill: white; -fx-font-size: 28px; -fx-font-weight: bold; }
+.stat-card-record { -fx-text-fill: #9399b2; -fx-font-size: 11px; -fx-font-style: italic; }
+
+.card-accent-peach { -fx-border-color: #fab387; -fx-border-width: 0 0 0 4; -fx-border-radius: 15; }
+.card-accent-blue  { -fx-border-color: #89b4fa; -fx-border-width: 0 0 0 4; -fx-border-radius: 15; }
+.card-accent-mauve { -fx-border-color: #cba6f7; -fx-border-width: 0 0 0 4; -fx-border-radius: 15; }
+
+/* Heatmap */
+.heatmap-grid { -fx-hgap: 3; -fx-vgap: 3; }
+.heatmap-scroll { -fx-background-color: transparent; }
+
+/* Seletores de Período */
+.toggle-group-container {
+    -fx-background-color: #313244;
+    -fx-background-radius: 10;
+    -fx-padding: 2;
+}
+.toggle-group-container .toggle-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cdd6f4;
+    -fx-cursor: hand;
+    -fx-padding: 5 15;
+}
+.toggle-group-container .toggle-button:selected {
+    -fx-background-color: #89b4fa;
+    -fx-text-fill: #11111b;
+    -fx-background-radius: 8;
+}
+
+/* --- Gráficos e Componentes --- */
+.chart-container {
+    -fx-background-color: #181825;
+    -fx-padding: 20;
+    -fx-border-color: #313244;
+    -fx-border-radius: 15;
+    -fx-border-width: 1;
+}
+
+.section-title { -fx-text-fill: #bac2de; -fx-font-weight: bold; -fx-letter-spacing: 1px; }
+
+.chart-bar { -fx-bar-fill: #89b4fa; }
+.axis { -fx-tick-label-fill: #a6adc8; }
+.axis-label { -fx-text-fill: #cdd6f4; }
+
+/* --- Timer e Pips --- */
+.timer-text { -fx-font-size: 85px; -fx-font-weight: bold; -fx-text-fill: white; }
 
 .action-button {
     -fx-pref-width: 120;
@@ -121,82 +165,18 @@
     -fx-cursor: hand;
 }
 
-.action-button:hover {
-    -fx-opacity: 0.9;
-    /* Sombra ao passar o mouse para dar feedback de clique */
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 8, 0, 0, 4);
-}
+.start-button { -fx-background-color: #a6e3a1; -fx-text-fill: #1e1e2e; }
+.pause-button { -fx-background-color: #f9e2af; -fx-text-fill: #1e1e2e; }
+.reset-button { -fx-background-color: #6c7086; -fx-text-fill: #dce0e8; }
+.skip-button  { -fx-background-color: #cba6f7; -fx-text-fill: #1e1e2e; }
 
-.start-button {
-    -fx-background-color: #a6e3a1;
-    -fx-text-fill: #1e1e2e;
-}
+.pip { -fx-fill: #313244; -fx-stroke: #45475a; }
+.pip-active { -fx-fill: #a6e3a1; }
+.pip-current { -fx-fill: #89b4fa; }
 
-.pause-button {
-    -fx-background-color: #f9e2af;
-    -fx-text-fill: #1e1e2e;
-}
-
-.reset-button {
-    -fx-background-color: #6c7086;
-    -fx-text-fill: #dce0e8;
-}
-
-.skip-button {
-    -fx-background-color: #cba6f7;
-    -fx-text-fill: #1e1e2e;
-}
-
-/* --- Diálogos (Alertas) --- */
-.my-dialog.dialog-pane {
-    -fx-background-color: #1e1e2e;
-}
-
-.my-dialog.dialog-pane>.header-panel,
-.my-dialog.dialog-pane>.button-bar {
-    -fx-background-color: #1e1e2e;
-}
-
-.my-dialog .label {
-    -fx-text-fill: #cdd6f4;
-}
-
-.my-dialog .button {
-    -fx-background-color: #313244;
-    -fx-text-fill: #cdd6f4;
-    -fx-background-radius: 10;
-    -fx-cursor: hand;
-}
-
-.my-dialog .button:hover {
-    -fx-background-color: #45475a;
-}
-
-/* --- Pips (Indicadores de Sessão) --- */
-.pip {
-    -fx-fill: #313244;
-    -fx-stroke: #45475a;
-    -fx-stroke-width: 1;
-}
-
-.pip-active {
-    -fx-fill: #a6e3a1;
-}
-
-.pip-current {
-    -fx-fill: #89b4fa;
-}
-
-.sync-button {
-    -fx-background-color: #313244;
-    -fx-text-fill: #cdd6f4;
-    -fx-background-radius: 10;
-    -fx-padding: 10;
-}
-
-/* Efeito de Hover para o botão de sincronização */
-.sync-button:hover {
-    -fx-background-color: #45475a; /* Cor Surface1 do Catppuccin */
-    -fx-text-fill: #f5e0dc;        /* Cor Rosewater para um destaque sutil */
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 5, 0, 0, 2);
-}
+/* --- Diálogos --- */
+.my-dialog.dialog-pane { -fx-background-color: #1e1e2e; }
+.my-dialog.dialog-pane > .header-panel,
+.my-dialog.dialog-pane > .button-bar { -fx-background-color: #1e1e2e; }
+.my-dialog .label { -fx-text-fill: #cdd6f4; }
+.my-dialog .button { -fx-background-color: #313244; -fx-text-fill: #cdd6f4; -fx-cursor: hand; }

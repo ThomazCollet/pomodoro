@@ -56,7 +56,8 @@ public class MainController {
         setupAvatar();
 
         btnTimer.setOnAction(e -> loadTimerView());
-        btnStats.setOnAction(e -> System.out.println("Estatísticas em breve..."));
+        // MUDANÇA AQUI: Chamar o método de carregamento real
+        btnStats.setOnAction(e -> loadStatsView());
 
         avatarContainer.setOnMouseClicked(this::handleAvatarClick);
 
@@ -201,6 +202,20 @@ public class MainController {
             timerController.setPomodoroService(pomodoroService);
             contentArea.getChildren().setAll(timerView);
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadStatsView() {
+        try {
+            // Certifique-se que o nome do arquivo FXML está correto (StatsView.fxml)
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
+            Parent statsView = loader.load();
+
+            // Substitui o Timer pelas Estatísticas
+            contentArea.getChildren().setAll(statsView);
+        } catch (IOException e) {
+            System.err.println("Erro ao carregar a tela de estatísticas: " + e.getMessage());
             e.printStackTrace();
         }
     }

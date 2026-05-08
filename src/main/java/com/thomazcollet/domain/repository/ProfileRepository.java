@@ -9,4 +9,7 @@ public interface ProfileRepository {
     Optional<Profile> findById(Long id);
     List<Profile> findAll();
     void delete(Long id);
+    
+    // ADICIONE ESTA LINHA:
+    void updateStats(Long profileId, int streak, int maxSeconds, int totalSessions);
 }

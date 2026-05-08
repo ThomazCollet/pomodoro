@@ -33,6 +33,9 @@ public class DatabaseInitializer {
                     work_duration INTEGER NOT NULL DEFAULT 25,
                     short_break INTEGER NOT NULL DEFAULT 5,
                     long_break INTEGER NOT NULL DEFAULT 15,
+                    max_streak INTEGER DEFAULT 0,
+                    max_focus_day_seconds INTEGER DEFAULT 0,
+                    total_focus_sessions INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT (datetime('now', 'localtime'))
                 );
 
@@ -47,7 +50,6 @@ public class DatabaseInitializer {
                     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 );
                 """;
-
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
 
