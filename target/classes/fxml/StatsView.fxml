@@ -22,13 +22,13 @@
             <VBox styleClass="stats-card, card-accent-peach" HBox.hgrow="ALWAYS">
                 <Label styleClass="stat-card-title" text="STREAK ATUAL" />
                 <Label fx:id="lblCurrentStreak" styleClass="stat-card-value" text="🔥 12 dias" />
-                <Label styleClass="stat-card-record" text="Recorde: 24 dias" />
+                <Label fx:id="lblMaxStreak" styleClass="stat-card-record" text="Recorde: 24 dias" />
             </VBox>
 
             <VBox styleClass="stats-card, card-accent-blue" HBox.hgrow="ALWAYS">
                 <Label styleClass="stat-card-title" text="FOCO HOJE" />
                 <Label fx:id="lblFocusToday" styleClass="stat-card-value" text="04h 20m" />
-                <Label styleClass="stat-card-record" text="Recorde: 08h 15m" />
+                <Label fx:id="lblRecordToday" styleClass="stat-card-record" text="Recorde: 08h 15m" />
             </VBox>
 
             <VBox styleClass="stats-card, card-accent-mauve" HBox.hgrow="ALWAYS">
@@ -40,12 +40,20 @@
 
         <VBox spacing="10.0" styleClass="chart-container">
             <Label styleClass="section-title" text="ATIVIDADE ANUAL (CONTRIBUIÇÕES DE FOCO)" />
-            <ScrollPane fitToHeight="true" minHeight="150.0" styleClass="heatmap-scroll" vbarPolicy="NEVER">
-                <GridPane fx:id="heatmapGrid" hgap="3.0" vgap="3.0" styleClass="heatmap-grid">
-                    <padding>
-                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                    </padding>
-                </GridPane>
+            
+            <ScrollPane fx:id="heatmapScrollPane" 
+                        fitToHeight="true" 
+                        minHeight="150.0" 
+                        styleClass="heatmap-scroll" 
+                        vbarPolicy="NEVER" 
+                        pannable="true">
+                <content>
+                    <GridPane fx:id="heatmapGrid" hgap="3.0" vgap="3.0" styleClass="heatmap-grid">
+                        <padding>
+                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                        </padding>
+                    </GridPane>
+                </content>
             </ScrollPane>
         </VBox>
 

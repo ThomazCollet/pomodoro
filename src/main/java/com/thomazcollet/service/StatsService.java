@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -47,7 +48,7 @@ public class StatsService {
                     .with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                     .atStartOfDay();
 
-            // 1. Cálculos de Tempo (Executados via Repositório)
+            // 1. Cálculos de Tempo (Cards)
             long secondsToday = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(profile.getId(), startOfDay,
                     endOfDay);
             long secondsThisWeek = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(profile.getId(),
@@ -56,18 +57,23 @@ public class StatsService {
             // 2. Cálculo de Streak Atual
             int currentStreak = calculateCurrentStreak(profile.getId());
 
-            // 3. Verificação e Sincronização de Recordes
+            // 3. Verificação de Recordes
             checkAndUpdateRecords(profile, (int) secondsToday, currentStreak);
 
-            // 4. Mapeamento para DTO
+            // --- NOVO: 4. Dados para o Heatmap (Último ano) ---
+            LocalDateTime oneYearAgo = now.minusYears(1).with(LocalTime.MIN);
+            Map<LocalDate, Long> heatmapData = sessionRepository.getDailyFocusTime(profile.getId(), oneYearAgo);
+
+            // 5. Mapeamento para DTO
             return new FocusStatistics(
                     currentStreak,
                     profile.getMaxStreak(),
                     formatDuration(secondsToday),
                     "Recorde: " + formatDuration(profile.getMaxFocusDaySeconds()),
                     formatDuration(secondsThisWeek),
-                    Collections.emptyMap(),
-                    Collections.emptyMap());
+                    heatmapData, // Map<LocalDate, Long> para annualHeatmap
+                    Collections.emptyMap() // Map<String, Double> para weeklyDistribution
+            );
 
         } catch (Exception e) {
             logger.error("Falha crítica ao computar estatísticas para o perfil ID: {}", profile.getId(), e);

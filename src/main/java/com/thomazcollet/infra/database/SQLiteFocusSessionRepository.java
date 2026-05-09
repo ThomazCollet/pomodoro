@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,7 +26,7 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setLong(1, session.getProfileId());
             pstmt.setString(2, session.getType().name());
@@ -53,7 +54,7 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         String sql = "SELECT * FROM focus_sessions WHERE profile_id = ? ORDER BY start_timestamp DESC";
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setLong(1, profileId);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -73,7 +74,7 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         String sql = "SELECT * FROM focus_sessions ORDER BY start_timestamp DESC LIMIT ?";
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, limit);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -95,7 +96,7 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 AND start_timestamp BETWEEN ? AND ?
                 """;
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, profileId);
             pstmt.setString(2, start.toString());
             pstmt.setString(3, end.toString());
@@ -119,13 +120,13 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 GROUP BY day
                 ORDER BY day DESC LIMIT ?
                 """;
-        
+
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setLong(1, profileId);
             pstmt.setInt(2, daysToLookBack);
-            
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     summary.put(rs.getString("day"), rs.getInt("total"));
@@ -146,5 +147,37 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 rs.getString("end_timestamp") != null ? LocalDateTime.parse(rs.getString("end_timestamp")) : null,
                 rs.getInt("duration_seconds"),
                 rs.getBoolean("completed"));
+    }
+
+    @Override
+    public Map<LocalDate, Long> getDailyFocusTime(Long profileId, LocalDateTime since) {
+        Map<LocalDate, Long> summary = new HashMap<>();
+        // No SQLite, usamos a função date() para agrupar apenas pelo dia (YYYY-MM-DD)
+        String sql = """
+                SELECT date(start_timestamp) as day, SUM(duration_seconds) as total
+                FROM focus_sessions
+                WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1
+                AND start_timestamp >= ?
+                GROUP BY day
+                ORDER BY day ASC
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            pstmt.setString(2, since.toString());
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // Convertemos a String do SQLite (YYYY-MM-DD) para LocalDate do Java
+                    LocalDate date = LocalDate.parse(rs.getString("day"));
+                    summary.put(date, rs.getLong("total"));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar dados do Heatmap para o perfil ID: {}", profileId, e);
+        }
+        return summary;
     }
 }
