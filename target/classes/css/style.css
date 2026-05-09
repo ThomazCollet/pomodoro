@@ -1,5 +1,5 @@
 /* POMODORO FOCUS - Catppuccin Mocha Theme
-   Organizado por Thomaz Collet 
+    Organizado por Thomaz Collet 
 */
 
 /* --- Configurações Globais --- */
@@ -80,6 +80,17 @@
 .popover-name {
     -fx-text-fill: #cdd6f4;
     -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+/* CORREÇÃO: Textos que estavam "apagados" no popup */
+.stat-label {
+    -fx-text-fill: #a6adc8;
+    -fx-font-size: 12px;
+}
+
+.stat-value {
+    -fx-text-fill: #f5e0dc;
     -fx-font-weight: bold;
 }
 
@@ -165,10 +176,18 @@
     -fx-cursor: hand;
 }
 
+/* CORREÇÃO: Efeitos de Hover restaurados nos botões do Timer */
 .start-button { -fx-background-color: #a6e3a1; -fx-text-fill: #1e1e2e; }
+.start-button:hover { -fx-background-color: #b7efb2; }
+
 .pause-button { -fx-background-color: #f9e2af; -fx-text-fill: #1e1e2e; }
+.pause-button:hover { -fx-background-color: #faeab1; }
+
 .reset-button { -fx-background-color: #6c7086; -fx-text-fill: #dce0e8; }
+.reset-button:hover { -fx-background-color: #7f849c; }
+
 .skip-button  { -fx-background-color: #cba6f7; -fx-text-fill: #1e1e2e; }
+.skip-button:hover { -fx-background-color: #d8b9ff; }
 
 .pip { -fx-fill: #313244; -fx-stroke: #45475a; }
 .pip-active { -fx-fill: #a6e3a1; }

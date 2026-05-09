@@ -1,12 +1,9 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Profile;
-import com.thomazcollet.service.StatsService;
 import com.thomazcollet.infra.database.SQLiteFocusSessionRepository;
 import com.thomazcollet.infra.database.SQLiteProfileRepository;
-import com.thomazcollet.service.FocusSessionService;
-import com.thomazcollet.service.PomodoroService;
-import com.thomazcollet.service.ProfileService;
+import com.thomazcollet.service.*;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
 import javafx.animation.TranslateTransition;
@@ -28,7 +25,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * Controller principal que gerencia a navegação e o ciclo de vida das views.
+ * Implementa cache de views para preservar o estado do Timer durante a navegação.
+ */
 public class MainController {
 
     private static final Logger logger = LoggerFactory.getLogger(MainController.class);
@@ -37,7 +40,6 @@ public class MainController {
     @FXML private StackPane avatarContainer;
     @FXML private Button btnTimer;
     @FXML private Button btnStats;
-    @FXML private Button btnSettings;
     @FXML private Circle avatarCircle;
     @FXML private Label initialLabel;
 
@@ -46,6 +48,10 @@ public class MainController {
     private FocusSessionService focusSessionService;
     private ProfileService profileService;
     private StatsService statsService;
+
+    // Cache de Views e Controllers
+    private final Map<String, Parent> viewCache = new HashMap<>();
+    private TimerController timerController;
 
     private Popup profilePopup;
     private long lastPopupCloseTime = 0;
@@ -56,7 +62,7 @@ public class MainController {
         setupAvatar();
         setupNavigation();
 
-        // Carregamento inicial (Dashboard padrão)
+        // Carregamento inicial
         loadTimerView();
     }
 
@@ -69,7 +75,6 @@ public class MainController {
             this.profileService = new ProfileService(profileRepository);
             this.statsService = new StatsService(sessionRepository, profileRepository);
 
-            // Garante que o perfil padrão exista antes de qualquer operação
             profileService.ensureProfileExists();
             logger.info("Serviços de infraestrutura inicializados com sucesso.");
         } catch (Exception e) {
@@ -90,21 +95,30 @@ public class MainController {
         initialLabel.setText(profileService.getProfileInitial());
     }
 
-    // --- CARREGAMENTO DE VISÕES (VIEWS) ---
+    // --- GERENCIAMENTO DE TELAS (CACHE E NAVEGAÇÃO) ---
 
     private void loadTimerView() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TimerView.fxml"));
-            Parent timerView = loader.load();
-            TimerController timerController = loader.getController();
-
-            if (pomodoroService == null) {
-                Profile activeProfile = profileService.getActiveProfile();
-                this.pomodoroService = new PomodoroService(activeProfile, timerController, focusSessionService);
+            if (!viewCache.containsKey("timer")) {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TimerView.fxml"));
+                Parent root = loader.load();
+                
+                this.timerController = loader.getController();
+                
+                // Inicializa o PomodoroService apenas uma vez com a primeira instância do controller
+                if (pomodoroService == null) {
+                    Profile activeProfile = profileService.getActiveProfile();
+                    this.pomodoroService = new PomodoroService(activeProfile, timerController, focusSessionService);
+                }
+                
+                timerController.setPomodoroService(pomodoroService);
+                viewCache.put("timer", root);
             }
-
-            timerController.setPomodoroService(pomodoroService);
-            updateContentArea(timerView);
+            
+            updateContentArea(viewCache.get("timer"));
+            btnTimer.getStyleClass().add("nav-button-active");
+            btnStats.getStyleClass().remove("nav-button-active");
+            
         } catch (IOException e) {
             logger.error("Erro ao carregar TimerView: ", e);
         }
@@ -112,14 +126,18 @@ public class MainController {
 
     private void loadStatsView() {
         try {
+            // As estatísticas são recarregadas para garantir dados atualizados, 
+            // mas você pode optar por cachear o Parent se a UI for pesada.
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
             Parent statsView = loader.load();
 
-            // Injeção de dependências no StatsController
-            StatsController statsController = loader.getController();
-            statsController.initData(statsService, profileService.getActiveProfile());
+            StatsController controller = loader.getController();
+            controller.initData(statsService, profileService.getActiveProfile());
 
             updateContentArea(statsView);
+            btnStats.getStyleClass().add("nav-button-active");
+            btnTimer.getStyleClass().remove("nav-button-active");
+            
         } catch (IOException e) {
             logger.error("Erro ao carregar StatsView: ", e);
         }
@@ -180,11 +198,11 @@ public class MainController {
         grid.getStyleClass().add("stats-grid");
         grid.setAlignment(Pos.CENTER);
         
-        // Aqui você pode futuramente usar o statsService para preencher estes valores
-        addStat(grid, "Hoje", "00:00h", 0, 0);
-        addStat(grid, "Total", "00:00h", 0, 1);
-        addStat(grid, "Streak", "🔥 " + profileService.getActiveProfile().getMaxStreak() + "d", 1, 0);
-        addStat(grid, "Nível", "⭐ Jr.", 1, 1);
+        Profile profile = profileService.getActiveProfile();
+        addStat(grid, "Streak", "🔥 " + profile.getMaxStreak() + "d", 0, 0);
+        addStat(grid, "Recorde", formatTime(profile.getMaxFocusDaySeconds()), 0, 1);
+        addStat(grid, "Nível", "⭐ Jr.", 1, 0);
+        addStat(grid, "Foco Total", profile.getTotalFocusSessions() + " ses.", 1, 1);
 
         Button btnSync = new Button("Sincronizar Dados");
         btnSync.getStyleClass().add("sync-button");
@@ -207,6 +225,12 @@ public class MainController {
         lblVal.getStyleClass().add("stat-value");
         box.getChildren().addAll(lblTitle, lblVal);
         grid.add(box, col, row);
+    }
+
+    private String formatTime(int totalSeconds) {
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        return String.format("%02dh %02dm", hours, minutes);
     }
 
     private void playEntranceAnimation(VBox node) {
