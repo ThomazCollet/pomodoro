@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.AppTest" time="0.072" tests="1" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.1" name="com.thomazcollet.service.StatsServiceTest" time="0.043" tests="2" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -58,5 +58,9 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="shouldAnswerWithTrue" classname="com.thomazcollet.AppTest" time="0.033"/>
+  <testcase name="shouldCalculateStatisticsAndFormatDurations" classname="com.thomazcollet.service.StatsServiceTest" time="0.018"/>
+  <testcase name="shouldUpdateMaxStreakWhenCurrentIsHigher" classname="com.thomazcollet.service.StatsServiceTest" time="0.021">
+    <system-out><![CDATA[22:13:33.050 [main] INFO com.thomazcollet.service.StatsService -- Recordes atualizados para o perfil Thomaz: Streak=8 FocoDiário=7200s
+]]></system-out>
+  </testcase>
 </testsuite>

@@ -1,6 +1,7 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.service.StatsService;
 import com.thomazcollet.infra.database.SQLiteFocusSessionRepository;
 import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.service.FocusSessionService;
@@ -23,29 +24,28 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.stage.Popup;
 import javafx.util.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class MainController {
 
-    @FXML
-    private StackPane contentArea;
-    @FXML
-    private StackPane avatarContainer;
-    @FXML
-    private Button btnTimer;
-    @FXML
-    private Button btnStats;
-    @FXML
-    private Button btnSettings;
-    @FXML
-    private Circle avatarCircle;
-    @FXML
-    private Label initialLabel;
+    private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
+    @FXML private StackPane contentArea;
+    @FXML private StackPane avatarContainer;
+    @FXML private Button btnTimer;
+    @FXML private Button btnStats;
+    @FXML private Button btnSettings;
+    @FXML private Circle avatarCircle;
+    @FXML private Label initialLabel;
+
+    // Services
     private PomodoroService pomodoroService;
     private FocusSessionService focusSessionService;
     private ProfileService profileService;
+    private StatsService statsService;
 
     private Popup profilePopup;
     private long lastPopupCloseTime = 0;
@@ -54,30 +54,82 @@ public class MainController {
     public void initialize() {
         initServices();
         setupAvatar();
+        setupNavigation();
 
-        btnTimer.setOnAction(e -> loadTimerView());
-        // MUDANÇA AQUI: Chamar o método de carregamento real
-        btnStats.setOnAction(e -> loadStatsView());
-
-        avatarContainer.setOnMouseClicked(this::handleAvatarClick);
-
+        // Carregamento inicial (Dashboard padrão)
         loadTimerView();
     }
 
     private void initServices() {
-        var sessionRepository = new SQLiteFocusSessionRepository();
-        this.focusSessionService = new FocusSessionService(sessionRepository);
-        var profileRepository = new SQLiteProfileRepository();
-        this.profileService = new ProfileService(profileRepository);
-        profileService.ensureProfileExists();
+        try {
+            var sessionRepository = new SQLiteFocusSessionRepository();
+            var profileRepository = new SQLiteProfileRepository();
+
+            this.focusSessionService = new FocusSessionService(sessionRepository);
+            this.profileService = new ProfileService(profileRepository);
+            this.statsService = new StatsService(sessionRepository, profileRepository);
+
+            // Garante que o perfil padrão exista antes de qualquer operação
+            profileService.ensureProfileExists();
+            logger.info("Serviços de infraestrutura inicializados com sucesso.");
+        } catch (Exception e) {
+            logger.error("Erro crítico ao inicializar serviços core: ", e);
+        }
+    }
+
+    private void setupNavigation() {
+        btnTimer.setOnAction(e -> loadTimerView());
+        btnStats.setOnAction(e -> loadStatsView());
+        avatarContainer.setOnMouseClicked(this::handleAvatarClick);
+        avatarContainer.setCursor(javafx.scene.Cursor.HAND);
     }
 
     private void setupAvatar() {
         String hexColor = profileService.getAvatarColor();
         avatarCircle.setFill(Paint.valueOf(hexColor));
         initialLabel.setText(profileService.getProfileInitial());
-        avatarContainer.setCursor(javafx.scene.Cursor.HAND);
     }
+
+    // --- CARREGAMENTO DE VISÕES (VIEWS) ---
+
+    private void loadTimerView() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TimerView.fxml"));
+            Parent timerView = loader.load();
+            TimerController timerController = loader.getController();
+
+            if (pomodoroService == null) {
+                Profile activeProfile = profileService.getActiveProfile();
+                this.pomodoroService = new PomodoroService(activeProfile, timerController, focusSessionService);
+            }
+
+            timerController.setPomodoroService(pomodoroService);
+            updateContentArea(timerView);
+        } catch (IOException e) {
+            logger.error("Erro ao carregar TimerView: ", e);
+        }
+    }
+
+    private void loadStatsView() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
+            Parent statsView = loader.load();
+
+            // Injeção de dependências no StatsController
+            StatsController statsController = loader.getController();
+            statsController.initData(statsService, profileService.getActiveProfile());
+
+            updateContentArea(statsView);
+        } catch (IOException e) {
+            logger.error("Erro ao carregar StatsView: ", e);
+        }
+    }
+
+    private void updateContentArea(Parent view) {
+        contentArea.getChildren().setAll(view);
+    }
+
+    // --- LÓGICA DO POPOVER DE PERFIL ---
 
     private void handleAvatarClick(MouseEvent event) {
         if (profilePopup != null && profilePopup.isShowing()) {
@@ -85,9 +137,7 @@ public class MainController {
             return;
         }
 
-        if (System.currentTimeMillis() - lastPopupCloseTime < 150)
-            return;
-
+        if (System.currentTimeMillis() - lastPopupCloseTime < 150) return;
         showProfilePopover();
     }
 
@@ -99,7 +149,6 @@ public class MainController {
         VBox root = createPopoverContent();
         profilePopup.getContent().add(root);
 
-        // Posicionamento
         Bounds bounds = avatarContainer.localToScreen(avatarContainer.getBoundsInLocal());
         profilePopup.show(avatarContainer.getScene().getWindow(),
                 bounds.getMinX() + bounds.getWidth() + 10,
@@ -115,57 +164,38 @@ public class MainController {
         root.setAlignment(Pos.CENTER);
         root.setOpacity(0);
 
-        // 1. Header (Avatar Grande)
+        // Header Avatar
         StackPane headerAvatar = new StackPane();
         Circle bigCircle = new Circle(40, avatarCircle.getFill());
         Label bigInitial = new Label(profileService.getProfileInitial());
         bigInitial.setStyle("-fx-font-size: 26px; -fx-text-fill: white; -fx-font-weight: bold;");
         headerAvatar.getChildren().addAll(bigCircle, bigInitial);
 
-        // 2. Info do Perfil
+        // Info
         Label lblName = new Label(profileService.getActiveProfile().getUsername());
         lblName.getStyleClass().add("popover-name");
 
-        // 3. Grid de Stats
+        // Stats Grid
         GridPane grid = new GridPane();
         grid.getStyleClass().add("stats-grid");
         grid.setAlignment(Pos.CENTER);
+        
+        // Aqui você pode futuramente usar o statsService para preencher estes valores
         addStat(grid, "Hoje", "00:00h", 0, 0);
         addStat(grid, "Total", "00:00h", 0, 1);
-        addStat(grid, "Streak", "🔥 0 dias", 1, 0);
-        addStat(grid, "Conquistas", "🏆 0/0", 1, 1);
+        addStat(grid, "Streak", "🔥 " + profileService.getActiveProfile().getMaxStreak() + "d", 1, 0);
+        addStat(grid, "Nível", "⭐ Jr.", 1, 1);
 
-        /// 4. Botão Sync
         Button btnSync = new Button("Sincronizar Dados");
         btnSync.getStyleClass().add("sync-button");
         btnSync.setMaxWidth(Double.MAX_VALUE);
-        btnSync.setCursor(javafx.scene.Cursor.HAND); // <--- ADICIONE ESTA LINHA (Cursor de mãozinha)
+        btnSync.setCursor(javafx.scene.Cursor.HAND);
         btnSync.setOnAction(e -> showSyncAlert());
 
-        // Garante que o botão aceite eventos de hover e clique imediatamente
-        btnSync.setMouseTransparent(false);
-
         root.getChildren().addAll(headerAvatar, lblName, new Separator(), grid, btnSync);
-
-        String css = getClass().getResource("/css/style.css").toExternalForm();
-        root.getStylesheets().add(css);
+        root.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
         return root;
-    }
-
-    private void playEntranceAnimation(VBox node) {
-        FadeTransition fade = new FadeTransition(Duration.millis(200), node);
-        fade.setFromValue(0);
-        fade.setToValue(1);
-
-        TranslateTransition slide = new TranslateTransition(Duration.millis(200), node);
-        slide.setFromX(-15);
-        slide.setToX(0);
-
-        ParallelTransition combined = new ParallelTransition(fade, slide);
-        // Garante que o clique funcione após a animação
-        combined.setOnFinished(e -> node.setMouseTransparent(false));
-        combined.play();
     }
 
     private void addStat(GridPane grid, String label, String value, int col, int row) {
@@ -179,44 +209,24 @@ public class MainController {
         grid.add(box, col, row);
     }
 
+    private void playEntranceAnimation(VBox node) {
+        FadeTransition fade = new FadeTransition(Duration.millis(200), node);
+        fade.setFromValue(0);
+        fade.setToValue(1);
+
+        TranslateTransition slide = new TranslateTransition(Duration.millis(200), node);
+        slide.setFromX(-15);
+        slide.setToX(0);
+
+        ParallelTransition combined = new ParallelTransition(fade, slide);
+        combined.play();
+    }
+
     private void showSyncAlert() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Sincronização");
         alert.setHeaderText(null);
-        alert.setContentText("Este recurso ainda não está disponível, obrigado!");
-        alert.getDialogPane().getStyleClass().add("my-dialog");
+        alert.setContentText("A sincronização em nuvem estará disponível em breve!");
         alert.showAndWait();
-    }
-
-    private void loadTimerView() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TimerView.fxml"));
-            Parent timerView = loader.load();
-            TimerController timerController = loader.getController();
-
-            if (pomodoroService == null) {
-                Profile activeProfile = profileService.getActiveProfile();
-                this.pomodoroService = new PomodoroService(activeProfile, timerController, focusSessionService);
-            }
-
-            timerController.setPomodoroService(pomodoroService);
-            contentArea.getChildren().setAll(timerView);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void loadStatsView() {
-        try {
-            // Certifique-se que o nome do arquivo FXML está correto (StatsView.fxml)
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
-            Parent statsView = loader.load();
-
-            // Substitui o Timer pelas Estatísticas
-            contentArea.getChildren().setAll(statsView);
-        } catch (IOException e) {
-            System.err.println("Erro ao carregar a tela de estatísticas: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
 }

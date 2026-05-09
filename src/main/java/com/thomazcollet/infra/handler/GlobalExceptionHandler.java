@@ -22,12 +22,14 @@ public class GlobalExceptionHandler {
             if (e instanceof DatabaseInitializationException) {
                 handleCriticalError("Banco de Dados", e.getMessage(), true);
             } else if (e instanceof ProfileInitializationException) {
-                // Se o perfil falhar na carga inicial, o app não tem contexto para rodar
                 handleCriticalError("Perfil de Usuário", e.getMessage(), true);
             } else if (e instanceof ProfileNotFoundException) {
                 showWarning("Usuário não Encontrado", e.getMessage());
             } else if (e instanceof TimerStateException) {
                 showWarning("Estado do Timer", e.getMessage());
+            } else if (e instanceof StatisticsComputationException) {
+                // Adicionado: Tratamento para erro de estatísticas
+                showWarning("Estatísticas", "Não foi possível carregar seus dados de produtividade agora.");
             } else if (e instanceof PomodoroException) {
                 showWarning("Regra de Negócio", e.getMessage());
             } else if (e instanceof IllegalArgumentException) {
