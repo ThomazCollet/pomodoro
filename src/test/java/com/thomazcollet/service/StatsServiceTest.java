@@ -17,6 +17,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.Map;
 
 class StatsServiceTest {
@@ -139,5 +140,67 @@ class StatsServiceTest {
                 anyInt(),
                 eq(10800), // Novo recorde diário
                 anyInt());
+    }
+
+    @Test
+    @DisplayName("Deve gerar distribuição diária com exatamente 7 dias e labels formatadas")
+    void shouldGenerateDailyDistributionWithSevenDays() {
+        // GIVEN
+        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                .thenReturn(3600L); // 1 hora para cada dia
+
+        // WHEN
+        Map<String, Double> daily = statsService.calculateRollingDailyDistribution(testProfile.getId());
+
+        // THEN
+        assertNotNull(daily);
+        assertEquals(7, daily.size(), "A distribuição diária deve conter 7 dias");
+
+        // Verifica se as horas foram convertidas corretamente (3600s = 1.0h)
+        daily.values().forEach(value -> assertEquals(1.0, value));
+
+        // Verifica se as labels não contêm pontos (ex: "seg" em vez de "seg.")
+        daily.keySet().forEach(label -> assertFalse(label.contains("."), "Label não deve conter pontos"));
+    }
+
+    @Test
+    @DisplayName("Deve gerar distribuição semanal com 8 semanas e formato dd/MM")
+    void shouldGenerateWeeklyDistributionWithEightWeeks() {
+        // GIVEN
+        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                .thenReturn(7200L); // 2 horas por semana
+
+        // WHEN
+        Map<String, Double> weekly = statsService.calculateEightWeeksDistribution(testProfile.getId());
+
+        // THEN
+        assertNotNull(weekly);
+        assertEquals(8, weekly.size(), "A distribuição deve conter 8 semanas");
+
+        // Verifica o formato da label (Ex: 12/05) usando Regex
+        String firstLabel = weekly.keySet().iterator().next();
+        assertTrue(firstLabel.matches("\\d{2}/\\d{2}"), "Label deve estar no formato dd/MM");
+
+        // Verifica conversão para horas (7200s = 2.0h)
+        assertEquals(2.0, weekly.get(firstLabel));
+    }
+
+    @Test
+    @DisplayName("Deve retornar estatísticas completas incluindo novos gráficos no DTO")
+    void shouldReturnCompleteStatisticsWithCharts() {
+        // GIVEN
+        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                .thenReturn(0L);
+        when(sessionRepository.getDailyFocusTime(anyLong(), any()))
+                .thenReturn(Collections.emptyMap());
+
+        // WHEN
+        FocusStatistics stats = statsService.getUserStatistics(testProfile);
+
+        // THEN
+        assertNotNull(stats.dailyDistribution(), "Distribuição diária não deve ser nula");
+        assertNotNull(stats.weeklyDistribution(), "Distribuição semanal não deve ser nula");
+        assertEquals(7, stats.dailyDistribution().size());
+        assertEquals(8, stats.weeklyDistribution().size());
     }
 }

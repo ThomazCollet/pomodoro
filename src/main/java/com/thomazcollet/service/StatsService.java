@@ -11,10 +11,9 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Serviço responsável por processar e consolidar métricas de produtividade.
@@ -33,8 +32,9 @@ public class StatsService {
 
     /**
      * Consolida todas as estatísticas de foco para o perfil fornecido.
-     * * @throws StatisticsComputationException se ocorrer erro no cálculo ou acesso
-     * aos dados.
+     *
+     * @throws StatisticsComputationException se ocorrer erro no cálculo ou acesso
+     *                                        aos dados.
      */
     public FocusStatistics getUserStatistics(Profile profile) {
         Objects.requireNonNull(profile, "O perfil não pode ser nulo para o cálculo de estatísticas.");
@@ -60,32 +60,90 @@ public class StatsService {
             // 3. Verificação de Recordes
             checkAndUpdateRecords(profile, (int) secondsToday, currentStreak);
 
-            // --- NOVO: 4. Dados para o Heatmap (Último ano) ---
+            // 4. Dados para o Heatmap (Último ano)
             LocalDateTime oneYearAgo = now.minusYears(1).with(LocalTime.MIN);
             Map<LocalDate, Long> heatmapData = sessionRepository.getDailyFocusTime(profile.getId(), oneYearAgo);
 
-            // 5. Mapeamento para DTO
+            // 5. Distribuição para Gráficos
+            Map<String, Double> dailyData = calculateRollingDailyDistribution(profile.getId());
+            Map<String, Double> weeklyData = calculateEightWeeksDistribution(profile.getId());
+            // Por enquanto, passamos um mapa vazio para o mensal até implementarmos a
+            // lógica anual
+            Map<String, Double> monthlyData = Collections.emptyMap();
+
+            // 6. Mapeamento para DTO (Agora com os 9 parâmetros corretos)
             return new FocusStatistics(
                     currentStreak,
                     profile.getMaxStreak(),
                     formatDuration(secondsToday),
                     "Recorde: " + formatDuration(profile.getMaxFocusDaySeconds()),
                     formatDuration(secondsThisWeek),
-                    heatmapData, // Map<LocalDate, Long> para annualHeatmap
-                    Collections.emptyMap() // Map<String, Double> para weeklyDistribution
+                    heatmapData,
+                    dailyData, // Adicionado: dailyDistribution
+                    weeklyData, // Adicionado: weeklyDistribution
+                    monthlyData // Adicionado: monthlyDistribution
             );
-
         } catch (Exception e) {
             logger.error("Falha crítica ao computar estatísticas para o perfil ID: {}", profile.getId(), e);
             throw new StatisticsComputationException("Erro ao processar métricas de foco.", e);
         }
     }
 
+    /**
+     * Calcula a distribuição de foco das últimas 8 semanas.
+     * Retorna um Map onde a chave é o início da semana (dd/MM) e o valor é o total
+     * em horas.
+     */
+    public Map<String, Double> calculateEightWeeksDistribution(Long profileId) {
+        Map<String, Double> distribution = new LinkedHashMap<>();
+        LocalDate now = LocalDate.now();
+
+        for (int i = 7; i >= 0; i--) {
+            LocalDate startOfWeek = now.minusWeeks(i).with(java.time.DayOfWeek.MONDAY);
+            LocalDate endOfWeek = startOfWeek.plusDays(6);
+
+            long seconds = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
+                    profileId,
+                    startOfWeek.atStartOfDay(),
+                    endOfWeek.atTime(LocalTime.MAX));
+
+            String label = String.format("%02d/%02d", startOfWeek.getDayOfMonth(), startOfWeek.getMonthValue());
+            distribution.put(label, seconds / 3600.0);
+        }
+        return distribution;
+    }
+
+    /**
+     * Calcula a distribuição de foco dos últimos 7 dias (Janela Deslizante).
+     * Retorna um Map onde a chave é a inicial do dia da semana e o valor é o total
+     * em horas.
+     */
+    public Map<String, Double> calculateRollingDailyDistribution(Long profileId) {
+        Map<String, Double> distribution = new LinkedHashMap<>();
+        LocalDate now = LocalDate.now();
+        Locale ptBr = new Locale("pt", "BR");
+
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = now.minusDays(i);
+            long seconds = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
+                    profileId,
+                    date.atStartOfDay(),
+                    date.atTime(LocalTime.MAX));
+
+            String dayLabel = date.getDayOfWeek()
+                    .getDisplayName(TextStyle.SHORT, ptBr)
+                    .replace(".", "")
+                    .toLowerCase();
+
+            distribution.put(dayLabel, seconds / 3600.0);
+        }
+        return distribution;
+    }
+
     private int calculateCurrentStreak(Long profileId) {
         int streak = 0;
         LocalDate dateToCheck = LocalDate.now();
 
-        // Verifica se houve foco hoje ou ontem para manter o streak ativo
         if (!hasFocusOnDate(profileId, dateToCheck)) {
             dateToCheck = dateToCheck.minusDays(1);
             if (!hasFocusOnDate(profileId, dateToCheck)) {
@@ -95,7 +153,6 @@ public class StatsService {
 
         streak++;
 
-        // Regressão histórica para contagem do streak
         while (true) {
             dateToCheck = dateToCheck.minusDays(1);
             if (hasFocusOnDate(profileId, dateToCheck)) {
@@ -128,6 +185,7 @@ public class StatsService {
                     profile.getMaxStreak(),
                     profile.getMaxFocusDaySeconds(),
                     profile.getTotalFocusSessions());
+
             logger.info("Recordes atualizados para o perfil {}: Streak={} FocoDiário={}s",
                     profile.getUsername(), profile.getMaxStreak(), profile.getMaxFocusDaySeconds());
         }
