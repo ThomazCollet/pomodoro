@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +18,10 @@ import java.util.Map;
 public class SQLiteFocusSessionRepository implements FocusSessionRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(SQLiteFocusSessionRepository.class);
+
+    // Formatador para compatibilidade total com o SQLite (evita o erro do "T" nas
+    // datas)
+    private static final DateTimeFormatter SQLITE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public void save(FocusSession session) {
@@ -30,8 +35,9 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
 
             pstmt.setLong(1, session.getProfileId());
             pstmt.setString(2, session.getType().name());
-            pstmt.setString(3, session.getStartTimestamp().toString());
-            pstmt.setString(4, session.getEndTimestamp() != null ? session.getEndTimestamp().toString() : null);
+            pstmt.setString(3, session.getStartTimestamp().format(SQLITE_FORMATTER));
+            pstmt.setString(4,
+                    session.getEndTimestamp() != null ? session.getEndTimestamp().format(SQLITE_FORMATTER) : null);
             pstmt.setInt(5, session.getDurationSeconds());
             pstmt.setBoolean(6, session.isCompleted());
 
@@ -98,8 +104,9 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         try (Connection conn = DatabaseInitializer.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, profileId);
-            pstmt.setString(2, start.toString());
-            pstmt.setString(3, end.toString());
+            pstmt.setString(2, start.format(SQLITE_FORMATTER));
+            pstmt.setString(3, end.format(SQLITE_FORMATTER));
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next())
                     return rs.getLong(1);
@@ -138,21 +145,9 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         return summary;
     }
 
-    private FocusSession mapResultSetToFocusSession(ResultSet rs) throws SQLException {
-        return new FocusSession(
-                rs.getLong("id"),
-                rs.getLong("profile_id"),
-                SessionType.valueOf(rs.getString("type")),
-                LocalDateTime.parse(rs.getString("start_timestamp")),
-                rs.getString("end_timestamp") != null ? LocalDateTime.parse(rs.getString("end_timestamp")) : null,
-                rs.getInt("duration_seconds"),
-                rs.getBoolean("completed"));
-    }
-
     @Override
     public Map<LocalDate, Long> getDailyFocusTime(Long profileId, LocalDateTime since) {
         Map<LocalDate, Long> summary = new HashMap<>();
-        // No SQLite, usamos a função date() para agrupar apenas pelo dia (YYYY-MM-DD)
         String sql = """
                 SELECT date(start_timestamp) as day, SUM(duration_seconds) as total
                 FROM focus_sessions
@@ -166,18 +161,30 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setLong(1, profileId);
-            pstmt.setString(2, since.toString());
+            pstmt.setString(2, since.format(SQLITE_FORMATTER));
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    // Convertemos a String do SQLite (YYYY-MM-DD) para LocalDate do Java
                     LocalDate date = LocalDate.parse(rs.getString("day"));
                     summary.put(date, rs.getLong("total"));
                 }
             }
         } catch (SQLException e) {
-            logger.error("Erro ao buscar dados do Heatmap para o perfil ID: {}", profileId, e);
+            logger.error("Erro ao buscar dados do Heatmap", e);
         }
         return summary;
+    }
+
+    private FocusSession mapResultSetToFocusSession(ResultSet rs) throws SQLException {
+        return new FocusSession(
+                rs.getLong("id"),
+                rs.getLong("profile_id"),
+                SessionType.valueOf(rs.getString("type")),
+                LocalDateTime.parse(rs.getString("start_timestamp").replace(" ", "T")),
+                rs.getString("end_timestamp") != null
+                        ? LocalDateTime.parse(rs.getString("end_timestamp").replace(" ", "T"))
+                        : null,
+                rs.getInt("duration_seconds"),
+                rs.getBoolean("completed"));
     }
 }

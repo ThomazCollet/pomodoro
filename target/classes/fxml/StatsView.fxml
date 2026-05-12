@@ -63,7 +63,7 @@
                 <Region HBox.hgrow="ALWAYS" />
                 <HBox styleClass="toggle-group-container">
                     <ToggleButton fx:id="btnLast7Days" selected="true" styleClass="toggle-left" text="7 dias" />
-                    <ToggleButton fx:id="btnLast30Days" styleClass="toggle-center" text="30 dias" />
+                    <ToggleButton fx:id="btnLast30Days" styleClass="toggle-center" text="8 semanas" />
                     <ToggleButton fx:id="btnLastYear" styleClass="toggle-right" text="12 meses" />
                 </HBox>
             </HBox>

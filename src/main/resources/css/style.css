@@ -250,6 +250,51 @@
     -fx-cursor: hand;
 }
 
+/* --- Melhorias de Polimento para o BarChart --- */
+
+/* 1. Remover as linhas de grade de fundo (essencial para o look clean) */
+.chart-vertical-grid-lines,
+.chart-horizontal-grid-lines {
+    -fx-stroke: transparent;
+}
+
+/* 2. Remover a borda branca padrão do fundo do gráfico */
+.chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+/* 3. Estilizar as barras com bordas arredondadas no topo e efeito de hover */
+.chart-bar {
+    -fx-bar-fill: #89b4fa;
+    /* Blue */
+    -fx-background-radius: 6 6 0 0;
+    /* Arredonda só o topo */
+}
+
+.chart-bar:hover {
+    -fx-bar-fill: #b4befe;
+    /* Um tom de azul mais claro (Lavender) no hover */
+    -fx-cursor: hand;
+}
+
+/* 4. Estilizar as linhas dos eixos para não ficarem "apagadas" */
+.axis {
+    -fx-tick-label-fill: #a6adc8;
+    -fx-font-size: 10px;
+}
+
+.axis:left {
+    -fx-border-color: #313244;
+    -fx-border-width: 0 1 0 0;
+    /* Linha vertical sutil separando o eixo Y */
+}
+
+.axis:bottom {
+    -fx-border-color: #313244;
+    -fx-border-width: 1 0 0 0;
+    /* Linha horizontal sutil separando o eixo X */
+}
+
 /* CORREÇÃO: Efeitos de Hover restaurados nos botões do Timer */
 .start-button {
     -fx-background-color: #a6e3a1;

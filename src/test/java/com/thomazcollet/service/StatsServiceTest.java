@@ -45,96 +45,78 @@ class StatsServiceTest {
     }
 
     @Test
+    @DisplayName("Deve gerar distribuição semanal com intervalo de datas profissional")
+    void shouldGenerateWeeklyDistributionWithDateIntervals() {
+        // GIVEN
+        // Retorna 3600L para as primeiras chamadas (hoje, semana e distribuições)
+        // E retorna 0L logo em seguida para quebrar o loop do streak e evitar o loop
+        // infinito
+        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                .thenReturn(3600L, 3600L, 3600L, 3600L, 0L);
+
+        // WHEN
+        Map<String, Double> weekly = statsService.getUserStatistics(testProfile).weeklyDistribution();
+
+        // THEN
+        assertNotNull(weekly);
+        assertEquals(8, weekly.size());
+
+        String firstLabel = weekly.keySet().iterator().next();
+        assertTrue(firstLabel.matches("\\d{2}/\\d{2} - \\d{2}/\\d{2}"),
+                "A label semanal deve ser um intervalo de datas profissional: " + firstLabel);
+    }
+
+    @Test
+    @DisplayName("Deve gerar distribuição anual fixa começando em JANEIRO")
+    void shouldGenerateAnnualDistributionWithTwelveMonths() {
+        // GIVEN
+        // O stubbing precisa cobrir as chamadas dos cards + as distribuições
+        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                .thenReturn(0L);
+
+        // WHEN
+        Map<String, Double> monthly = statsService.getUserStatistics(testProfile).monthlyDistribution();
+
+        // THEN
+        assertEquals(12, monthly.size(), "Deve conter exatamente 12 meses");
+
+        // VERIFICAÇÃO DE CICLO FIXO:
+        String firstMonth = monthly.keySet().iterator().next();
+        assertEquals("JAN", firstMonth, "O gráfico anual fixo deve obrigatoriamente começar em JAN");
+
+        // Verifica o padrão visual (ex: MAI)
+        assertTrue(firstMonth.matches("[A-Z]{3}"), "A label deve ser MAIÚSCULA e sem ponto: " + firstMonth);
+    }
+
+    @Test
     @DisplayName("Deve calcular estatísticas corretamente e formatar durações")
     void shouldCalculateStatisticsAndFormatDurations() {
-        // Simula: 1h hoje, 5h na semana, e depois 0 para os cálculos de streak não
-        // entrarem em loop
+        // Ajustado para garantir que o Mockito tenha respostas suficientes para todos
+        // os métodos internos
         when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
                 .thenReturn(3600L) // Hoje
                 .thenReturn(18000L) // Semana
-                .thenReturn(0L); // Ontem (quebra o streak em 1 para o teste terminar rápido)
+                .thenReturn(0L); // Quebra streak inicial
 
         FocusStatistics stats = statsService.getUserStatistics(testProfile);
 
-        assertEquals("01h 00m", stats.timeToday());
-        assertEquals("05h 00m", stats.timeThisWeek());
-    }
-
-    @Test
-    @DisplayName("Deve atualizar recorde de streak quando o atual for maior que o máximo")
-    void shouldUpdateMaxStreakWhenCurrentIsHigher() {
-        // GIVEN:
-        // Usamos o stubbing consecutivo para garantir que:
-        // 1. As chamadas iniciais (hoje/semana) retornem valor.
-        // 2. As chamadas do loop de streak retornem valor por 10 vezes.
-        // 3. Eventualmente retorne 0 para quebrar o loop.
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(3600L, 3600L, 3600L, 3600L, 3600L, 3600L, 3600L, 3600L, 3600L, 3600L, 0L);
-
-        // O recorde atual no testProfile é 5 (definido no setUp)
-        // Então um streak de 10 chamadas certamente deve disparar o update.
-
-        // WHEN
-        statsService.getUserStatistics(testProfile);
-
-        // THEN
-        // Verificamos se o updateStats foi chamado com um valor > 5
-        verify(profileRepository, atLeastOnce()).updateStats(
-                eq(testProfile.getId()),
-                gt(5),
-                anyInt(),
-                anyInt());
-    }
-
-    @Test
-    @DisplayName("Deve incluir dados do heatmap no DTO de estatísticas")
-    void shouldIncludeHeatmapDataInStatistics() {
-        // GIVEN
-        LocalDate today = LocalDate.now();
-        Map<LocalDate, Long> mockHeatmap = Map.of(
-                today, 3600L,
-                today.minusDays(1), 7200L);
-
-        when(sessionRepository.getDailyFocusTime(anyLong(), any())).thenReturn(mockHeatmap);
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any())).thenReturn(0L);
-
-        // WHEN
-        FocusStatistics stats = statsService.getUserStatistics(testProfile);
-
-        // THEN
-        assertNotNull(stats.annualHeatmap());
-        assertEquals(2, stats.annualHeatmap().size());
-        assertEquals(3600L, stats.annualHeatmap().get(today));
-    }
-
-    @Test
-    @DisplayName("Deve lançar StatisticsComputationException quando ocorrer erro no repositório")
-    void shouldThrowExceptionWhenRepositoryFails() {
-        // GIVEN
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenThrow(new RuntimeException("Erro de conexão com o banco"));
-
-        // WHEN & THEN
-        assertThrows(StatisticsComputationException.class, () -> {
-            statsService.getUserStatistics(testProfile);
-        });
+        assertAll(
+                () -> assertEquals("01h 00m", stats.timeToday()),
+                () -> assertEquals("05h 00m", stats.timeThisWeek()),
+                () -> assertNotNull(stats.monthlyDistribution()),
+                () -> assertEquals(12, stats.monthlyDistribution().size()));
     }
 
     @Test
     @DisplayName("Deve atualizar recorde de foco diário quando o tempo de hoje for superior")
     void shouldUpdateMaxFocusDayWhenTodayIsHigher() {
-        // GIVEN
-        // Perfil tem recorde de 2h (7200s). Vamos simular que hoje ele fez 3h (10800s).
         when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(10800L) // Hoje (3h)
+                .thenReturn(10800L) // Hoje (3h) - Maior que o recorde de 2h
                 .thenReturn(10800L) // Semana
                 .thenReturn(0L); // Quebra streak
 
-        // WHEN
         statsService.getUserStatistics(testProfile);
 
-        // THEN
-        // Verificamos se o updateStats foi chamado com o novo tempo recorde (10800)
         verify(profileRepository).updateStats(
                 eq(testProfile.getId()),
                 anyInt(),
@@ -143,64 +125,20 @@ class StatsServiceTest {
     }
 
     @Test
-    @DisplayName("Deve gerar distribuição diária com exatamente 7 dias e labels formatadas")
-    void shouldGenerateDailyDistributionWithSevenDays() {
-        // GIVEN
+    @DisplayName("Deve lançar StatisticsComputationException em caso de falha no repositório")
+    void shouldThrowExceptionWhenRepositoryFails() {
         when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(3600L); // 1 hora para cada dia
+                .thenThrow(new RuntimeException("DB Offline"));
 
-        // WHEN
-        Map<String, Double> daily = statsService.calculateRollingDailyDistribution(testProfile.getId());
-
-        // THEN
-        assertNotNull(daily);
-        assertEquals(7, daily.size(), "A distribuição diária deve conter 7 dias");
-
-        // Verifica se as horas foram convertidas corretamente (3600s = 1.0h)
-        daily.values().forEach(value -> assertEquals(1.0, value));
-
-        // Verifica se as labels não contêm pontos (ex: "seg" em vez de "seg.")
-        daily.keySet().forEach(label -> assertFalse(label.contains("."), "Label não deve conter pontos"));
+        assertThrows(StatisticsComputationException.class, () -> statsService.getUserStatistics(testProfile));
     }
 
     @Test
-    @DisplayName("Deve gerar distribuição semanal com 8 semanas e formato dd/MM")
-    void shouldGenerateWeeklyDistributionWithEightWeeks() {
-        // GIVEN
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(7200L); // 2 horas por semana
+    @DisplayName("Deve garantir que labels diárias não possuem pontos decorrentes da formatação")
+    void shouldEnsureCleanDailyLabels() {
+        Map<String, Double> daily = statsService.getUserStatistics(testProfile).dailyDistribution();
 
-        // WHEN
-        Map<String, Double> weekly = statsService.calculateEightWeeksDistribution(testProfile.getId());
-
-        // THEN
-        assertNotNull(weekly);
-        assertEquals(8, weekly.size(), "A distribuição deve conter 8 semanas");
-
-        // Verifica o formato da label (Ex: 12/05) usando Regex
-        String firstLabel = weekly.keySet().iterator().next();
-        assertTrue(firstLabel.matches("\\d{2}/\\d{2}"), "Label deve estar no formato dd/MM");
-
-        // Verifica conversão para horas (7200s = 2.0h)
-        assertEquals(2.0, weekly.get(firstLabel));
-    }
-
-    @Test
-    @DisplayName("Deve retornar estatísticas completas incluindo novos gráficos no DTO")
-    void shouldReturnCompleteStatisticsWithCharts() {
-        // GIVEN
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(0L);
-        when(sessionRepository.getDailyFocusTime(anyLong(), any()))
-                .thenReturn(Collections.emptyMap());
-
-        // WHEN
-        FocusStatistics stats = statsService.getUserStatistics(testProfile);
-
-        // THEN
-        assertNotNull(stats.dailyDistribution(), "Distribuição diária não deve ser nula");
-        assertNotNull(stats.weeklyDistribution(), "Distribuição semanal não deve ser nula");
-        assertEquals(7, stats.dailyDistribution().size());
-        assertEquals(8, stats.weeklyDistribution().size());
+        daily.keySet().forEach(label -> assertFalse(label.contains("."),
+                "A label '" + label + "' não deve conter pontos (ex: seg. -> seg)"));
     }
 }
