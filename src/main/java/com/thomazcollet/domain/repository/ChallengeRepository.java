@@ -9,6 +9,6 @@ public interface ChallengeRepository {
     Optional<Challenge> findById(Long id);
     List<Challenge> findActiveByProfile(Long profileId);
     List<Challenge> findAllByProfile(Long profileId);
-    void updateProgress(Integer challengeId, int progressDays, int livesRemaining, String status);
-    void delete(Integer id);
+    void updateProgress(Long challengeId, int progressDays, int livesRemaining, String status);
+    void delete(Long id);
 }

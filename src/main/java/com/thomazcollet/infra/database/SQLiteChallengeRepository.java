@@ -52,7 +52,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
     }
 
     @Override
-    public void updateProgress(Integer challengeId, int progressDays, int livesRemaining, String status) {
+    public void updateProgress(Long challengeId, int progressDays, int livesRemaining, String status) {
         String sql = "UPDATE challenges SET progress_days = ?, lives_remaining = ?, status = ? WHERE id = ?";
 
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -61,7 +61,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
             pstmt.setInt(1, progressDays);
             pstmt.setInt(2, livesRemaining);
             pstmt.setString(3, status);
-            pstmt.setInt(4, challengeId);
+            pstmt.setLong(4, challengeId);
 
             pstmt.executeUpdate();
             logger.debug("Progresso do desafio ID {} atualizado.", challengeId);
@@ -100,11 +100,11 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
     }
 
     @Override
-    public void delete(Integer id) {
+    public void delete(Long id) {
         String sql = "DELETE FROM challenges WHERE id = ?";
         try (Connection conn = DatabaseInitializer.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
+            pstmt.setLong(1, id);
             pstmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao deletar desafio", e);

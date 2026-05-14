@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.thomazcollet.infra.database.SQLiteProfileRepositoryTest
--------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.676 s -- in com.thomazcollet.infra.database.SQLiteProfileRepositoryTest
