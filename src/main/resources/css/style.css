@@ -475,3 +475,75 @@
 .dark-scroll .viewport {
     -fx-background-color: transparent;
 }
+
+.empty-state-box {
+    -fx-padding: 40;
+    -fx-background-color: rgba(49, 50, 68, 0.3);
+    /* Surface0 com transparência */
+    -fx-background-radius: 15;
+    -fx-border-color: #45475a;
+    /* Surface1 */
+    -fx-border-width: 1;
+    -fx-border-style: segments(10, 10) line-cap round;
+    /* Borda pontilhada */
+}
+
+.empty-state-icon {
+    -fx-font-size: 32px;
+}
+
+.empty-state-text {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.empty-state-subtext {
+    -fx-text-fill: #9399b2;
+    -fx-font-size: 12px;
+}
+
+.empty-state-container {
+    -fx-padding: 60 40;
+    -fx-max-width: 500; /* Evita que o texto estique demais em telas largas */
+}
+
+.empty-state-main-text {
+    -fx-text-fill: #cdd6f4; /* Catppuccin Text */
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.empty-state-sub-text {
+    -fx-text-fill: #bac2de; /* Catppuccin Subtext1 */
+    -fx-font-size: 13px;
+}
+
+.section-title {
+    -fx-text-fill: #89b4fa; /* Blue para destacar as seções */
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-character-spacing: 1.5;
+}
+/* Botão de Ação Principal (+ NOVO DESAFIO) */
+.action-button {
+    -fx-background-color: linear-gradient(to right, #89b4fa, #b4befe); /* Blue to Lavender */
+    -fx-text-fill: #1e1e2e; /* Base (texto escuro no botão claro) */
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+    -fx-transition: 0.3s;
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.3), 8, 0, 0, 0);
+}
+
+.action-button:hover {
+    /* Enaltecendo o botão: fica mais claro e com um brilho azulado */
+    -fx-background-color: linear-gradient(to right, #a6e3a1, #89b4fa); /* Green to Blue (foco em sucesso) */
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.6), 12, 0, 0, 0);
+    -fx-translate-y: -1; /* Efeito de elevação sutil */
+}
+
+.action-button:pressed {
+    -fx-translate-y: 1; /* Efeito de clique */
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.2), 4, 0, 0, 0);
+}

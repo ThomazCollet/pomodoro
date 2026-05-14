@@ -33,12 +33,19 @@ public class ChallengeController {
     }
 
     private void loadActiveChallenges() {
-        challengesContainer.getChildren().clear();
-
         List<Challenge> actives = challengeService.getChallengesByStatus(currentProfileId, ChallengeStatus.ACTIVE);
 
-        for (Challenge challenge : actives) {
-            addChallengeCard(challenge);
+        // Se a lista não estiver vazia, aí sim limpamos o placeholder e adicionamos os
+        // cards
+        if (!actives.isEmpty()) {
+            challengesContainer.getChildren().clear();
+            for (Challenge challenge : actives) {
+                addChallengeCard(challenge);
+            }
+        } else {
+            // Opcional: Você pode garantir que a mensagem apareça aqui via código
+            // ou apenas não dar o clear() se souber que o FXML já tem a mensagem.
+            logger.info("Nenhum desafio ativo encontrado. Mantendo placeholder.");
         }
     }
 
