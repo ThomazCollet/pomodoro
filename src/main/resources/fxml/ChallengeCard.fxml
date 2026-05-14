@@ -6,29 +6,25 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
 
-<HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="challenge-card" stylesheets="@../css/style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.thomazcollet.ui.controller.ChallengeCardController">
+<HBox alignment="TOP_LEFT" spacing="15.0" styleClass="challenge-card" stylesheets="@../css/style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.thomazcollet.ui.controller.ChallengeCardController">
     <padding>
         <Insets bottom="15.0" left="20.0" right="20.0" top="15.0" />
     </padding>
     
-    <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+    <VBox spacing="12.0" HBox.hgrow="ALWAYS">
         <children>
             <Label fx:id="lblTitle" styleClass="card-title" text="Título do Desafio" />
+            
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                 <children>
                     <ProgressBar fx:id="progressChallenge" maxWidth="Infinity" progress="0.5" HBox.hgrow="ALWAYS" />
-                    <Label fx:id="lblProgressDays" styleClass="small-text" text="5/10 dias" />
+                    <Label fx:id="lblProgressDays" minWidth="65.0" styleClass="small-text" text="0/30 dias" />
                 </children>
             </HBox>
-        </children>
-    </VBox>
-
-    <VBox alignment="CENTER" spacing="5.0">
-        <children>
-            <Label styleClass="mini-label" text="VIDAS" />
-            <HBox fx:id="livesContainer" alignment="CENTER" spacing="4.0">
-                </HBox>
+            
+            <HBox fx:id="livesContainer" alignment="CENTER_LEFT" spacing="6.0" style="-fx-padding: 5 0 0 0;" />
         </children>
     </VBox>
 

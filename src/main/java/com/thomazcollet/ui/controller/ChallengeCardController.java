@@ -7,7 +7,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
-import javafx.scene.shape.Circle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,19 +14,21 @@ public class ChallengeCardController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChallengeCardController.class);
 
-    @FXML private Label lblTitle;
-    @FXML private ProgressBar progressChallenge;
-    @FXML private Label lblProgressDays;
-    @FXML private HBox livesContainer;
-    @FXML private Button btnDelete;
+    @FXML
+    private Label lblTitle;
+    @FXML
+    private ProgressBar progressChallenge;
+    @FXML
+    private Label lblProgressDays;
+    @FXML
+    private HBox livesContainer;
+    @FXML
+    private Button btnDelete;
 
     private Challenge challenge;
     private ChallengeService challengeService;
     private Runnable onUpdateCallback;
 
-    /**
-     * Preenche o card com os dados do desafio e configura as dependências.
-     */
     public void setData(Challenge challenge, ChallengeService service, Runnable onUpdateCallback) {
         this.challenge = challenge;
         this.challengeService = service;
@@ -38,11 +39,11 @@ public class ChallengeCardController {
 
     private void renderCard() {
         lblTitle.setText(challenge.getTitle());
-        
-        // Cálculo do progresso (0.0 a 1.0 para a ProgressBar)
+
+        // Cálculo do progresso (0.0 a 1.0)
         double progress = (double) challenge.getProgressDays() / challenge.getDurationDays();
         progressChallenge.setProgress(progress);
-        
+
         lblProgressDays.setText(challenge.getProgressDays() + "/" + challenge.getDurationDays() + " dias");
 
         renderLives();
@@ -54,12 +55,20 @@ public class ChallengeCardController {
         int remaining = challenge.getLivesRemaining();
 
         for (int i = 0; i < total; i++) {
-            Circle heart = new Circle(6); // Círculo de raio 6
+            // Trocamos o Circle por uma Label com o caractere de coração
+            Label heart = new Label("❤");
+
+            // Adicionamos a classe base para o estilo do coração
+            heart.getStyleClass().add("heart-icon");
+
             if (i < remaining) {
-                heart.getStyleClass().add("heart-icon"); // Estilo Red/Peach do seu CSS
+                // Estilo para vida ativa (Red/Peach)
+                heart.getStyleClass().add("heart-active");
             } else {
-                heart.getStyleClass().add("heart-icon-empty"); // Estilo cinza/escuro
+                // Estilo para vida perdida (Cinza/Escuro)
+                heart.getStyleClass().add("heart-lost");
             }
+
             livesContainer.getChildren().add(heart);
         }
     }
@@ -69,8 +78,7 @@ public class ChallengeCardController {
         try {
             challengeService.deleteChallenge(challenge.getId());
             logger.info("Desafio '{}' excluído via UI.", challenge.getTitle());
-            
-            // Chama o callback para atualizar a lista no ChallengeController
+
             if (onUpdateCallback != null) {
                 onUpdateCallback.run();
             }

@@ -32,6 +32,9 @@ public class ChallengeController {
     @FXML
     private VBox challengesContainer;
 
+    @FXML
+    private StackPane rootStackPane;
+
     private final ChallengeService challengeService;
     private final Long currentProfileId = 1L;
 
@@ -47,13 +50,61 @@ public class ChallengeController {
     private void loadActiveChallenges() {
         List<Challenge> actives = challengeService.getChallengesByStatus(currentProfileId, ChallengeStatus.ACTIVE);
 
+        // Limpa o container antes de decidir o alinhamento
+        challengesContainer.getChildren().clear();
+
         if (!actives.isEmpty()) {
-            challengesContainer.getChildren().clear();
+            // AJUSTE DINÂMICO: Se houver desafios, alinha no topo para grudar no título
+            challengesContainer.setAlignment(Pos.TOP_CENTER);
+
+            // Adiciona um pequeno padding no topo para o primeiro card não encostar na
+            // Label "EM ANDAMENTO"
+            challengesContainer.setPadding(new Insets(10, 10, 10, 10));
+
             for (Challenge challenge : actives) {
                 addChallengeCard(challenge);
             }
         } else {
-            logger.info("Nenhum desafio ativo encontrado. Mantendo placeholder.");
+            // AJUSTE DINÂMICO: Se estiver vazio, centraliza para o placeholder (alvo) ficar
+            // no meio
+            challengesContainer.setAlignment(Pos.CENTER);
+            challengesContainer.setPadding(new Insets(0));
+            showPlaceholder();
+            logger.info("Nenhum desafio ativo encontrado. Exibindo placeholder centralizado.");
+        }
+    }
+
+    /**
+     * Recria o placeholder visual (🎯) programaticamente quando a lista está vazia
+     */
+    private void showPlaceholder() {
+        try {
+            VBox emptyBox = new VBox(15);
+            emptyBox.setAlignment(Pos.CENTER);
+            emptyBox.getStyleClass().add("empty-state-box");
+
+            Label icon = new Label("🎯");
+            icon.getStyleClass().add("empty-state-icon");
+
+            VBox textContainer = new VBox(8);
+            textContainer.setAlignment(Pos.CENTER);
+
+            Label mainText = new Label("No momento você não possui nenhum desafio em andamento.");
+            mainText.getStyleClass().add("empty-state-main-text");
+            mainText.setWrapText(true);
+            mainText.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #cdd6f4;");
+
+            Label subText = new Label("Que tal começar um agora para elevar sua disciplina?");
+            subText.getStyleClass().add("empty-state-sub-text");
+            subText.setWrapText(true);
+            subText.setStyle("-fx-font-size: 13px; -fx-text-fill: #bac2de;");
+
+            textContainer.getChildren().addAll(mainText, subText);
+            emptyBox.getChildren().addAll(icon, textContainer);
+
+            challengesContainer.getChildren().add(emptyBox);
+        } catch (Exception e) {
+            logger.error("Erro ao criar placeholder: ", e);
         }
     }
 
@@ -73,74 +124,58 @@ public class ChallengeController {
     @FXML
     private void handleNewChallenge() {
         try {
-            // 1. Carrega o FXML
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ChallengeDialog.fxml"));
             Parent root = loader.load();
 
-            // 2. Obtém o controller do modal
             ChallengeDialogController dialogController = loader.getController();
 
-            // 3. Configura o Stage de forma limpa
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Novo Desafio");
             dialogStage.initModality(Modality.APPLICATION_MODAL);
-            dialogStage.initStyle(StageStyle.UTILITY); // Use UTILITY para testes, depois voltamos para UNDECORATED
+            dialogStage.initStyle(StageStyle.UTILITY);
 
             Scene scene = new Scene(root);
             dialogStage.setScene(scene);
-
-            // 4. Exibe e aguarda
-            logger.info("Exibindo modal de novo desafio...");
             dialogStage.showAndWait();
 
-            // 5. Lógica pós-fechamento
             if (dialogController.isSaveClicked()) {
                 Challenge newChallenge = dialogController.getChallenge();
                 newChallenge.setProfileId(currentProfileId);
                 newChallenge.setStatus(ChallengeStatus.ACTIVE);
 
                 challengeService.createChallenge(newChallenge);
-                logger.info("Novo desafio salvo com sucesso: {}", newChallenge.getTitle());
-
                 loadActiveChallenges();
                 showToast("✓ Desafio ativado! Boa sorte.");
             }
 
         } catch (Exception e) {
-            // Trocamos para Exception para pegar QUALQUER erro (FXML, NullPointer, etc.)
             logger.error("Erro crítico ao abrir modal: ", e);
-            e.printStackTrace();
         }
     }
-
-    @FXML
-    private StackPane rootStackPane; // Você vai precisar de um StackPane no seu FXML principal
 
     private void showToast(String message) {
         Label toast = new Label(message);
         toast.getStyleClass().add("toast-success");
         toast.setOpacity(0);
 
-        // Adiciona o toast no topo do StackPane
-        rootStackPane.getChildren().add(toast);
-        StackPane.setAlignment(toast, Pos.TOP_CENTER);
-        StackPane.setMargin(toast, new Insets(20, 0, 0, 0));
+        if (rootStackPane != null) {
+            rootStackPane.getChildren().add(toast);
+            StackPane.setAlignment(toast, Pos.TOP_CENTER);
+            StackPane.setMargin(toast, new Insets(20, 0, 0, 0));
 
-        // Animação de entrada
-        FadeTransition fadeIn = new FadeTransition(Duration.millis(300), toast);
-        fadeIn.setFromValue(0);
-        fadeIn.setToValue(1);
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(300), toast);
+            fadeIn.setFromValue(0);
+            fadeIn.setToValue(1);
 
-        // Animação de saída (com delay)
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(300), toast);
-        fadeOut.setFromValue(1);
-        fadeOut.setToValue(0);
-        fadeOut.setDelay(Duration.seconds(2));
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), toast);
+            fadeOut.setFromValue(1);
+            fadeOut.setToValue(0);
+            fadeOut.setDelay(Duration.seconds(2));
 
-        // Remove do StackPane após sumir
-        fadeOut.setOnFinished(e -> rootStackPane.getChildren().remove(toast));
+            fadeOut.setOnFinished(e -> rootStackPane.getChildren().remove(toast));
 
-        fadeIn.play();
-        fadeOut.play();
+            fadeIn.play();
+            fadeOut.play();
+        }
     }
 }

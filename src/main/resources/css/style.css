@@ -440,15 +440,25 @@
     -fx-font-weight: bold;
 }
 
-/* Ícones de Vida (Corações/Círculos) */
+/* Ícones de Vida (Corações) */
 .heart-icon {
-    -fx-fill: #f38ba8;
-    /* Red */
+    -fx-font-family: "Segoe UI Symbol";
+    /* Fonte robusta para símbolos no Windows */
+    -fx-font-size: 16px;
+    /* Ajuste fino para o símbolo não parecer cortado */
+    -fx-line-spacing: 0;
+    -fx-padding: 0 1 0 1;
 }
 
-.heart-icon-empty {
-    -fx-fill: #45475a;
-    /* Surface1 */
+.heart-active {
+    -fx-text-fill: #f38ba8;
+    /* Rosa/Vermelho vibrante */
+}
+
+.heart-lost {
+    -fx-text-fill: #313244;
+    /* Cor de fundo apagada */
+    -fx-opacity: 0.4;
 }
 
 /* Botões de Ação e Excluir */
@@ -630,11 +640,13 @@
 }
 
 .toast-success {
-    -fx-background-color: #a6e3a1; /* Verde suave do Catppuccin */
-    -fx-text-fill: #11111b; /* Texto escuro para contraste */
+    -fx-background-color: #a6e3a1;
+    /* Verde suave do Catppuccin */
+    -fx-text-fill: #11111b;
+    /* Texto escuro para contraste */
     -fx-padding: 10 20 10 20;
     -fx-background-radius: 20;
     -fx-font-weight: bold;
     -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 4);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
 }

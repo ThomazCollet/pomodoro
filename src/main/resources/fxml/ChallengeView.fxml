@@ -42,22 +42,28 @@
                     </padding>
                     
                     <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+                        <padding>
+                            <Insets top="40.0" left="0.0" right="0.0" bottom="0.0" />
+                        </padding>
+                        
                         <Label styleClass="section-title" text="EM ANDAMENTO" />
                         
                         <VBox fx:id="challengesContainer" alignment="CENTER" spacing="15.0" VBox.vgrow="ALWAYS">
-                            <VBox alignment="CENTER" spacing="15.0" styleClass="empty-state-box">
-                                <Label styleClass="empty-state-icon" text="🎯" />
-                                <VBox alignment="CENTER" spacing="8.0">
-                                    <Label styleClass="empty-state-main-text" 
-                                           text="No momento você não possui nenhum desafio em andamento." 
-                                           textAlignment="CENTER" wrapText="true" 
-                                           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #cdd6f4;" />
-                                    <Label styleClass="empty-state-sub-text" 
-                                           text="Que tal começar um agora para elevar sua disciplina?" 
-                                           textAlignment="CENTER" wrapText="true" 
-                                           style="-fx-font-size: 13px; -fx-text-fill: #bac2de;" />
+                            <children>
+                                <VBox alignment="CENTER" spacing="15.0" styleClass="empty-state-box">
+                                    <Label styleClass="empty-state-icon" text="🎯" />
+                                    <VBox alignment="CENTER" spacing="8.0">
+                                        <Label styleClass="empty-state-main-text" 
+                                               text="No momento você não possui nenhum desafio em andamento." 
+                                               textAlignment="CENTER" wrapText="true" 
+                                               style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #cdd6f4;" />
+                                        <Label styleClass="empty-state-sub-text" 
+                                               text="Que tal começar um agora para elevar sua disciplina?" 
+                                               textAlignment="CENTER" wrapText="true" 
+                                               style="-fx-font-size: 13px; -fx-text-fill: #bac2de;" />
+                                    </VBox>
                                 </VBox>
-                            </VBox>
+                            </children>
                         </VBox>
                     </VBox>
 
@@ -73,4 +79,4 @@
         </ScrollPane>
     </VBox>
 
-    </StackPane>
+</StackPane>
