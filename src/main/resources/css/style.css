@@ -505,45 +505,136 @@
 
 .empty-state-container {
     -fx-padding: 60 40;
-    -fx-max-width: 500; /* Evita que o texto estique demais em telas largas */
+    -fx-max-width: 500;
+    /* Evita que o texto estique demais em telas largas */
 }
 
 .empty-state-main-text {
-    -fx-text-fill: #cdd6f4; /* Catppuccin Text */
+    -fx-text-fill: #cdd6f4;
+    /* Catppuccin Text */
     -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 
 .empty-state-sub-text {
-    -fx-text-fill: #bac2de; /* Catppuccin Subtext1 */
+    -fx-text-fill: #bac2de;
+    /* Catppuccin Subtext1 */
     -fx-font-size: 13px;
 }
 
 .section-title {
-    -fx-text-fill: #89b4fa; /* Blue para destacar as seções */
+    -fx-text-fill: #89b4fa;
+    /* Blue para destacar as seções */
     -fx-font-weight: bold;
     -fx-font-size: 11px;
     -fx-character-spacing: 1.5;
 }
+
 /* Botão de Ação Principal (+ NOVO DESAFIO) */
 .action-button {
-    -fx-background-color: linear-gradient(to right, #89b4fa, #b4befe); /* Blue to Lavender */
-    -fx-text-fill: #1e1e2e; /* Base (texto escuro no botão claro) */
+    -fx-background-color: linear-gradient(to right, #89b4fa, #b4befe);
+    /* Blue to Lavender */
+    -fx-text-fill: #1e1e2e;
+    /* Base (texto escuro no botão claro) */
     -fx-font-weight: bold;
     -fx-background-radius: 10;
     -fx-cursor: hand;
     -fx-transition: 0.3s;
     -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.3), 8, 0, 0, 0);
+    -fx-pref-width: 180;
+    -fx-padding: 8 20 8 20;
 }
 
 .action-button:hover {
     /* Enaltecendo o botão: fica mais claro e com um brilho azulado */
-    -fx-background-color: linear-gradient(to right, #a6e3a1, #89b4fa); /* Green to Blue (foco em sucesso) */
+    -fx-background-color: linear-gradient(to right, #a6e3a1, #89b4fa);
+    /* Green to Blue (foco em sucesso) */
     -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.6), 12, 0, 0, 0);
-    -fx-translate-y: -1; /* Efeito de elevação sutil */
+    -fx-translate-y: -1;
+    /* Efeito de elevação sutil */
 }
 
 .action-button:pressed {
-    -fx-translate-y: 1; /* Efeito de clique */
+    -fx-translate-y: 1;
+    /* Efeito de clique */
     -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.2), 4, 0, 0, 0);
+}
+
+.dialog-container {
+    -fx-background-color: #1e1e2e;
+    /* Base do Catppuccin */
+    -fx-border-color: #89b4fa;
+    -fx-border-width: 2;
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+}
+
+/* Estilização do Campo de Texto */
+.dark-input {
+    -fx-background-color: #313244;
+    /* Surface0 */
+    -fx-text-fill: #cdd6f4;
+    /* Text */
+    -fx-prompt-text-fill: #6c7086;
+    /* Overlay0 */
+    -fx-background-radius: 8;
+    -fx-border-color: #45475a;
+    /* Surface1 */
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+}
+
+.dark-input:focused {
+    -fx-border-color: #89b4fa;
+    /* Blue ao focar */
+    -fx-background-color: #45475a;
+}
+
+/* Atualização para os Spinners */
+.spinner {
+    -fx-background-color: #313244;
+    -fx-background-radius: 8;
+    -fx-border-color: #45475a;
+    /* Borda sutil para definir o campo */
+    -fx-border-radius: 8;
+}
+
+/* Removemos a cor de fundo padrão das setas para não achatar */
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: #45475a;
+    -fx-background-insets: 2;
+    /* Cria um respiro interno */
+    -fx-cursor: hand;
+}
+
+/* Garante que a setinha interna seja visível e limpa */
+.spinner .increment-arrow-button .increment-arrow,
+.spinner .decrement-arrow-button .decrement-arrow {
+    -fx-background-color: #cdd6f4;
+    /* Cor do texto Catppuccin */
+    -fx-padding: 2;
+    /* Tamanho da seta */
+}
+
+/* Hover mais suave */
+.spinner .increment-arrow-button:hover,
+.spinner .decrement-arrow-button:hover {
+    -fx-background-color: #89b4fa;
+}
+
+/* Remove aquela linha branca chata que aparece no foco padrão */
+.spinner:focused {
+    -fx-border-color: #89b4fa;
+    -fx-background-insets: 0;
+}
+
+.toast-success {
+    -fx-background-color: #a6e3a1; /* Verde suave do Catppuccin */
+    -fx-text-fill: #11111b; /* Texto escuro para contraste */
+    -fx-padding: 10 20 10 20;
+    -fx-background-radius: 20;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 4);
 }
