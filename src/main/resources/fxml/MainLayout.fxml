@@ -32,6 +32,7 @@
          <Separator opacity="0.1" maxWidth="140.0" />
 
          <Button fx:id="btnTimer" text="⏱  Timer" styleClass="menu-button" maxWidth="180.0" />
+         <Button fx:id="btnChallenges" text="🏆   Desafios" styleClass="menu-button" maxWidth="180.0" />
          <Button fx:id="btnStats" text="📊  Estatísticas" styleClass="menu-button" maxWidth="180.0" />
          <Button fx:id="btnSettings" text="⚙  Configurações" styleClass="menu-button" maxWidth="180.0" />
          

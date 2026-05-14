@@ -364,3 +364,114 @@
     -fx-text-fill: #cdd6f4;
     -fx-cursor: hand;
 }
+
+/* --- Aba de Desafios (Catppuccin Mocha Style) --- */
+
+/* Títulos da Seção */
+.title-label {
+    -fx-text-fill: #89b4fa;
+    /* Blue */
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1px;
+}
+
+.subtitle-label {
+    -fx-text-fill: #a6adc8;
+    /* Subtext0 */
+    -fx-font-size: 14px;
+}
+
+/* Card de Desafio Individual */
+.challenge-card {
+    -fx-background-color: #313244;
+    /* Surface0 */
+    -fx-background-radius: 15;
+    -fx-border-color: rgba(137, 180, 250, 0.1);
+    /* Sutil Blue border */
+    -fx-border-radius: 15;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 10, 0, 0, 5);
+    -fx-transition: 0.3s;
+}
+
+.challenge-card:hover {
+    -fx-border-color: #89b4fa;
+    /* Blue on hover */
+    -fx-background-color: #3e4059;
+}
+
+/* Título dentro do Card */
+.card-title {
+    -fx-text-fill: #f5e0dc;
+    /* Rosewater */
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+/* Barra de Progresso Customizada */
+.challenge-card .progress-bar {
+    -fx-pref-height: 12;
+}
+
+.challenge-card .progress-bar .track {
+    -fx-background-color: #181825;
+    /* Mantle */
+    -fx-background-radius: 10;
+}
+
+.challenge-card .progress-bar .bar {
+    -fx-background-color: linear-gradient(to right, #cba6f7, #89b4fa);
+    /* Mauve to Blue */
+    -fx-background-radius: 10;
+}
+
+/* Labels menores e Vidas */
+.small-text {
+    -fx-text-fill: #9399b2;
+    /* Overlay0 */
+    -fx-font-size: 12px;
+}
+
+.mini-label {
+    -fx-text-fill: #f38ba8;
+    /* Red para o label de Vidas */
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+/* Ícones de Vida (Corações/Círculos) */
+.heart-icon {
+    -fx-fill: #f38ba8;
+    /* Red */
+}
+
+.heart-icon-empty {
+    -fx-fill: #45475a;
+    /* Surface1 */
+}
+
+/* Botões de Ação e Excluir */
+.delete-btn-small {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-padding: 5;
+    -fx-background-radius: 50;
+}
+
+.delete-btn-small:hover {
+    -fx-background-color: rgba(243, 139, 168, 0.2);
+    -fx-text-fill: #f38ba8;
+}
+
+/* ScrollPane customizado para a lista */
+.dark-scroll {
+    -fx-background-color: transparent;
+    -fx-padding: 0 10 0 0;
+}
+
+.dark-scroll .viewport {
+    -fx-background-color: transparent;
+}

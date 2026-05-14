@@ -1,6 +1,7 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.infra.database.SQLiteChallengeRepository;
 import com.thomazcollet.infra.database.SQLiteFocusSessionRepository;
 import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.service.*;
@@ -30,24 +31,34 @@ import java.util.Map;
 
 /**
  * Controller principal que gerencia a navegação e o ciclo de vida das views.
- * Implementa cache de views para preservar o estado do Timer durante a navegação.
+ * Implementa cache de views para preservar o estado do Timer durante a
+ * navegação.
  */
 public class MainController {
 
     private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
-    @FXML private StackPane contentArea;
-    @FXML private StackPane avatarContainer;
-    @FXML private Button btnTimer;
-    @FXML private Button btnStats;
-    @FXML private Circle avatarCircle;
-    @FXML private Label initialLabel;
+    @FXML
+    private StackPane contentArea;
+    @FXML
+    private StackPane avatarContainer;
+    @FXML
+    private Button btnTimer;
+    @FXML
+    private Button btnStats;
+    @FXML
+    private Button btnChallenges; // Novo botão injetado
+    @FXML
+    private Circle avatarCircle;
+    @FXML
+    private Label initialLabel;
 
     // Services
     private PomodoroService pomodoroService;
     private FocusSessionService focusSessionService;
     private ProfileService profileService;
     private StatsService statsService;
+    private ChallengeService challengeService; // Novo Service
 
     // Cache de Views e Controllers
     private final Map<String, Parent> viewCache = new HashMap<>();
@@ -70,10 +81,12 @@ public class MainController {
         try {
             var sessionRepository = new SQLiteFocusSessionRepository();
             var profileRepository = new SQLiteProfileRepository();
+            var challengeRepository = new SQLiteChallengeRepository(); // Novo Repo
 
             this.focusSessionService = new FocusSessionService(sessionRepository);
             this.profileService = new ProfileService(profileRepository);
             this.statsService = new StatsService(sessionRepository, profileRepository);
+            this.challengeService = new ChallengeService(challengeRepository); // Novo Service
 
             profileService.ensureProfileExists();
             logger.info("Serviços de infraestrutura inicializados com sucesso.");
@@ -85,6 +98,7 @@ public class MainController {
     private void setupNavigation() {
         btnTimer.setOnAction(e -> loadTimerView());
         btnStats.setOnAction(e -> loadStatsView());
+        btnChallenges.setOnAction(e -> loadChallengesView()); // Nova navegação
         avatarContainer.setOnMouseClicked(this::handleAvatarClick);
         avatarContainer.setCursor(javafx.scene.Cursor.HAND);
     }
@@ -102,23 +116,21 @@ public class MainController {
             if (!viewCache.containsKey("timer")) {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TimerView.fxml"));
                 Parent root = loader.load();
-                
+
                 this.timerController = loader.getController();
-                
-                // Inicializa o PomodoroService apenas uma vez com a primeira instância do controller
+
                 if (pomodoroService == null) {
                     Profile activeProfile = profileService.getActiveProfile();
                     this.pomodoroService = new PomodoroService(activeProfile, timerController, focusSessionService);
                 }
-                
+
                 timerController.setPomodoroService(pomodoroService);
                 viewCache.put("timer", root);
             }
-            
+
             updateContentArea(viewCache.get("timer"));
-            btnTimer.getStyleClass().add("nav-button-active");
-            btnStats.getStyleClass().remove("nav-button-active");
-            
+            updateNavStyles(btnTimer);
+
         } catch (IOException e) {
             logger.error("Erro ao carregar TimerView: ", e);
         }
@@ -126,8 +138,6 @@ public class MainController {
 
     private void loadStatsView() {
         try {
-            // As estatísticas são recarregadas para garantir dados atualizados, 
-            // mas você pode optar por cachear o Parent se a UI for pesada.
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
             Parent statsView = loader.load();
 
@@ -135,12 +145,42 @@ public class MainController {
             controller.initData(statsService, profileService.getActiveProfile());
 
             updateContentArea(statsView);
-            btnStats.getStyleClass().add("nav-button-active");
-            btnTimer.getStyleClass().remove("nav-button-active");
-            
+            updateNavStyles(btnStats);
+
         } catch (IOException e) {
             logger.error("Erro ao carregar StatsView: ", e);
         }
+    }
+
+    private void loadChallengesView() {
+        try {
+            // Recarregamos a view de desafios para sempre pegar os dados mais novos do
+            // banco
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ChallengeView.fxml"));
+
+            // Injeção de dependência manual para o ChallengeController
+            loader.setControllerFactory(param -> {
+                if (param == ChallengeController.class) {
+                    return new ChallengeController(challengeService);
+                }
+                return null;
+            });
+
+            Parent challengesView = loader.load();
+            updateContentArea(challengesView);
+            updateNavStyles(btnChallenges);
+
+        } catch (IOException e) {
+            logger.error("Erro ao carregar ChallengeView: ", e);
+        }
+    }
+
+    private void updateNavStyles(Button activeBtn) {
+        btnTimer.getStyleClass().remove("nav-button-active");
+        btnStats.getStyleClass().remove("nav-button-active");
+        btnChallenges.getStyleClass().remove("nav-button-active");
+
+        activeBtn.getStyleClass().add("nav-button-active");
     }
 
     private void updateContentArea(Parent view) {
@@ -155,7 +195,8 @@ public class MainController {
             return;
         }
 
-        if (System.currentTimeMillis() - lastPopupCloseTime < 150) return;
+        if (System.currentTimeMillis() - lastPopupCloseTime < 150)
+            return;
         showProfilePopover();
     }
 
@@ -197,7 +238,7 @@ public class MainController {
         GridPane grid = new GridPane();
         grid.getStyleClass().add("stats-grid");
         grid.setAlignment(Pos.CENTER);
-        
+
         Profile profile = profileService.getActiveProfile();
         addStat(grid, "Streak", "🔥 " + profile.getMaxStreak() + "d", 0, 0);
         addStat(grid, "Recorde", formatTime(profile.getMaxFocusDaySeconds()), 0, 1);
