@@ -26,10 +26,9 @@
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                 <children>
                     <ProgressBar fx:id="progressChallenge" maxWidth="Infinity" progress="0.5" HBox.hgrow="ALWAYS" />
-                    <Label fx:id="lblProgressDays" minWidth="65.0" styleClass="small-text" text="0/30 dias" />
+                    <Label fx:id="lblProgressText" minWidth="85.0" styleClass="small-text" text="0/30 dias" />
                 </children>
             </HBox>
-            
             <HBox fx:id="livesContainer" alignment="CENTER_LEFT" spacing="6.0" style="-fx-padding: 5 0 0 0;" />
         </children>
     </VBox>

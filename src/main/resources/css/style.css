@@ -650,3 +650,59 @@
     -fx-font-size: 14px;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
 }
+
+/* Cards de Seleção no Dialog */
+.type-card {
+    -fx-padding: 20;
+    -fx-border-color: #333333;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    /* Importante para o background não vazar a borda */
+    -fx-background-color: #1e1e1e;
+    -fx-cursor: hand;
+}
+
+.type-card:hover {
+    -fx-border-color: #00ff88;
+    /* Neon verde/retro */
+    -fx-background-color: #252525;
+    /* Nota: Para o efeito de escala (zoom), use ScaleTransition no JavaFX Controller */
+}
+
+/* Títulos dentro dos cards */
+.card-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+    -fx-text-fill: white;
+}
+
+/* Cor específica para a barra de Milestone */
+.milestone-progress .bar {
+    -fx-background-color: #89b4fa;
+    /* Azul Catppuccin */
+    -fx-background-insets: 0;
+    /* Remove sombras internas padrão */
+}
+
+/* Estilo para a barra de Streak (opcional, para manter o padrão verde) */
+.streak-progress .bar {
+    -fx-background-color: #a6e3a1;
+    /* Verde suave */
+    -fx-background-insets: 0;
+}
+
+.dark-input,
+.spinner {
+    -fx-min-height: 40px;
+    -fx-background-radius: 8;
+}
+
+/* Garante que o diálogo tenha uma borda bonita e não corte o conteúdo */
+.dialog-container {
+    -fx-background-color: #181825;
+    /* Cor de fundo escura */
+    -fx-border-color: #313244;
+    -fx-border-width: 1;
+    -fx-border-radius: 15;
+    -fx-background-radius: 15;
+}

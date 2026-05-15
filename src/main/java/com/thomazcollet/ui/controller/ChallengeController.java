@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,23 +51,16 @@ public class ChallengeController {
     private void loadActiveChallenges() {
         List<Challenge> actives = challengeService.getChallengesByStatus(currentProfileId, ChallengeStatus.ACTIVE);
 
-        // Limpa o container antes de decidir o alinhamento
         challengesContainer.getChildren().clear();
 
         if (!actives.isEmpty()) {
-            // AJUSTE DINÂMICO: Se houver desafios, alinha no topo para grudar no título
             challengesContainer.setAlignment(Pos.TOP_CENTER);
-
-            // Adiciona um pequeno padding no topo para o primeiro card não encostar na
-            // Label "EM ANDAMENTO"
             challengesContainer.setPadding(new Insets(10, 10, 10, 10));
 
             for (Challenge challenge : actives) {
                 addChallengeCard(challenge);
             }
         } else {
-            // AJUSTE DINÂMICO: Se estiver vazio, centraliza para o placeholder (alvo) ficar
-            // no meio
             challengesContainer.setAlignment(Pos.CENTER);
             challengesContainer.setPadding(new Insets(0));
             showPlaceholder();
@@ -74,9 +68,6 @@ public class ChallengeController {
         }
     }
 
-    /**
-     * Recria o placeholder visual (🎯) programaticamente quando a lista está vazia
-     */
     private void showPlaceholder() {
         try {
             VBox emptyBox = new VBox(15);
@@ -132,22 +123,27 @@ public class ChallengeController {
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Novo Desafio");
             dialogStage.initModality(Modality.APPLICATION_MODAL);
-            dialogStage.initStyle(StageStyle.UTILITY);
+
+            // Use StageStyle.DECORATED para garantir que o Windows permita o
+            // redimensionamento
+            dialogStage.initStyle(StageStyle.DECORATED);
 
             Scene scene = new Scene(root);
             dialogStage.setScene(scene);
+
+            // Força a janela a ser do tamanho exato do VBox escuro
+            dialogStage.sizeToScene();
+            dialogStage.setResizable(false);
+
             dialogStage.showAndWait();
 
             if (dialogController.isSaveClicked()) {
                 Challenge newChallenge = dialogController.getChallenge();
                 newChallenge.setProfileId(currentProfileId);
                 newChallenge.setStatus(ChallengeStatus.ACTIVE);
-
                 challengeService.createChallenge(newChallenge);
                 loadActiveChallenges();
-                showToast("✓ Desafio ativado! Boa sorte.");
             }
-
         } catch (Exception e) {
             logger.error("Erro crítico ao abrir modal: ", e);
         }
