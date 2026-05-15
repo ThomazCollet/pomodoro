@@ -52,11 +52,11 @@ public class DatabaseInitializer {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
                     title TEXT NOT NULL,
-                    type TEXT NOT NULL, -- NOVO: STREAK_CHALLENGE ou MILESTONE_CHALLENGE
+                    type TEXT NOT NULL, -- STREAK_CHALLENGE ou MILESTONE_CHALLENGE
                     duration_days INTEGER NOT NULL,
                     min_focus_minutes_per_day INTEGER NOT NULL,
-                    target_total_minutes INTEGER DEFAULT 0, -- NOVO: Alvo para o modo Intensidade
-                    accumulated_minutes INTEGER DEFAULT 0,  -- NOVO: Total focado no desafio
+                    target_total_minutes INTEGER DEFAULT 0, -- Alvo para o modo Intensidade
+                    accumulated_minutes INTEGER DEFAULT 0,  -- Total focado no desafio
                     today_focus_minutes INTEGER DEFAULT 0,
                     lives_total INTEGER NOT NULL,
                     lives_remaining INTEGER NOT NULL,
@@ -69,10 +69,11 @@ public class DatabaseInitializer {
                 CREATE TABLE IF NOT EXISTS achievements (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
-                    category TEXT NOT NULL,
-                    tier TEXT NOT NULL CHECK(tier IN ('BRONZE', 'PRATA', 'OURO')),
+                    achievement_key TEXT NOT NULL, -- Identificador da regra específica (Ex: 'streak_total_5', 'focus_cycles_10')
+                    category TEXT NOT NULL CHECK(category IN ('STREAK', 'CHALLENGE', 'DAILY_FOCUS', 'ACHIEVEMENTS')),
+                    tier TEXT NOT NULL CHECK(tier IN ('BRONZE', 'SILVER', 'GOLD', 'PLATINUM')),
                     unlocked_at DATETIME DEFAULT (datetime('now', 'localtime')),
-                    UNIQUE(profile_id, category, tier),
+                    UNIQUE(profile_id, achievement_key),
                     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 );
                 """;
