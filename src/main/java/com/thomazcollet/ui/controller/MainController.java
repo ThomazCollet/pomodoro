@@ -119,11 +119,17 @@ public class MainController {
 
                 this.timerController = loader.getController();
 
+                // Localize este bloco dentro do seu MainController.java
                 if (pomodoroService == null) {
                     Profile activeProfile = profileService.getActiveProfile();
-                    this.pomodoroService = new PomodoroService(activeProfile, timerController, focusSessionService);
-                }
 
+                    // ATUALIZAÇÃO AQUI: Adicionado o challengeService como 4º parâmetro
+                    this.pomodoroService = new PomodoroService(
+                            activeProfile,
+                            timerController,
+                            focusSessionService,
+                            challengeService);
+                }
                 timerController.setPomodoroService(pomodoroService);
                 viewCache.put("timer", root);
             }

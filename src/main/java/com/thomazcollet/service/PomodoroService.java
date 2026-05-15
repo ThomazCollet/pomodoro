@@ -12,6 +12,7 @@ import java.util.concurrent.*;
 
 /**
  * Service responsável pela orquestração do tempo e transição de estados.
+ * Integrado ao sistema de desafios para computar tempo de foco.
  */
 public class PomodoroService {
 
@@ -21,8 +22,9 @@ public class PomodoroService {
     private ScheduledFuture<?> task;
     private final TimerChangeListener listener;
     private final FocusSessionService focusSessionService;
+    private final ChallengeService challengeService; // Nova dependência
 
-    private int sessionsInCycle = 0; // Contador de 0 a 3 para os Pips
+    private int sessionsInCycle = 0;
 
     private Profile currentProfile;
     private SessionType currentSessionType;
@@ -31,14 +33,19 @@ public class PomodoroService {
     private int totalSessionDuration;
     private volatile TimerState timerState;
 
-    public PomodoroService(Profile profile, TimerChangeListener listener, FocusSessionService focusSessionService) {
-        if (profile == null || listener == null || focusSessionService == null) {
+    public PomodoroService(Profile profile,
+            TimerChangeListener listener,
+            FocusSessionService focusSessionService,
+            ChallengeService challengeService) { // Construtor atualizado
+
+        if (profile == null || listener == null || focusSessionService == null || challengeService == null) {
             throw new IllegalArgumentException("Dependências obrigatórias não podem ser nulas.");
         }
 
         this.currentProfile = profile;
         this.listener = listener;
         this.focusSessionService = focusSessionService;
+        this.challengeService = challengeService;
         this.executor = Executors.newSingleThreadScheduledExecutor();
         this.timerState = TimerState.STOPPED;
 
@@ -80,14 +87,18 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
 
-        // Se terminou um FOCO, incrementamos o ciclo para os Pips
         if (currentSessionType == SessionType.FOCUS) {
             incrementCycle();
+
+            // Notifica os desafios: Converte duração total para minutos
+            int minutesSpent = totalSessionDuration / 60;
+            if (minutesSpent > 0) {
+                challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), minutesSpent);
+            }
         }
 
         focusSessionService.finalizeCurrentSession(totalSessionDuration, true);
 
-        // Lógica de próxima sessão (Se for o 4º foco, vai para Long Break)
         SessionType nextType;
         if (currentSessionType == SessionType.FOCUS) {
             nextType = (sessionsInCycle == 0) ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
@@ -111,10 +122,17 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
 
-        SessionType nextType;
-
+        // NOVO: Notifica os desafios antes de mudar de sessão
         if (currentSessionType == SessionType.FOCUS) {
+            int minutesSpent = totalSessionDuration / 60;
+            if (minutesSpent > 0) {
+                challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), minutesSpent);
+            }
             incrementCycle();
+        }
+
+        SessionType nextType;
+        if (currentSessionType == SessionType.FOCUS) {
             // Se após o incremento o ciclo resetou para 0, significa que completamos o 4º
             // foco
             nextType = (sessionsInCycle == 0) ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
@@ -136,12 +154,18 @@ public class PomodoroService {
 
     public void stop() {
         if (timerState != TimerState.STOPPED) {
-            int elapsed = totalSessionDuration - remainingSeconds;
-            focusSessionService.finalizeCurrentSession(elapsed, false);
+            int elapsedSeconds = totalSessionDuration - remainingSeconds;
+
+            // Computa tempo parcial para os desafios se for uma sessão de FOCUS
+            if (currentSessionType == SessionType.FOCUS && elapsedSeconds >= 60) {
+                challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), elapsedSeconds / 60);
+            }
+
+            focusSessionService.finalizeCurrentSession(elapsedSeconds, false);
         }
         cancelTask();
         timerState = TimerState.STOPPED;
-        sessionsInCycle = 0; // Reset do ciclo visual
+        sessionsInCycle = 0;
         prepareSession(SessionType.FOCUS);
     }
 
@@ -155,21 +179,14 @@ public class PomodoroService {
         executor.shutdown();
     }
 
-    /**
-     * Atualiza o perfil do usuário e reajusta as configurações de tempo.
-     * Útil quando o usuário altera as preferências de duração.
-     */
     public void updateProfile(Profile newProfile) {
         if (newProfile == null)
             return;
-
         this.currentProfile = newProfile;
 
-        // Se o timer estiver parado, já prepara a próxima sessão com o novo tempo
         if (timerState == TimerState.STOPPED) {
             prepareSession(currentSessionType);
         }
-
         logger.info("Perfil atualizado no serviço. Novas durações aplicadas.");
     }
 

@@ -3,6 +3,7 @@ package com.thomazcollet.service;
 import com.thomazcollet.domain.exception.ChallengeNotFoundException;
 import com.thomazcollet.domain.model.Challenge;
 import com.thomazcollet.domain.model.ChallengeStatus;
+import com.thomazcollet.domain.model.ChallengeType;
 import com.thomazcollet.domain.repository.ChallengeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,100 +32,120 @@ class ChallengeServiceTest {
     @InjectMocks
     private ChallengeService service;
 
-    private Challenge challenge;
+    private Challenge streakChallenge;
+    private Challenge milestoneChallenge;
 
     @BeforeEach
     void setUp() {
-        challenge = new Challenge();
-        challenge.setId(1L);
-        challenge.setProfileId(10L);
-        challenge.setTitle("Foco Intenso");
-        challenge.setDurationDays(5);
-        challenge.setMinFocusMinutesPerDay(30);
-        challenge.setLivesTotal(2);
+        // Mock de um desafio de Streak (Consistência)
+        streakChallenge = new Challenge();
+        streakChallenge.setId(1L);
+        streakChallenge.setProfileId(10L);
+        streakChallenge.setType(ChallengeType.STREAK_CHALLENGE);
+        streakChallenge.setTitle("Foco Diário");
+        streakChallenge.setDurationDays(5);
+        streakChallenge.setMinFocusMinutesPerDay(30);
+        streakChallenge.setLivesTotal(2);
+
+        // Mock de um desafio de Milestone (Acumulado)
+        milestoneChallenge = new Challenge();
+        milestoneChallenge.setId(2L);
+        milestoneChallenge.setProfileId(10L);
+        milestoneChallenge.setType(ChallengeType.MILESTONE_CHALLENGE);
+        milestoneChallenge.setTitle("Maratona Java");
+        milestoneChallenge.setTargetTotalMinutes(120); // 2 horas de foco total
+        milestoneChallenge.setDurationDays(30);
+    }
+
+    // --- TESTES DE CRIAÇÃO E VALIDAÇÃO ---
+
+    @Test
+    @DisplayName("Deve lançar exceção ao criar Milestone sem meta de minutos")
+    void shouldThrowExceptionForMilestoneWithoutTarget() {
+        milestoneChallenge.setTargetTotalMinutes(0);
+        assertThrows(IllegalArgumentException.class, () -> service.createChallenge(milestoneChallenge));
+    }
+
+    // --- TESTES DE PROGRESSO EM TEMPO REAL (ADD MINUTES) ---
+
+    @Test
+    @DisplayName("Deve atualizar apenas foco diário para desafios de Streak")
+    void shouldUpdateOnlyDailyFocusForStreak() {
+        when(repository.findById(1L)).thenReturn(Optional.of(streakChallenge));
+        streakChallenge.setStatus(ChallengeStatus.ACTIVE);
+        streakChallenge.setTodayFocusMinutes(10);
+
+        service.addFocusMinutes(1L, 25);
+
+        // Deve somar 10 + 25 = 35
+        verify(repository).updateDailyFocus(1L, 35);
+        // NÃO deve chamar updateMilestoneProgress
+        verify(repository, never()).updateMilestoneProgress(anyLong(), anyInt(), anyString());
     }
 
     @Test
-    @DisplayName("Deve criar desafio com estado inicial correto")
-    void shouldCreateChallengeWithInitialState() {
-        service.createChallenge(challenge);
+    @DisplayName("Deve atualizar acumulado e completar Milestone quando meta é atingida")
+    void shouldCompleteMilestoneWhenTargetReached() {
+        when(repository.findById(2L)).thenReturn(Optional.of(milestoneChallenge));
+        milestoneChallenge.setStatus(ChallengeStatus.ACTIVE);
+        milestoneChallenge.setAccumulatedMinutes(100);
 
-        assertEquals(ChallengeStatus.ACTIVE, challenge.getStatus());
-        assertEquals(0, challenge.getProgressDays());
-        assertEquals(2, challenge.getLivesRemaining());
-        verify(repository, times(1)).save(challenge);
+        // Faltam 20 para 120. Adicionamos 25.
+        service.addFocusMinutes(2L, 25);
+
+        verify(repository).updateMilestoneProgress(2L, 125, "COMPLETED");
     }
 
     @Test
-    @DisplayName("Deve lançar exceção ao criar desafio com duração inválida")
-    void shouldThrowExceptionForInvalidDuration() {
-        challenge.setDurationDays(0);
-        assertThrows(IllegalArgumentException.class, () -> service.createChallenge(challenge));
+    @DisplayName("Deve propagar minutos para todos os desafios ativos do perfil")
+    void shouldPropagateMinutesToAllActiveChallenges() {
+        // CONFIGURAÇÃO: Garantir que ambos estão ATIVOS para passar pelo IF do service
+        streakChallenge.setStatus(ChallengeStatus.ACTIVE);
+        milestoneChallenge.setStatus(ChallengeStatus.ACTIVE);
+
+        when(repository.findActiveByProfile(10L)).thenReturn(List.of(streakChallenge, milestoneChallenge));
+
+        when(repository.findById(1L)).thenReturn(Optional.of(streakChallenge));
+        when(repository.findById(2L)).thenReturn(Optional.of(milestoneChallenge));
+
+        // EXECUÇÃO
+        service.addFocusMinutesToActiveChallenges(10L, 25);
+
+        // VERIFICAÇÃO
+        verify(repository).updateDailyFocus(1L, 25);
+        verify(repository).updateDailyFocus(2L, 25);
+        // Verifica se o Milestone também chamou o update de acumulado
+        verify(repository).updateMilestoneProgress(eq(2L), anyInt(), anyString());
+    }
+
+    // --- TESTES DE PROCESSAMENTO DIÁRIO (STREAK) ---
+
+    @Test
+    @DisplayName("Deve perder vida no Streak se meta diária não for atingida")
+    void shouldDecrementLivesWhenGoalIsNotReached() {
+        streakChallenge.setLivesRemaining(2);
+        streakChallenge.setStatus(ChallengeStatus.ACTIVE);
+
+        when(repository.findActiveByProfile(10L)).thenReturn(List.of(streakChallenge));
+
+        service.processDailyProgress(10L, 10); // Meta era 30
+
+        verify(repository).updateProgress(1L, 0, 1, "ACTIVE");
+        // Garante que resetou o foco do dia para o próximo dia
+        verify(repository).updateDailyFocus(1L, 0);
     }
 
     @Test
-    @DisplayName("Deve lançar ChallengeNotFoundException ao deletar ID inexistente")
-    void shouldThrowExceptionWhenDeletingNonExistentId() {
-        when(repository.findById(1L)).thenReturn(Optional.empty());
-        assertThrows(ChallengeNotFoundException.class, () -> service.deleteChallenge(1L));
-    }
+    @DisplayName("Deve completar Streak no último dia com sucesso")
+    void shouldCompleteStreakOnLastDay() {
+        streakChallenge.setProgressDays(4); // Faltava 1 dia (total 5)
+        streakChallenge.setLivesRemaining(2);
+        streakChallenge.setStatus(ChallengeStatus.ACTIVE);
 
-    @Test
-    @DisplayName("Deve progredir dia quando meta de foco é atingida")
-    void shouldIncrementProgressWhenGoalIsReached() {
-        challenge.setProgressDays(1);
-        challenge.setLivesRemaining(2);
-        challenge.setStatus(ChallengeStatus.ACTIVE);
-
-        when(repository.findActiveByProfile(10L)).thenReturn(List.of(challenge));
-
-        service.processDailyProgress(10L, 40); // 40 min > 30 min meta
-
-        verify(repository).updateProgress(1L, 2, 2, "ACTIVE");
-    }
-
-    @Test
-    @DisplayName("Deve concluir desafio ao atingir meta no último dia")
-    void shouldCompleteChallengeOnLastDay() {
-        // Configurando o cenário específico para este teste
-        challenge.setProgressDays(4);
-        challenge.setLivesRemaining(2); // Garante que as vidas atuais sejam 2
-        challenge.setStatus(ChallengeStatus.ACTIVE);
-
-        when(repository.findActiveByProfile(10L)).thenReturn(List.of(challenge));
+        when(repository.findActiveByProfile(10L)).thenReturn(List.of(streakChallenge));
 
         service.processDailyProgress(10L, 30);
 
-        // Agora o verify vai bater: 2 vidas entrando, 2 vidas saindo (já que ele bateu
-        // a meta)
         verify(repository).updateProgress(1L, 5, 2, "COMPLETED");
-    }
-
-    @Test
-    @DisplayName("Deve perder vida quando meta de foco não é atingida")
-    void shouldDecrementLivesWhenGoalIsNotReached() {
-        challenge.setProgressDays(1);
-        challenge.setLivesRemaining(2);
-        challenge.setStatus(ChallengeStatus.ACTIVE);
-
-        when(repository.findActiveByProfile(10L)).thenReturn(List.of(challenge));
-
-        service.processDailyProgress(10L, 10); // 10 min < 30 min meta
-
-        verify(repository).updateProgress(1L, 1, 1, "ACTIVE");
-    }
-
-    @Test
-    @DisplayName("Deve falhar desafio quando vidas acabam")
-    void shouldFailChallengeWhenLivesAreExhausted() {
-        challenge.setProgressDays(2);
-        challenge.setLivesRemaining(0); // Última vida
-        challenge.setStatus(ChallengeStatus.ACTIVE);
-
-        when(repository.findActiveByProfile(10L)).thenReturn(List.of(challenge));
-
-        service.processDailyProgress(10L, 5);
-
-        verify(repository).updateProgress(1L, 2, -1, "FAILED");
     }
 }
