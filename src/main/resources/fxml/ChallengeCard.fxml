@@ -15,7 +15,13 @@
     
     <VBox spacing="12.0" HBox.hgrow="ALWAYS">
         <children>
-            <Label fx:id="lblTitle" styleClass="card-title" text="Título do Desafio" />
+            <HBox alignment="CENTER_LEFT">
+                <children>
+                    <Label fx:id="lblTitle" styleClass="card-title" text="Título do Desafio" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Label fx:id="lblDailyGoal" styleClass="small-text" style="-fx-font-weight: bold; -fx-text-fill: #00adb5;" text="0/0 min" />
+                </children>
+            </HBox>
             
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                 <children>

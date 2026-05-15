@@ -14,6 +14,9 @@ public class Challenge {
     private LocalDate startDate;
     private int progressDays;
 
+    // NOVO CAMPO: Essencial para a UI do Card
+    private int todayFocusMinutes;
+
     // Getters e Setters
     public Long getId() {
         return id;
@@ -98,5 +101,18 @@ public class Challenge {
     // Método utilitário para a UI
     public double getProgressPercentage() {
         return (double) progressDays / durationDays;
+    }
+
+    public int getTodayFocusMinutes() {
+        return todayFocusMinutes;
+    }
+
+    public void setTodayFocusMinutes(int todayFocusMinutes) {
+        this.todayFocusMinutes = todayFocusMinutes;
+    }
+
+    // MÉTODO UTILITÁRIO: Verifica se o dia atual já está ganho
+    public boolean isDailyGoalMet() {
+        return todayFocusMinutes >= minFocusMinutesPerDay;
     }
 }

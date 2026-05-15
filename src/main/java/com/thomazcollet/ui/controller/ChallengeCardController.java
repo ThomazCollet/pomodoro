@@ -17,6 +17,8 @@ public class ChallengeCardController {
     @FXML
     private Label lblTitle;
     @FXML
+    private Label lblDailyGoal; // Nova label ao lado do título
+    @FXML
     private ProgressBar progressChallenge;
     @FXML
     private Label lblProgressDays;
@@ -40,7 +42,10 @@ public class ChallengeCardController {
     private void renderCard() {
         lblTitle.setText(challenge.getTitle());
 
-        // Cálculo do progresso (0.0 a 1.0)
+        // Lógica da Meta Diária (Gamificação)
+        updateDailyGoalDisplay();
+
+        // Cálculo do progresso total (0.0 a 1.0)
         double progress = (double) challenge.getProgressDays() / challenge.getDurationDays();
         progressChallenge.setProgress(progress);
 
@@ -49,23 +54,34 @@ public class ChallengeCardController {
         renderLives();
     }
 
+    private void updateDailyGoalDisplay() {
+        // Supondo que você tenha esse método no Model para pegar o foco do dia atual
+        int currentFocus = challenge.getTodayFocusMinutes();
+        int goal = challenge.getMinFocusMinutesPerDay();
+
+        if (currentFocus >= goal) {
+            // Estado: Meta Concluída (Verde suave + Check)
+            lblDailyGoal.setText(String.format(" • %d/%d min ✓", currentFocus, goal));
+            lblDailyGoal.setStyle("-fx-text-fill: #a6e3a1; -fx-font-weight: bold;");
+        } else {
+            // Estado: Em progresso (Cinza opaco)
+            lblDailyGoal.setText(String.format(" • %d/%d min", currentFocus, goal));
+            lblDailyGoal.setStyle("-fx-text-fill: rgba(255, 255, 255, 0.5);");
+        }
+    }
+
     private void renderLives() {
         livesContainer.getChildren().clear();
         int total = challenge.getLivesTotal();
         int remaining = challenge.getLivesRemaining();
 
         for (int i = 0; i < total; i++) {
-            // Trocamos o Circle por uma Label com o caractere de coração
             Label heart = new Label("❤");
-
-            // Adicionamos a classe base para o estilo do coração
             heart.getStyleClass().add("heart-icon");
 
             if (i < remaining) {
-                // Estilo para vida ativa (Red/Peach)
                 heart.getStyleClass().add("heart-active");
             } else {
-                // Estilo para vida perdida (Cinza/Escuro)
                 heart.getStyleClass().add("heart-lost");
             }
 

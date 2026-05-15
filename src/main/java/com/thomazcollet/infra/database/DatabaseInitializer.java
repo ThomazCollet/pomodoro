@@ -9,11 +9,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-/**
- * Responsável pela configuração inicial e integridade do banco de dados SQLite.
- * Aplica o princípio Fail-Fast: se o banco falhar, a aplicação não deve
- * iniciar.
- */
 public class DatabaseInitializer {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseInitializer.class);
@@ -22,7 +17,6 @@ public class DatabaseInitializer {
     public static void initialize() {
         logger.info("Iniciando verificação e configuração do banco de dados...");
 
-        // Adicionados atributos: username (antigo name) e image_path
         String setupSql = """
                 PRAGMA foreign_keys = ON;
 
@@ -36,7 +30,7 @@ public class DatabaseInitializer {
                     max_streak INTEGER DEFAULT 0,
                     max_focus_day_seconds INTEGER DEFAULT 0,
                     total_focus_sessions INTEGER DEFAULT 0,
-                    xp INTEGER DEFAULT 0, -- Adicionado para o sistema de Ranking
+                    xp INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT (datetime('now', 'localtime'))
                 );
 
@@ -51,7 +45,6 @@ public class DatabaseInitializer {
                     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 );
 
-                -- Nova tabela para Desafios/Metas
                 CREATE TABLE IF NOT EXISTS challenges (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
@@ -63,28 +56,39 @@ public class DatabaseInitializer {
                     status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'COMPLETED', 'FAILED')),
                     start_date DATE NOT NULL,
                     progress_days INTEGER DEFAULT 0,
+                    today_focus_minutes INTEGER DEFAULT 0, -- COLUNA NO LUGAR CORRETO (ANTES DA FK)
                     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 );
 
-                -- Nova tabela para Conquistas (Achievements)
                 CREATE TABLE IF NOT EXISTS achievements (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
-                    category TEXT NOT NULL, -- ex: 'STREAK', 'CHALLENGE', 'TOTAL_TIME'
+                    category TEXT NOT NULL,
                     tier TEXT NOT NULL CHECK(tier IN ('BRONZE', 'PRATA', 'OURO')),
                     unlocked_at DATETIME DEFAULT (datetime('now', 'localtime')),
-                    UNIQUE(profile_id, category, tier), -- Impede conquistas duplicadas
+                    UNIQUE(profile_id, category, tier),
                     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 );
                 """;
+
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
 
+            // Executa a criação das tabelas
             for (String sql : setupSql.split(";")) {
                 if (!sql.trim().isEmpty()) {
                     stmt.execute(sql);
                 }
             }
+
+            // MIGRATION: Tenta adicionar a coluna caso a tabela já exista de antes
+            try {
+                stmt.execute("ALTER TABLE challenges ADD COLUMN today_focus_minutes INTEGER DEFAULT 0;");
+                logger.info("Migration: Coluna today_focus_minutes adicionada com sucesso.");
+            } catch (SQLException e) {
+                // Se cair aqui, é porque a coluna já existe. Podemos ignorar silenciosamente.
+            }
+
             logger.info("Banco de dados verificado com sucesso.");
 
         } catch (SQLException e) {

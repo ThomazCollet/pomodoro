@@ -1,7 +1,7 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Challenge;
-import com.thomazcollet.domain.model.ChallengeStatus; // Import necessário
+import com.thomazcollet.domain.model.ChallengeStatus;
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -10,9 +10,15 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import java.time.LocalDate; // Import necessário
+import java.time.LocalDate;
 
 public class ChallengeDialogController {
+
+    @FXML
+    private Spinner<Integer> spnMinFocusMinutes;
+
+    @FXML
+    private Label lblFocusTimeTranslation; // Nova Label para tradução HH:mm
 
     @FXML
     private TextField txtTitle;
@@ -31,18 +37,47 @@ public class ChallengeDialogController {
 
     @FXML
     public void initialize() {
+        // Fábrica para Duração (1 a 30 dias, padrão 7)
         SpinnerValueFactory<Integer> durationFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 30, 7);
         spinnerDuration.setValueFactory(durationFactory);
 
+        // META DE FOCO: Mínimo 5 min, Máximo 480 min (8h), Padrão 60, Incremento de 5
+        SpinnerValueFactory<Integer> focusFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 480, 60, 5);
+        spnMinFocusMinutes.setValueFactory(focusFactory);
+
+        // Listener para atualizar a tradução de tempo (HH:mm) dinamicamente
+        spnMinFocusMinutes.valueProperty().addListener((obs, oldVal, newVal) -> {
+            updateFocusTimeTranslation(newVal);
+        });
+
+        // Inicializa a tradução com o valor padrão
+        updateFocusTimeTranslation(60);
+
+        // Inicializa o limite de vidas baseado no padrão (7 dias)
         updateLivesLimit(7);
 
+        // Listener para ajustar o limite de vidas dinamicamente
         spinnerDuration.valueProperty().addListener((obs, oldVal, newVal) -> {
             updateLivesLimit(newVal);
         });
     }
 
+    /**
+     * Converte os minutos totais em um formato legível de horas e minutos.
+     */
+    private void updateFocusTimeTranslation(int totalMinutes) {
+        int hours = totalMinutes / 60;
+        int minutes = totalMinutes % 60;
+
+        if (hours > 0) {
+            lblFocusTimeTranslation.setText(String.format("(%dh %02dm)", hours, minutes));
+        } else {
+            lblFocusTimeTranslation.setText(String.format("(%dm)", minutes));
+        }
+    }
+
     private void updateLivesLimit(int days) {
-        int maxLives = (int) Math.ceil(days * 0.35); // Ajustado para 35% como conversamos
+        int maxLives = (int) Math.ceil(days * 0.35);
         int currentVal = (spinnerLives.getValueFactory() != null) ? spinnerLives.getValue() : 1;
 
         SpinnerValueFactory<Integer> livesFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, maxLives,
@@ -57,7 +92,9 @@ public class ChallengeDialogController {
     }
 
     private void showLimitWarning() {
-        if (lblLimitWarning == null) return;
+        if (lblLimitWarning == null)
+            return;
+
         lblLimitWarning.setVisible(true);
         lblLimitWarning.setManaged(true);
 
@@ -73,20 +110,20 @@ public class ChallengeDialogController {
     private void handleSave() {
         if (isInputValid()) {
             challenge = new Challenge();
-            
+
             // Dados da UI
             challenge.setTitle(txtTitle.getText());
             challenge.setDurationDays(spinnerDuration.getValue());
             challenge.setLivesTotal(spinnerLives.getValue());
-            
-            // DADOS OBRIGATÓRIOS PARA O SQLITE (O que faltava)
-            challenge.setLivesRemaining(spinnerLives.getValue()); // Começa com vidas cheias
-            challenge.setStartDate(LocalDate.now());            // Data de início é hoje
-            challenge.setStatus(ChallengeStatus.ACTIVE);        // Status inicial ativo
-            challenge.setProgressDays(0);                       // Começa com zero progresso
-            challenge.setMinFocusMinutesPerDay(25);             // Valor padrão (pode ser ajustado depois)
-            
-            // O profileId será setado no ChallengeController principal antes de salvar
+
+            // Captura o valor real selecionado pelo usuário
+            challenge.setMinFocusMinutesPerDay(spnMinFocusMinutes.getValue());
+
+            // Dados obrigatórios de estado inicial
+            challenge.setLivesRemaining(spinnerLives.getValue());
+            challenge.setStartDate(LocalDate.now());
+            challenge.setStatus(ChallengeStatus.ACTIVE);
+            challenge.setProgressDays(0);
 
             saveClicked = true;
             closeStage();

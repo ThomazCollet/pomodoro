@@ -20,8 +20,8 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
     public void save(Challenge challenge) {
         String sql = """
                 INSERT INTO challenges (profile_id, title, duration_days, min_focus_minutes_per_day,
-                lives_total, lives_remaining, status, start_date, progress_days)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                lives_total, lives_remaining, status, start_date, progress_days, today_focus_minutes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -36,6 +36,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
             pstmt.setString(7, challenge.getStatus().name());
             pstmt.setString(8, challenge.getStartDate().toString());
             pstmt.setInt(9, challenge.getProgressDays());
+            pstmt.setInt(10, challenge.getTodayFocusMinutes());
 
             pstmt.executeUpdate();
 
@@ -68,6 +69,24 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         } catch (SQLException e) {
             logger.error("Erro ao atualizar progresso do desafio", e);
             throw new RuntimeException("Falha ao atualizar desafio no banco", e);
+        }
+    }
+
+    @Override
+    public void updateDailyFocus(Long challengeId, int minutes) {
+        String sql = "UPDATE challenges SET today_focus_minutes = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, minutes);
+            pstmt.setLong(2, challengeId);
+
+            pstmt.executeUpdate();
+            logger.debug("Minutos de foco diário do desafio ID {} atualizados para {}.", challengeId, minutes);
+        } catch (SQLException e) {
+            logger.error("Erro ao atualizar minutos de foco", e);
+            throw new RuntimeException("Falha ao atualizar foco no banco", e);
         }
     }
 
@@ -139,6 +158,10 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         c.setStatus(ChallengeStatus.valueOf(rs.getString("status")));
         c.setStartDate(LocalDate.parse(rs.getString("start_date")));
         c.setProgressDays(rs.getInt("progress_days"));
+
+        // MAPEAMENTO DO NOVO CAMPO
+        c.setTodayFocusMinutes(rs.getInt("today_focus_minutes"));
+
         return c;
     }
 }

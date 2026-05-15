@@ -27,6 +27,16 @@
             <TextField fx:id="txtTitle" promptText="Ex: Estudar idiomas ou para a faculdade" styleClass="dark-input" />
         </VBox>
 
+        <VBox spacing="5.0">
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <children>
+                    <Label styleClass="small-text" text="Meta de Foco Diária (Minutos)" />
+                    <Label fx:id="lblFocusTimeTranslation" style="-fx-text-fill: #89b4fa; -fx-font-size: 11px;" text="(1h 00m)" />
+                </children>
+            </HBox>
+            <Spinner fx:id="spnMinFocusMinutes" editable="true" maxWidth="Infinity" />
+        </VBox>
+
         <HBox spacing="20.0">
             <VBox spacing="5.0" HBox.hgrow="ALWAYS">
                 <Label styleClass="small-text" text="Duração (Dias)" />
@@ -38,8 +48,9 @@
                 <Spinner fx:id="spinnerLives" editable="true" maxWidth="Infinity" />
             </VBox>
         </HBox>
+        
         <Label fx:id="lblLimitWarning" text="Limite de resiliência: 25% da duração total." 
-           style="-fx-text-fill: #f38ba8; -fx-font-size: 11px;" visible="false" managed="false" />
+               style="-fx-text-fill: #f38ba8; -fx-font-size: 11px;" visible="false" managed="false" />
     </VBox>
 
     <HBox alignment="CENTER_RIGHT" spacing="12.0">
