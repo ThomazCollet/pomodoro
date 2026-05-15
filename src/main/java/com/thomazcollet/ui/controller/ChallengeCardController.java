@@ -3,6 +3,8 @@ package com.thomazcollet.ui.controller;
 import com.thomazcollet.domain.model.Challenge;
 import com.thomazcollet.domain.model.ChallengeType;
 import com.thomazcollet.service.ChallengeService;
+import com.thomazcollet.ui.util.DialogHelper;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -136,14 +138,20 @@ public class ChallengeCardController {
 
     @FXML
     private void onDelete() {
-        try {
-            challengeService.deleteChallenge(challenge.getId());
-            logger.info("Desafio '{}' removido.", challenge.getTitle());
-            if (onUpdateCallback != null) {
-                onUpdateCallback.run();
+        String message = String.format("O progresso do desafio '%s' será perdido permanentemente. Deseja continuar?",
+                challenge.getTitle());
+        String cssPath = getClass().getResource("/css/style.css").toExternalForm();
+
+        if (DialogHelper.showConfirmation("Excluir Desafio", message, cssPath)) {
+            try {
+                challengeService.deleteChallenge(challenge.getId());
+                logger.info("Desafio '{}' removido pelo usuário.", challenge.getTitle());
+                if (onUpdateCallback != null) {
+                    onUpdateCallback.run();
+                }
+            } catch (Exception e) {
+                logger.error("Erro ao excluir desafio: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            logger.error("Erro ao excluir desafio: {}", e.getMessage());
         }
     }
 }
