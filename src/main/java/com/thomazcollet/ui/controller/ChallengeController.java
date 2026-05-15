@@ -2,6 +2,7 @@ package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Challenge;
 import com.thomazcollet.domain.model.ChallengeStatus;
+import com.thomazcollet.domain.model.ChallengeType;
 import com.thomazcollet.service.ChallengeService;
 
 import javafx.animation.FadeTransition;
@@ -23,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import javafx.util.Duration;
 import java.util.List;
 
@@ -54,6 +57,9 @@ public class ChallengeController {
         challengesContainer.getChildren().clear();
 
         if (!actives.isEmpty()) {
+            // Aplica a ordenação inteligente antes de renderizar
+            sortChallenges(actives);
+
             challengesContainer.setAlignment(Pos.TOP_CENTER);
             challengesContainer.setPadding(new Insets(10, 10, 10, 10));
 
@@ -66,6 +72,44 @@ public class ChallengeController {
             showPlaceholder();
             logger.info("Nenhum desafio ativo encontrado. Exibindo placeholder centralizado.");
         }
+    }
+
+    /**
+     * Ordena os desafios por Urgência (prazos críticos) e depois por Progresso
+     * (maior primeiro).
+     */
+    private void sortChallenges(List<Challenge> challenges) {
+        challenges.sort((c1, c2) -> {
+            long days1 = calculateDaysRemaining(c1);
+            long days2 = calculateDaysRemaining(c2);
+
+            // 1. Prioridade de Urgência: Desafios vencendo hoje ou amanhã sobem para o topo
+            boolean critical1 = days1 <= 1;
+            boolean critical2 = days2 <= 1;
+
+            if (critical1 && !critical2)
+                return -1;
+            if (critical2 && !critical1)
+                return 1;
+
+            // 2. Critério de Desempate: Maior progresso percentual primeiro
+            double prog1 = calculateProgressPercent(c1);
+            double prog2 = calculateProgressPercent(c2);
+
+            return Double.compare(prog2, prog1);
+        });
+    }
+
+    private long calculateDaysRemaining(Challenge c) {
+        LocalDate endDate = c.getStartDate().plusDays(c.getDurationDays());
+        return ChronoUnit.DAYS.between(LocalDate.now(), endDate);
+    }
+
+    private double calculateProgressPercent(Challenge c) {
+        if (c.getType() == ChallengeType.MILESTONE_CHALLENGE) {
+            return (double) c.getAccumulatedMinutes() / c.getTargetTotalMinutes();
+        }
+        return (double) c.getProgressDays() / c.getDurationDays();
     }
 
     private void showPlaceholder() {
@@ -123,15 +167,11 @@ public class ChallengeController {
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Novo Desafio");
             dialogStage.initModality(Modality.APPLICATION_MODAL);
-
-            // Use StageStyle.DECORATED para garantir que o Windows permita o
-            // redimensionamento
             dialogStage.initStyle(StageStyle.DECORATED);
 
             Scene scene = new Scene(root);
             dialogStage.setScene(scene);
 
-            // Força a janela a ser do tamanho exato do VBox escuro
             dialogStage.sizeToScene();
             dialogStage.setResizable(false);
 

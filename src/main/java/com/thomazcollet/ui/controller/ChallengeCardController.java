@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox; // Adicionado
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,13 +22,15 @@ public class ChallengeCardController {
     private static final Logger logger = LoggerFactory.getLogger(ChallengeCardController.class);
 
     @FXML
+    private HBox cardContainer; // Certifique-se de adicionar este fx:id no VBox raiz do seu FXML
+    @FXML
     private Label lblTitle;
     @FXML
-    private Label lblDailyGoal; // Usado para o status no canto superior direito
+    private Label lblDailyGoal;
     @FXML
     private ProgressBar progressChallenge;
     @FXML
-    private Label lblProgressText; // Texto sobre/abaixo da barra de progresso
+    private Label lblProgressText;
     @FXML
     private HBox livesContainer;
     @FXML
@@ -47,9 +50,15 @@ public class ChallengeCardController {
     private void renderCard() {
         lblTitle.setText(challenge.getTitle());
 
+        // Limpa as classes de moldura antes de aplicar a nova (evita bugs visual ao
+        // atualizar)
+        cardContainer.getStyleClass().removeAll("card-streak", "card-milestone");
+
         if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
+            cardContainer.getStyleClass().add("card-milestone");
             renderMilestoneLayout();
         } else {
+            cardContainer.getStyleClass().add("card-streak");
             renderStreakLayout();
         }
     }
@@ -58,12 +67,10 @@ public class ChallengeCardController {
         livesContainer.setVisible(true);
         livesContainer.setManaged(true);
 
-        // Progresso em Dias
         double progress = (double) challenge.getProgressDays() / challenge.getDurationDays();
         progressChallenge.setProgress(progress);
         lblProgressText.setText(challenge.getProgressDays() + "/" + challenge.getDurationDays() + " dias");
 
-        // Meta Diária (Gamificação)
         int currentFocus = challenge.getTodayFocusMinutes();
         int goal = challenge.getMinFocusMinutesPerDay();
 
@@ -87,34 +94,37 @@ public class ChallengeCardController {
         livesContainer.setVisible(false);
         livesContainer.setManaged(false);
 
-        // 1. Progresso Visual (Barra)
-        double progress = (double) challenge.getAccumulatedMinutes() / challenge.getTargetTotalMinutes();
+        int accMin = challenge.getAccumulatedMinutes();
+        int targetTotalMin = challenge.getTargetTotalMinutes();
+        double progress = (double) accMin / targetTotalMin;
         progressChallenge.setProgress(progress);
 
-        // 2. Formatação do Progresso (Ex: "1h 33m / 201h")
-        // Substituindo o formato decimal anterior (1,3h) por Hh MMm
-        int accMin = challenge.getAccumulatedMinutes();
         int h = accMin / 60;
         int m = accMin % 60;
-        int targetH = challenge.getTargetTotalMinutes() / 60;
-
+        int targetH = targetTotalMin / 60;
         lblProgressText.setText(String.format("%dh %02dm / %dh", h, m, targetH));
 
-        // 3. Cálculo de Dias Restantes (Foco no Prazo)
-        // Substituindo "Faltam Xh Ym" por dias restantes até o fim do prazo
-        LocalDate startDate = challenge.getStartDate();
-        LocalDate endDate = startDate.plusDays(challenge.getDurationDays());
+        LocalDate endDate = challenge.getStartDate().plusDays(challenge.getDurationDays());
         long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), endDate);
 
-        if (accMin >= challenge.getTargetTotalMinutes()) {
+        long urgencyThreshold = Math.max(2, (long) (challenge.getDurationDays() * 0.1));
+        boolean isUrgent = daysRemaining <= urgencyThreshold;
+
+        if (accMin >= targetTotalMin) {
             lblDailyGoal.setText("CONCLUÍDO! 🏆");
             lblDailyGoal.setStyle("-fx-text-fill: #f9e2af; -fx-font-weight: bold;");
-        } else if (daysRemaining <= 0) {
-            lblDailyGoal.setText("Último dia!");
-            lblDailyGoal.setStyle("-fx-text-fill: #f38ba8; -fx-font-weight: bold;");
         } else {
-            lblDailyGoal.setText(String.format("Faltam %d dias", daysRemaining));
-            lblDailyGoal.setStyle("-fx-text-fill: #89b4fa;");
+            if (daysRemaining <= 0) {
+                lblDailyGoal.setText("ÚLTIMO DIA! ⚠️");
+            } else {
+                lblDailyGoal.setText(String.format("Faltam %d dias", daysRemaining));
+            }
+
+            if (isUrgent || daysRemaining <= 0) {
+                lblDailyGoal.setStyle("-fx-text-fill: #f38ba8; -fx-font-weight: bold;");
+            } else {
+                lblDailyGoal.setStyle("-fx-text-fill: #89b4fa;");
+            }
         }
 
         progressChallenge.getStyleClass().remove("streak-progress");

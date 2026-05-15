@@ -8,7 +8,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.Region?>
 
-<HBox alignment="TOP_LEFT" spacing="15.0" styleClass="challenge-card" stylesheets="@../css/style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.thomazcollet.ui.controller.ChallengeCardController">
+<HBox fx:id="cardContainer" alignment="TOP_LEFT" spacing="15.0" styleClass="challenge-card" stylesheets="@../css/style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.thomazcollet.ui.controller.ChallengeCardController">
     <padding>
         <Insets bottom="15.0" left="20.0" right="20.0" top="15.0" />
     </padding>

@@ -395,12 +395,6 @@
     -fx-transition: 0.3s;
 }
 
-.challenge-card:hover {
-    -fx-border-color: #89b4fa;
-    /* Blue on hover */
-    -fx-background-color: #3e4059;
-}
-
 /* Título dentro do Card */
 .card-title {
     -fx-text-fill: #f5e0dc;
@@ -662,12 +656,6 @@
     -fx-cursor: hand;
 }
 
-.type-card:hover {
-    -fx-border-color: #00ff88;
-    /* Neon verde/retro */
-    -fx-background-color: #252525;
-    /* Nota: Para o efeito de escala (zoom), use ScaleTransition no JavaFX Controller */
-}
 
 /* Títulos dentro dos cards */
 .card-title {
@@ -705,4 +693,32 @@
     -fx-border-width: 1;
     -fx-border-radius: 15;
     -fx-background-radius: 15;
+}
+
+/* Card de Constância - Foco em manter o hábito (Rosa) */
+.card-streak {
+    -fx-border-color: #f38ba8;
+    -fx-border-width: 0 0 0 5; /* Borda esquerda mais grossa */
+    -fx-background-color: rgba(243, 139, 168, 0.03); /* Leve fundo rosado */
+}
+
+/* Card de Intensidade - Foco em volume de horas (Azul) */
+.card-milestone {
+    -fx-border-color: #89b4fa;
+    -fx-border-width: 0 0 0 5; /* Borda esquerda mais grossa */
+    -fx-background-color: rgba(137, 180, 250, 0.03); /* Leve fundo azulado */
+}
+
+/* Hover para o desafio de Constância (Streak - Rosa) */
+.card-streak:hover {
+    -fx-background-color: #3e4059; /* Cor de fundo que você já gosta */
+    -fx-border-color: #f38ba8;     /* Mantém o Rosa, mas você pode usar uma cor levemente mais clara se quiser */
+    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.4), 10, 0, 0, 0); /* Brilho neon rosa */
+}
+
+/* Hover para o desafio de Intensidade (Milestone - Azul) */
+.card-milestone:hover {
+    -fx-background-color: #3e4059;
+    -fx-border-color: #89b4fa;     /* Mantém o Azul */
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.4), 10, 0, 0, 0); /* Brilho neon azul */
 }
