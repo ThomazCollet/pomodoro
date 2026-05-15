@@ -9,6 +9,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Responsável pela configuração inicial e integridade do banco de dados SQLite.
+ */
 public class DatabaseInitializer {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseInitializer.class);
@@ -49,14 +52,17 @@ public class DatabaseInitializer {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
                     title TEXT NOT NULL,
+                    type TEXT NOT NULL, -- NOVO: STREAK_CHALLENGE ou MILESTONE_CHALLENGE
                     duration_days INTEGER NOT NULL,
                     min_focus_minutes_per_day INTEGER NOT NULL,
+                    target_total_minutes INTEGER DEFAULT 0, -- NOVO: Alvo para o modo Intensidade
+                    accumulated_minutes INTEGER DEFAULT 0,  -- NOVO: Total focado no desafio
+                    today_focus_minutes INTEGER DEFAULT 0,
                     lives_total INTEGER NOT NULL,
                     lives_remaining INTEGER NOT NULL,
                     status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'COMPLETED', 'FAILED')),
                     start_date DATE NOT NULL,
                     progress_days INTEGER DEFAULT 0,
-                    today_focus_minutes INTEGER DEFAULT 0, -- COLUNA NO LUGAR CORRETO (ANTES DA FK)
                     FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
                 );
 
@@ -74,21 +80,11 @@ public class DatabaseInitializer {
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
 
-            // Executa a criação das tabelas
             for (String sql : setupSql.split(";")) {
                 if (!sql.trim().isEmpty()) {
                     stmt.execute(sql);
                 }
             }
-
-            // MIGRATION: Tenta adicionar a coluna caso a tabela já exista de antes
-            try {
-                stmt.execute("ALTER TABLE challenges ADD COLUMN today_focus_minutes INTEGER DEFAULT 0;");
-                logger.info("Migration: Coluna today_focus_minutes adicionada com sucesso.");
-            } catch (SQLException e) {
-                // Se cair aqui, é porque a coluna já existe. Podemos ignorar silenciosamente.
-            }
-
             logger.info("Banco de dados verificado com sucesso.");
 
         } catch (SQLException e) {

@@ -13,11 +13,14 @@ public class Challenge {
     private ChallengeStatus status;
     private LocalDate startDate;
     private int progressDays;
-
-    // NOVO CAMPO: Essencial para a UI do Card
+    private ChallengeType type;
+    private int targetTotalMinutes;
+    private int accumulatedMinutes;
     private int todayFocusMinutes;
 
-    // Getters e Setters
+    // Getters e Setters (Mantidos como os seus)
+    // ... [Seus getters e setters aqui] ...
+
     public Long getId() {
         return id;
     }
@@ -98,9 +101,28 @@ public class Challenge {
         this.progressDays = progressDays;
     }
 
-    // Método utilitário para a UI
-    public double getProgressPercentage() {
-        return (double) progressDays / durationDays;
+    public ChallengeType getType() {
+        return type;
+    }
+
+    public void setType(ChallengeType type) {
+        this.type = type;
+    }
+
+    public int getTargetTotalMinutes() {
+        return targetTotalMinutes;
+    }
+
+    public void setTargetTotalMinutes(int targetTotalMinutes) {
+        this.targetTotalMinutes = targetTotalMinutes;
+    }
+
+    public int getAccumulatedMinutes() {
+        return accumulatedMinutes;
+    }
+
+    public void setAccumulatedMinutes(int accumulatedMinutes) {
+        this.accumulatedMinutes = accumulatedMinutes;
     }
 
     public int getTodayFocusMinutes() {
@@ -111,7 +133,25 @@ public class Challenge {
         this.todayFocusMinutes = todayFocusMinutes;
     }
 
-    // MÉTODO UTILITÁRIO: Verifica se o dia atual já está ganho
+    // --- MÉTODOS UTILITÁRIOS REFORMULADOS ---
+
+    /**
+     * Retorna o progresso baseado no tipo de desafio.
+     * Para STREAK: baseado em dias concluídos.
+     * Para MILESTONE: baseado em minutos acumulados vs alvo.
+     */
+    public double getProgressPercentage() {
+        if (type == ChallengeType.MILESTONE_CHALLENGE) {
+            if (targetTotalMinutes <= 0)
+                return 0.0;
+            return Math.min(1.0, (double) accumulatedMinutes / targetTotalMinutes);
+        }
+        // Padrão STREAK
+        if (durationDays <= 0)
+            return 0.0;
+        return Math.min(1.0, (double) progressDays / durationDays);
+    }
+
     public boolean isDailyGoalMet() {
         return todayFocusMinutes >= minFocusMinutesPerDay;
     }
