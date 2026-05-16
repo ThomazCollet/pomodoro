@@ -271,4 +271,84 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         }
         return 0;
     }
+
+    @Override
+    public int findCurrentStreakDaysByProfileId(Long profileId) {
+        // Query baseada em Gaps and Islands: Agrupa sequências de dias consecutivos
+        String sql = """
+                WITH DistinctDays AS (
+                    SELECT DISTINCT date(start_timestamp) as focus_date
+                    FROM focus_sessions
+                    WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1
+                ),
+                OrderedDays AS (
+                    SELECT focus_date,
+                           date(focus_date, '-' || (ROW_NUMBER() OVER (ORDER BY focus_date)) || ' day') as base_island
+                    FROM DistinctDays
+                ),
+                IslandLengths AS (
+                    SELECT COUNT(*) as streak_days,
+                           MAX(focus_date) as last_focus_date
+                    FROM OrderedDays
+                    GROUP BY base_island
+                )
+                SELECT streak_days FROM IslandLengths
+                WHERE last_focus_date >= date('now', '-1 day')
+                ORDER BY last_focus_date DESC LIMIT 1;
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("streak_days");
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar streak atual do perfil: {}", profileId, e);
+        }
+        return 0;
+    }
+
+    @Override
+    public int countTimesStreakTargetWasReached(Long profileId, int streakTarget) {
+        // Encontra todas as ilhas históricas de dias seguidos e filtra quais bateram ou
+        // superaram a meta definida
+        String sql = """
+                WITH DistinctDays AS (
+                    SELECT DISTINCT date(start_timestamp) as focus_date
+                    FROM focus_sessions
+                    WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1
+                ),
+                OrderedDays AS (
+                    SELECT focus_date,
+                           date(focus_date, '-' || (ROW_NUMBER() OVER (ORDER BY focus_date)) || ' day') as base_island
+                    FROM DistinctDays
+                ),
+                HistoricalIslands AS (
+                    SELECT COUNT(*) as streak_length
+                    FROM OrderedDays
+                    GROUP BY base_island
+                )
+                SELECT COUNT(*) FROM HistoricalIslands WHERE streak_length >= ?;
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            pstmt.setInt(2, streakTarget);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao contar recorrência do streak de {} dias para o perfil: {}", streakTarget, profileId,
+                    e);
+        }
+        return 0;
+    }
 }

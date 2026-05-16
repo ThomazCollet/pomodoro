@@ -12,6 +12,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.ArrayList;
 
 public class AchievementService {
 
@@ -86,47 +87,83 @@ public class AchievementService {
     }
 
     private List<AchievementDefinition> getDefinitionsFromPlanilha() {
-        return List.of(
-                // Linha 1: Tempo focado em um único dia (Valores convertidos em minutos)
-                new AchievementDefinition("focus_daily_1h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.BRONZE, 60),
-                new AchievementDefinition("focus_daily_2h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.SILVER, 120),
-                new AchievementDefinition("focus_daily_4h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.GOLD, 240),
-                new AchievementDefinition("focus_daily_6h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.PLATINUM, 360),
+        List<AchievementDefinition> list = new ArrayList<>();
 
-                // Linha 2: Quantidade de ciclos pomodoro completos acumulados
-                new AchievementDefinition("focus_cycles_1_bronze", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.BRONZE, 1),
-                new AchievementDefinition("focus_cycles_10_silver", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.SILVER, 10),
-                new AchievementDefinition("focus_cycles_25_gold", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.GOLD, 25),
-                new AchievementDefinition("focus_cycles_100_platinum", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.PLATINUM, 100),
+        // =========================================================================
+        // CATEGORIA: DAILY_FOCUS (Foco Acumulado)
+        // =========================================================================
 
-                // Linha 3: Total de dias distintos com foco realizado
-                new AchievementDefinition("focus_total_days_15_bronze", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.BRONZE, 15),
-                new AchievementDefinition("focus_total_days_30_silver", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.SILVER, 30),
-                new AchievementDefinition("focus_total_days_90_gold", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.GOLD, 90),
-                new AchievementDefinition("focus_total_days_365_platinum", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.PLATINUM, 365),
+        // Linha 1: Tempo focado em um único dia (Valores convertidos em minutos)
+        list.add(new AchievementDefinition("focus_daily_1h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.BRONZE, 60));
+        list.add(new AchievementDefinition("focus_daily_2h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.SILVER, 120));
+        list.add(new AchievementDefinition("focus_daily_4h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.GOLD, 240));
+        list.add(new AchievementDefinition("focus_daily_6h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.PLATINUM, 360));
 
-                // Linha Nova (Foco Acumulado Histórico): Horas totais acumuladas convertidas
-                // para minutos
-                new AchievementDefinition("focus_accumulated_12h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.BRONZE, 720), // 12h * 60min
-                new AchievementDefinition("focus_accumulated_24h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.SILVER, 1440), // 24h * 60min
-                new AchievementDefinition("focus_accumulated_300h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.GOLD, 18000), // 300h * 60min
-                new AchievementDefinition("focus_accumulated_1000h_hours", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.PLATINUM, 60000) // 1000h * 60min
-        );
+        // Linha 2: Quantidade de ciclos pomodoro completos acumulados
+        list.add(new AchievementDefinition("focus_cycles_1_bronze", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.BRONZE, 1));
+        list.add(new AchievementDefinition("focus_cycles_10_silver", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.SILVER, 10));
+        list.add(new AchievementDefinition("focus_cycles_25_gold", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.GOLD, 25));
+        list.add(new AchievementDefinition("focus_cycles_100_platinum", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.PLATINUM, 100));
+
+        // Linha 3: Total de dias distintos com foco realizado
+        list.add(new AchievementDefinition("focus_total_days_15_bronze", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.BRONZE, 15));
+        list.add(new AchievementDefinition("focus_total_days_30_silver", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.SILVER, 30));
+        list.add(new AchievementDefinition("focus_total_days_90_gold", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.GOLD, 90));
+        list.add(new AchievementDefinition("focus_total_days_365_platinum", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.PLATINUM, 365));
+
+        // Linha Nova (Foco Acumulado Histórico): Horas totais acumuladas convertidas
+        // para minutos
+        list.add(new AchievementDefinition("focus_accumulated_12h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.BRONZE, 720)); // 12h * 60min
+        list.add(new AchievementDefinition("focus_accumulated_24h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.SILVER, 1440)); // 24h * 60min
+        list.add(new AchievementDefinition("focus_accumulated_300h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.GOLD, 18000)); // 300h * 60min
+        list.add(new AchievementDefinition("focus_accumulated_1000h_hours", AchievementCategory.DAILY_FOCUS,
+                AchievementTier.PLATINUM, 60000)); // 1000h * 60min
+
+        // =========================================================================
+        // CATEGORIA: STREAK (Ofensivas)
+        // =========================================================================
+
+        // Linha 4: Atingir um total de X streaks (Dias consecutivos de ofensiva)
+        list.add(new AchievementDefinition("streak_current_5", AchievementCategory.STREAK, AchievementTier.BRONZE, 5));
+        list.add(
+                new AchievementDefinition("streak_current_12", AchievementCategory.STREAK, AchievementTier.SILVER, 12));
+        list.add(new AchievementDefinition("streak_current_15", AchievementCategory.STREAK, AchievementTier.GOLD, 15));
+        list.add(new AchievementDefinition("streak_current_30", AchievementCategory.STREAK, AchievementTier.PLATINUM,
+                30));
+
+        // Linha 5: Atinja um total de X streaks 3 vezes (conditionValue guarda o
+        // tamanho do streak alvo)
+        list.add(new AchievementDefinition("streak_count_5_x3", AchievementCategory.STREAK, AchievementTier.BRONZE, 5));
+        list.add(new AchievementDefinition("streak_count_12_x3", AchievementCategory.STREAK, AchievementTier.SILVER,
+                12));
+        list.add(new AchievementDefinition("streak_count_15_x3", AchievementCategory.STREAK, AchievementTier.GOLD, 15));
+        list.add(new AchievementDefinition("streak_count_30_x3", AchievementCategory.STREAK, AchievementTier.PLATINUM,
+                30));
+
+        // Linha 6: Atinja um total de X streaks 5 vezes (conditionValue guarda o
+        // tamanho do streak alvo)
+        list.add(new AchievementDefinition("streak_count_5_x5", AchievementCategory.STREAK, AchievementTier.BRONZE, 5));
+        list.add(new AchievementDefinition("streak_count_12_x5", AchievementCategory.STREAK, AchievementTier.SILVER,
+                12));
+        list.add(new AchievementDefinition("streak_count_15_x5", AchievementCategory.STREAK, AchievementTier.GOLD, 15));
+        list.add(new AchievementDefinition("streak_count_30_x5", AchievementCategory.STREAK, AchievementTier.PLATINUM,
+                30));
+
+        return list;
     }
 }

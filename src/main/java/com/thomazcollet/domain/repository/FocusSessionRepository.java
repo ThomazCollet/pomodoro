@@ -61,4 +61,7 @@ public interface FocusSessionRepository {
 
     int sumTotalFocusMinutesByProfileId(Long profileId);
 
+    int findCurrentStreakDaysByProfileId(Long profileId);
+
+    int countTimesStreakTargetWasReached(Long profileId, int streakTarget);
 }
