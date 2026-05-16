@@ -164,6 +164,28 @@ public class AchievementService {
         list.add(new AchievementDefinition("streak_count_30_x5", AchievementCategory.STREAK, AchievementTier.PLATINUM,
                 30));
 
+        // =========================================================================
+        // CATEGORIA: ACHIEVEMENTS (Meta-Conquistas)
+        // =========================================================================
+
+        // Linha 21: Obtenha sua primeira conquista ouro / platina
+        list.add(new AchievementDefinition("meta_first_gold", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE,
+                1));
+        list.add(new AchievementDefinition("meta_first_platinum", AchievementCategory.ACHIEVEMENTS,
+                AchievementTier.SILVER, 1));
+
+        // Linha 22: Obtenha um total de X conquistas
+        list.add(
+                new AchievementDefinition("meta_total_5", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE, 5));
+        list.add(new AchievementDefinition("meta_total_15", AchievementCategory.ACHIEVEMENTS, AchievementTier.SILVER,
+                15));
+        list.add(
+                new AchievementDefinition("meta_total_30", AchievementCategory.ACHIEVEMENTS, AchievementTier.GOLD, 30));
+
+        // Linha 23: Obtenha todas as conquistas ouro
+        list.add(new AchievementDefinition("meta_all_gold", AchievementCategory.ACHIEVEMENTS, AchievementTier.PLATINUM,
+                7));
+
         return list;
     }
 }

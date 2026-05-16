@@ -20,7 +20,8 @@ class AchievementServiceTest {
 
     private MockAchievementRepository mockRepository;
     private MockEvaluator mockDailyFocusEvaluator;
-    private MockEvaluator mockStreakEvaluator; // Novo Evaluator plugado no ciclo de vida
+    private MockEvaluator mockStreakEvaluator;
+    private MockEvaluator mockAchievementsEvaluator; // Novo Evaluator para meta-conquistas
     private AchievementService achievementService;
     private final Long profileId = 1L;
 
@@ -29,19 +30,22 @@ class AchievementServiceTest {
         // Inicializa os dublês de testes limpos antes de cada execução
         mockRepository = new MockAchievementRepository();
         mockDailyFocusEvaluator = new MockEvaluator(AchievementCategory.DAILY_FOCUS);
-        mockStreakEvaluator = new MockEvaluator(AchievementCategory.STREAK); // Instanciando a dependência de Streak
+        mockStreakEvaluator = new MockEvaluator(AchievementCategory.STREAK);
+        mockAchievementsEvaluator = new MockEvaluator(AchievementCategory.ACHIEVEMENTS); // Instanciando dependência de
+                                                                                         // Meta-Conquistas
 
-        // Instancia o serviço injetando manualmente as duas dependências (Garante que
-        // as chaves de Streak não retornem null)
+        // Instancia o serviço injetando manualmente todas as dependências ativas no
+        // motor
         achievementService = new AchievementService(mockRepository,
-                List.of(mockDailyFocusEvaluator, mockStreakEvaluator));
+                List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator));
     }
 
     @Test
     @DisplayName("Deve lançar NullPointerException se o repositório fornecido for nulo")
     void shouldThrowExceptionWhenRepositoryIsNull() {
         NullPointerException exception = assertThrows(NullPointerException.class, () -> {
-            new AchievementService(null, List.of(mockDailyFocusEvaluator, mockStreakEvaluator));
+            new AchievementService(null,
+                    List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator));
         });
         assertEquals("AchievementRepository não pode ser nulo", exception.getMessage());
     }
@@ -98,6 +102,7 @@ class AchievementServiceTest {
     void shouldNotSaveAnyAchievementWhenCriteriaIsNotMet() {
         mockDailyFocusEvaluator.setEvaluateResult(false);
         mockStreakEvaluator.setEvaluateResult(false);
+        mockAchievementsEvaluator.setEvaluateResult(false);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
 
@@ -106,20 +111,15 @@ class AchievementServiceTest {
     }
 
     // ==========================================
-    // NOVOS CENÁRIOS DE TESTE DIRECIONADOS AO STREAK
+    // SCENARIOS DE TESTE DIRECIONADOS AO STREAK
     // ==========================================
 
     @Test
     @DisplayName("Deve desbloquear conquista de Streak de Bronze quando a ofensiva atual atingir 5 dias")
     void shouldUnlockStreakBronzeWhenCurrentStreakHitsFiveDays() {
-        // Cenário: Usuário atingiu a meta de 5 dias corridos de streak
         mockStreakEvaluator.setEvaluateResult(true);
         mockStreakEvaluator.setMaxSimulatedLimit(5);
 
-        // Para evitar colisões com os acumuladores de mesmo valor (x3 e x5) neste
-        // assert específico,
-        // simulamos que o usuário já possui as conquistas de repetição desbloqueadas
-        // (Fail-Fast)
         mockRepository.simulateAlreadyUnlocked("streak_count_5_x3");
         mockRepository.simulateAlreadyUnlocked("streak_count_5_x5");
 
@@ -137,13 +137,9 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve desbloquear conquista cumulativa de Streak quando bater a meta x3 vezes")
     void shouldUnlockStreakAccumulatedWhenTargetIsReachedThreeTimes() {
-        // Cenário: O usuário já bateu a meta de 5 dias de streak por 3 vezes na
-        // história
         mockStreakEvaluator.setEvaluateResult(true);
         mockStreakEvaluator.setMaxSimulatedLimit(5);
 
-        // Simulamos que ele já pegou a de streak corrente para isolar o teste na de
-        // repetição
         mockRepository.simulateAlreadyUnlocked("streak_current_5");
         mockRepository.simulateAlreadyUnlocked("streak_count_5_x5");
 
@@ -153,6 +149,51 @@ class AchievementServiceTest {
         assertEquals(1, saved.size(), "Deveria salvar apenas a conquista de repetição pendente");
 
         assertEquals("streak_count_5_x3", saved.get(0).getAchievementKey());
+    }
+
+    // ==========================================
+    // NOVOS CENÁRIOS: META-CONQUISTAS (ACHIEVEMENTS)
+    // ==========================================
+
+    @Test
+    @DisplayName("Deve desbloquear meta-conquista de Bronze ao atingir o total de 5 conquistas normais")
+    void shouldUnlockMetaTotalAchievementsWhenCountHitsFive() {
+        // Cenário: Usuário atinge o limite simulação de 5 insígnias
+        mockAchievementsEvaluator.setEvaluateResult(true);
+        mockAchievementsEvaluator.setMaxSimulatedLimit(5);
+
+        // Simulamos que as outras metas de tamanho maior ou de tier específico já foram
+        // processadas ou falharam
+        mockRepository.simulateAlreadyUnlocked("meta_first_gold");
+        mockRepository.simulateAlreadyUnlocked("meta_total_15");
+        mockRepository.simulateAlreadyUnlocked("meta_total_30");
+
+        achievementService.checkAndUnlockNewAchievements(profileId);
+
+        List<Achievement> saved = mockRepository.getSavedAchievements();
+        assertFalse(saved.isEmpty(), "Deveria ter salvo a meta-conquista de totalizador");
+
+        boolean hasTotal5Key = saved.stream().anyMatch(a -> "meta_total_5".equals(a.getAchievementKey()));
+        assertTrue(hasTotal5Key, "A chave salva deveria ser 'meta_total_5'");
+    }
+
+    @Test
+    @DisplayName("Deve desbloquear a insígnia de Platina ao completar todas as 7 conquistas Ouro planejadas")
+    void shouldUnlockMetaAllGoldWhenUserCollectsAllSevenGoldAchievements() {
+        // Cenário: Usuário conquistou o teto estipulado de 7 medalhas de ouro
+        mockAchievementsEvaluator.setEvaluateResult(true);
+        mockAchievementsEvaluator.setMaxSimulatedLimit(7);
+
+        mockRepository.simulateAlreadyUnlocked("meta_first_gold");
+        mockRepository.simulateAlreadyUnlocked("meta_total_5");
+        mockRepository.simulateAlreadyUnlocked("meta_total_15");
+        mockRepository.simulateAlreadyUnlocked("meta_total_30");
+
+        achievementService.checkAndUnlockNewAchievements(profileId);
+
+        List<Achievement> saved = mockRepository.getSavedAchievements();
+        boolean hasAllGoldKey = saved.stream().anyMatch(a -> "meta_all_gold".equals(a.getAchievementKey()));
+        assertTrue(hasAllGoldKey, "Deveria desbloquear 'meta_all_gold' por completar a linha de ouro da planilha");
     }
 
     // ==========================================
@@ -222,8 +263,14 @@ class AchievementServiceTest {
                 if (!achievementKey.startsWith("streak_current_") && !achievementKey.startsWith("streak_count_")) {
                     return false;
                 }
-                // Apenas valida se o valor exigido pela conquista está mapeado no limite do
-                // mock
+                return evaluateResult && (conditionValue <= maxSimulatedLimit);
+            }
+
+            // Regra isolada para a nova categoria de Meta-Conquistas (ACHIEVEMENTS)
+            if (this.category == AchievementCategory.ACHIEVEMENTS) {
+                if (!achievementKey.startsWith("meta_")) {
+                    return false;
+                }
                 return evaluateResult && (conditionValue <= maxSimulatedLimit);
             }
 
