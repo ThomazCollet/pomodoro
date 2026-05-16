@@ -21,7 +21,7 @@ class AchievementServiceTest {
     private MockAchievementRepository mockRepository;
     private MockEvaluator mockDailyFocusEvaluator;
     private MockEvaluator mockStreakEvaluator;
-    private MockAchievementsEvaluator mockAchievementsEvaluator; // Tipo específico corrigido para suportar o count
+    private MockAchievementsEvaluator mockAchievementsEvaluator;
     private MockEvaluator mockChallengeEvaluator;
     private MockEvaluator mockRankingEvaluator;
     private AchievementService achievementService;
@@ -56,9 +56,6 @@ class AchievementServiceTest {
     @DisplayName("Deve pular a validação se a conquista já foi desbloqueada previamente (Fail-Fast)")
     void shouldSkipValidationWhenAchievementIsAlreadyUnlocked() {
         mockRepository.simulateAlreadyUnlocked("focus_daily_1h_hours");
-
-        // Configuramos para disparar true apenas na chave alvo para isolar o
-        // comportamento do fail-fast
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_1h_hours", 60);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
@@ -87,8 +84,6 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve desbloquear múltiplas conquistas em cadeia se o critério atingir níveis mais altos")
     void shouldUnlockMultipleAchievementsInChain() {
-        // Ativamos as chaves progressivas de horas diárias simulando que o usuário
-        // bateu a meta de 120 minutos
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_1h_hours", 60);
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
 
@@ -104,7 +99,6 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Não deve salvar nenhuma conquista se o critério do avaliador não for atingido")
     void shouldNotSaveAnyAchievementWhenCriteriaIsNotMet() {
-        // Sem nenhuma chave configurada nos alvos, todos retornam falso implicitamente
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         assertTrue(mockRepository.getSavedAchievements().isEmpty(),
@@ -119,7 +113,6 @@ class AchievementServiceTest {
     @DisplayName("Deve desbloquear conquista de Streak de Bronze quando a ofensiva atual atingir 5 dias")
     void shouldUnlockStreakBronzeWhenCurrentStreakHitsFiveDays() {
         mockStreakEvaluator.setTargetKeyAndValue("streak_current_5", 5);
-
         mockRepository.simulateAlreadyUnlocked("streak_count_5_x3");
         mockRepository.simulateAlreadyUnlocked("streak_count_5_x5");
 
@@ -138,7 +131,6 @@ class AchievementServiceTest {
     @DisplayName("Deve desbloquear conquista cumulativa de Streak quando bater a meta x3 vezes")
     void shouldUnlockStreakAccumulatedWhenTargetIsReachedThreeTimes() {
         mockStreakEvaluator.setTargetKeyAndValue("streak_count_5_x3", 5);
-
         mockRepository.simulateAlreadyUnlocked("streak_current_5");
         mockRepository.simulateAlreadyUnlocked("streak_count_5_x5");
 
@@ -146,9 +138,9 @@ class AchievementServiceTest {
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
         assertEquals(1, saved.size(), "Deveria salvar apenas a conquista de repetição pendente");
-
         assertEquals("streak_count_5_x3", saved.get(0).getAchievementKey());
     }
+
     // ==========================================
     // SCENARIOS DE TESTE: CHALLENGE
     // ==========================================
@@ -157,8 +149,6 @@ class AchievementServiceTest {
     @DisplayName("Deve desbloquear conquista de Desafio de Bronze ao completar um desafio de constância de 7 dias")
     void shouldUnlockChallengeConstancyWhenSevenDaysCompleted() {
         mockChallengeEvaluator.setTargetKeyAndValue("challenge_constancy_days_7", 7);
-
-        // Fail-fast para outras chaves que não queremos avaliar neste cenário
         mockRepository.simulateAlreadyUnlocked("challenge_perfect_days_5");
         mockRepository.simulateAlreadyUnlocked("challenge_count_constancy_min_7_3");
 
@@ -172,11 +162,7 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve desbloquear conquista de Desafio Perfeito de Prata ao terminar 7 dias com vidas intactas")
     void shouldUnlockChallengePerfectWhenCompletedWithAllLives() {
-        // Configuramos a chave exata que o Evaluator vai processar
         mockChallengeEvaluator.setTargetKeyAndValue("challenge_perfect_days_7", 7);
-
-        // Simula que as outras conquistas de régua de 7 dias já foram obtidas para
-        // isolar o teste
         mockRepository.simulateAlreadyUnlocked("challenge_constancy_days_7");
         mockRepository.simulateAlreadyUnlocked("challenge_count_constancy_min_7_3");
         mockRepository.simulateAlreadyUnlocked("challenge_count_constancy_min_7_6");
@@ -187,7 +173,7 @@ class AchievementServiceTest {
         boolean hasPerfectKey = saved.stream().anyMatch(a -> "challenge_perfect_days_7".equals(a.getAchievementKey()));
         assertTrue(hasPerfectKey, "Deveria liberar a chave 'challenge_perfect_days_7'");
     }
-    
+
     // ==========================================
     // SCENARIOS DE TESTE: META-CONQUISTAS (ACHIEVEMENTS)
     // ==========================================
@@ -196,7 +182,6 @@ class AchievementServiceTest {
     @DisplayName("Deve desbloquear meta-conquista de Bronze ao atingir o total de 5 conquests normais")
     void shouldUnlockMetaTotalAchievementsWhenCountHitsFive() {
         mockAchievementsEvaluator.setTargetKeyAndValue("meta_total_5", 5);
-
         mockRepository.simulateAlreadyUnlocked("meta_first_gold");
         mockRepository.simulateAlreadyUnlocked("meta_total_15");
         mockRepository.simulateAlreadyUnlocked("meta_total_30");
@@ -209,7 +194,7 @@ class AchievementServiceTest {
     }
 
     // ==========================================
-    // SCENARIOS DE TESTE: RANKING
+    // SCENARIOS DE TESTE: RANKING & ORDEM CASCATA
     // ==========================================
 
     @Test
@@ -223,6 +208,25 @@ class AchievementServiceTest {
         assertEquals(1, saved.size(), "Deveria registrar apenas o Rank alvo configurado");
         assertEquals("ranking_tier_s", saved.get(0).getAchievementKey());
         assertEquals(AchievementTier.GOLD, saved.get(0).getTier());
+    }
+
+    @Test
+    @DisplayName("Deve avaliar Meta-Conquistas por último permitindo ganho em cascata no mesmo ciclo")
+    void shouldEvaluateMetaAchievementsLastEnablingCascadingUnlocks() {
+        // Usuário atinge o critério para ganhar Rank C (Categoria Base)
+        mockRankingEvaluator.setTargetKeyAndValue("ranking_tier_c", 1);
+
+        // E atinge o critério para Meta_Total_5 se ganhar essa última medalha do Rank
+        mockAchievementsEvaluator.setTargetKeyAndValue("meta_total_5", 5);
+
+        achievementService.checkAndUnlockNewAchievements(profileId);
+
+        List<Achievement> saved = mockRepository.getSavedAchievements();
+
+        // Com a ordem correta, as duas devem ser desbloqueadas juntas
+        assertEquals(2, saved.size(), "Deveria processar o Rank primeiro e a Meta-conquista logo em seguida");
+        assertEquals("ranking_tier_c", saved.get(0).getAchievementKey());
+        assertEquals("meta_total_5", saved.get(1).getAchievementKey());
     }
 
     // ==========================================
@@ -270,31 +274,32 @@ class AchievementServiceTest {
     }
 
     private static class MockEvaluator implements AchievementEvaluator {
-        private final AchievementCategory category;
-        private final Set<String> activeKeys = new HashSet<>();
+        protected final AchievementCategory category;
+        protected final Set<String> activeKeys = new HashSet<>();
 
         public MockEvaluator(AchievementCategory category) {
             this.category = category;
         }
 
-        // CORREÇÃO ESTRUTURAL: Vincula explicitamente quais chaves devem responder true
-        // baseado no valor exato
         public void setTargetKeyAndValue(String key, int val) {
             activeKeys.add(key + "_" + val);
         }
 
         @Override
         public boolean evaluate(Long profileId, String achievementKey, int conditionValue) {
-            if (!achievementKey.startsWith(this.category.name().toLowerCase().split("_")[0])) {
-                // Tratamento especial para DAILY_FOCUS cujo prefixo é focus_
-                if (this.category == AchievementCategory.DAILY_FOCUS && !achievementKey.startsWith("focus_")) {
+            // CORREÇÃO: Evita que o prefixo 'ranking_' invalide a checagem prematuramente
+            if (this.category == AchievementCategory.RANKING) {
+                if (!achievementKey.startsWith("ranking_"))
                     return false;
-                }
-                // Tratamento para RANKING
-                if (this.category == AchievementCategory.RANKING && !achievementKey.startsWith("ranking_")) {
+            } else if (this.category == AchievementCategory.DAILY_FOCUS) {
+                if (!achievementKey.startsWith("focus_"))
                     return false;
-                }
+            } else {
+                String expectedPrefix = this.category.name().toLowerCase().split("_")[0];
+                if (!achievementKey.startsWith(expectedPrefix))
+                    return false;
             }
+
             return activeKeys.contains(achievementKey + "_" + conditionValue);
         }
 
@@ -304,8 +309,6 @@ class AchievementServiceTest {
         }
     }
 
-    // Mock especializado herdando a mecânica para evitar problemas de casting em
-    // Meta-Conquistas
     private static class MockAchievementsEvaluator extends MockEvaluator {
         public MockAchievementsEvaluator() {
             super(AchievementCategory.ACHIEVEMENTS);
@@ -316,7 +319,7 @@ class AchievementServiceTest {
             if (!achievementKey.startsWith("meta_")) {
                 return false;
             }
-            return super.activeKeys.contains(achievementKey + "_" + conditionValue);
+            return activeKeys.contains(achievementKey + "_" + conditionValue);
         }
     }
 }

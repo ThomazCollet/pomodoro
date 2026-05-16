@@ -42,31 +42,53 @@ public class AchievementService {
 
         List<AchievementDefinition> definitions = getDefinitionsFromPlanilha();
 
+        // Lista separada para adiar a avaliação das Meta-Conquistas
+        List<AchievementDefinition> metaAchievements = new ArrayList<>();
+
+        // Passo 1: Avalia todas as categorias base (DAILY_FOCUS, STREAK, CHALLENGE,
+        // RANKING)
         for (AchievementDefinition def : definitions) {
-
-            // Fail-Fast estruturado: evita processamento redundante se a insígnia
-            // específica já existe
-            if (achievementRepository.isUnlocked(profileId, def.key())) {
+            if (def.category() == AchievementCategory.ACHIEVEMENTS) {
+                metaAchievements.add(def); // Guarda para o final
                 continue;
             }
 
-            AchievementEvaluator evaluator = evaluators.get(def.category());
-            if (evaluator == null) {
-                continue;
-            }
+            processEvaluation(profileId, def);
+        }
 
-            if (evaluator.evaluate(profileId, def.key(), def.conditionValue())) {
-                Achievement newAchievement = new Achievement();
-                newAchievement.setProfileId(profileId);
-                newAchievement.setAchievementKey(def.key());
-                newAchievement.setCategory(def.category());
-                newAchievement.setTier(def.tier());
+        // Passo 2: Avalia as Meta-Conquistas por último (Garante consistência na
+        // contagem das medalhas ganhas hoje)
+        for (AchievementDefinition def : metaAchievements) {
+            processEvaluation(profileId, def);
+        }
+    }
 
-                achievementRepository.save(newAchievement);
-                logger.info("🏆 CONQUISTA DESBLOQUEADA: {} [{}]", def.key(), def.tier());
+    /**
+     * Isolamento da lógica de avaliação e desbloqueio (Extração de método para
+     * Clean Code)
+     */
+    private void processEvaluation(Long profileId, AchievementDefinition def) {
+        // Fail-Fast estruturado: evita processamento redundante se a insígnia já existe
+        if (achievementRepository.isUnlocked(profileId, def.key())) {
+            return;
+        }
 
-                // TODO: Notificar a UI (JavaFX) para disparar o Toast animado na tela
-            }
+        AchievementEvaluator evaluator = evaluators.get(def.category());
+        if (evaluator == null) {
+            return;
+        }
+
+        if (evaluator.evaluate(profileId, def.key(), def.conditionValue())) {
+            Achievement newAchievement = new Achievement();
+            newAchievement.setProfileId(profileId);
+            newAchievement.setAchievementKey(def.key());
+            newAchievement.setCategory(def.category());
+            newAchievement.setTier(def.tier());
+
+            achievementRepository.save(newAchievement);
+            logger.info("🏆 CONQUISTA DESBLOQUEADA: {} [{}]", def.key(), def.tier());
+
+            // TODO: Notificar a UI (JavaFX) para disparar o Toast animado na tela
         }
     }
 

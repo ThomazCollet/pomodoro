@@ -18,8 +18,8 @@ public class SQLiteProfileRepository implements ProfileRepository {
     public void save(Profile profile) {
         String sql = """
                 INSERT INTO profiles (username, image_path, work_duration, short_break, long_break,
-                                    max_streak, max_focus_day_seconds, total_focus_sessions)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                    max_streak, max_focus_day_seconds, total_focus_sessions, xp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -33,6 +33,7 @@ public class SQLiteProfileRepository implements ProfileRepository {
             pstmt.setInt(6, profile.getMaxStreak());
             pstmt.setInt(7, profile.getMaxFocusDaySeconds());
             pstmt.setInt(8, profile.getTotalFocusSessions());
+            pstmt.setInt(9, profile.getXp()); // Inclusão do XP na criação do perfil
 
             pstmt.executeUpdate();
 
@@ -69,6 +70,30 @@ public class SQLiteProfileRepository implements ProfileRepository {
         } catch (SQLException e) {
             logger.error("Erro ao atualizar marcos do perfil ID: {}", profileId, e);
             throw new RuntimeException("Falha ao atualizar estatísticas no banco", e);
+        }
+    }
+
+    /**
+     * Atualiza cirurgicamente o XP acumulado do usuário no banco.
+     * Certifique-se de adicionar a assinatura correspondente 'void updateXp(Long
+     * profileId, int newXp);'
+     * na sua interface ProfileRepository.
+     */
+    @Override
+    public void updateXp(Long profileId, int newXp) {
+        String sql = "UPDATE profiles SET xp = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, newXp);
+            pstmt.setLong(2, profileId);
+
+            pstmt.executeUpdate();
+            logger.debug("XP do perfil ID {} atualizado para: {}", profileId, newXp);
+        } catch (SQLException e) {
+            logger.error("Erro ao atualizar XP do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao atualizar XP no banco", e);
         }
     }
 
@@ -136,6 +161,7 @@ public class SQLiteProfileRepository implements ProfileRepository {
                 rs.getInt("max_streak"),
                 rs.getInt("max_focus_day_seconds"),
                 rs.getInt("total_focus_sessions"),
+                rs.getInt("xp"), // Mapeamento da coluna de XP recuperada do banco
                 rs.getTimestamp("created_at").toLocalDateTime().withNano(0));
     }
 }

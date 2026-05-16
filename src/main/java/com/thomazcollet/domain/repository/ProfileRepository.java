@@ -6,10 +6,14 @@ import java.util.Optional;
 
 public interface ProfileRepository {
     void save(Profile profile);
+
     Optional<Profile> findById(Long id);
+
     List<Profile> findAll();
+
     void delete(Long id);
-    
-    // ADICIONE ESTA LINHA:
+
     void updateStats(Long profileId, int streak, int maxSeconds, int totalSessions);
+
+    void updateXp(Long profileId, int newXp);
 }
