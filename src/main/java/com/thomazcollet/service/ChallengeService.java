@@ -67,16 +67,31 @@ public class ChallengeService {
      * Processamento de fim de dia (chamado geralmente à meia-noite ou ao iniciar o
      * app no dia seguinte).
      */
+    /**
+     * Processamento de fim de dia (chamado geralmente à meia-noite ou ao iniciar o
+     * app no dia seguinte).
+     */
     public void processDailyProgress(Long profileId, int focusMinutesToday) {
         List<Challenge> activeChallenges = repository.findActiveByProfile(profileId);
 
         for (Challenge challenge : activeChallenges) {
             try {
-                if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
-                    processStreakLogic(challenge, focusMinutesToday);
+                // Fail-Fast: Se por algum motivo bizarro o desafio não estiver ativo, pula
+                if (challenge.getStatus() != ChallengeStatus.ACTIVE) {
+                    continue;
                 }
-                // Limpa o foco diário para o novo dia
+
+                if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
+                    // CORREÇÃO: Passamos o foco específico acumulado NESTE desafio hoje,
+                    // e não o total global do perfil recebido por parâmetro.
+                    processStreakLogic(challenge, challenge.getTodayFocusMinutes());
+                } else if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
+                    processMilestoneLogic(challenge, challenge.getTodayFocusMinutes());
+                }
+
+                // Limpa o foco diário para o novo dia de forma segura
                 repository.updateDailyFocus(challenge.getId(), 0);
+
             } catch (Exception e) {
                 logger.error("Erro ao processar desafio ID {}: {}", challenge.getId(), e.getMessage());
             }
@@ -92,15 +107,38 @@ public class ChallengeService {
             currentProgress++;
             if (currentProgress >= challenge.getDurationDays()) {
                 currentStatus = ChallengeStatus.COMPLETED;
+                logger.info("DESAFIO DE CONSTÂNCIA CONCLUÍDO: {}", challenge.getTitle());
             }
         } else {
             currentLives--;
             if (currentLives < 0) {
                 currentStatus = ChallengeStatus.FAILED;
+                logger.warn("DESAFIO DE CONSTÂNCIA FALHOU (Sem vidas): {}", challenge.getTitle());
             }
         }
 
         repository.updateProgress(challenge.getId(), currentProgress, currentLives, currentStatus.name());
+    }
+
+    private void processMilestoneLogic(Challenge challenge, int focusMinutesToday) {
+        // Garante que o progresso acumulado do Milestone seja validado e atualizado na
+        // virada do dia
+        // caso o fluxo em tempo real tenha sofrido alguma perda de estado.
+        int newTotal = challenge.getAccumulatedMinutes();
+
+        // Se o acumulado em memória não computou o dia de hoje, consolida
+        if (challenge.getTodayFocusMinutes() > 0 && newTotal < challenge.getTargetTotalMinutes()) {
+            // Caso o update em tempo real não tenha rodado, aqui serve como barreira de
+            // segurança
+            newTotal = repository.findById(challenge.getId())
+                    .map(Challenge::getAccumulatedMinutes)
+                    .orElse(challenge.getAccumulatedMinutes());
+        }
+
+        if (newTotal >= challenge.getTargetTotalMinutes()) {
+            repository.updateMilestoneProgress(challenge.getId(), newTotal, ChallengeStatus.COMPLETED.name());
+            logger.info("MILESTONE CONCLUÍDO NO PROCESSAMENTO DIÁRIO: {}", challenge.getTitle());
+        }
     }
 
     public List<Challenge> getChallengesByStatus(Long profileId, ChallengeStatus status) {

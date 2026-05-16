@@ -21,8 +21,6 @@ public class DatabaseInitializer {
         logger.info("Iniciando verificação e configuração do banco de dados...");
 
         String setupSql = """
-                PRAGMA foreign_keys = ON;
-
                 CREATE TABLE IF NOT EXISTS profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT NOT NULL,
@@ -69,8 +67,9 @@ public class DatabaseInitializer {
                 CREATE TABLE IF NOT EXISTS achievements (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
-                    achievement_key TEXT NOT NULL, -- Identificador da regra específica (Ex: 'streak_total_5', 'focus_cycles_10')
-                    category TEXT NOT NULL CHECK(category IN ('STREAK', 'CHALLENGE', 'DAILY_FOCUS', 'ACHIEVEMENTS')),
+                    achievement_key TEXT NOT NULL, -- Identificador da regra específica
+                    -- AJUSTE: Adicionado 'RANKING' para suportar as insígnias de Rank S, Rank A, etc.
+                    category TEXT NOT NULL CHECK(category IN ('STREAK', 'CHALLENGE', 'DAILY_FOCUS', 'ACHIEVEMENTS', 'RANKING')),
                     tier TEXT NOT NULL CHECK(tier IN ('BRONZE', 'SILVER', 'GOLD', 'PLATINUM')),
                     unlocked_at DATETIME DEFAULT (datetime('now', 'localtime')),
                     UNIQUE(profile_id, achievement_key),
@@ -80,6 +79,9 @@ public class DatabaseInitializer {
 
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
+
+            // Ativa chaves estrangeiras diretamente na conexão ativa de forma isolada
+            stmt.execute("PRAGMA foreign_keys = ON;");
 
             for (String sql : setupSql.split(";")) {
                 if (!sql.trim().isEmpty()) {

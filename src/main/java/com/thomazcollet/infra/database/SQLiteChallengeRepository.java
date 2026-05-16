@@ -28,7 +28,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setLong(1, challenge.getProfileId());
             pstmt.setString(2, challenge.getTitle());
@@ -63,7 +63,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         String sql = "UPDATE challenges SET progress_days = ?, lives_remaining = ?, status = ? WHERE id = ?";
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, progressDays);
             pstmt.setInt(2, livesRemaining);
@@ -85,14 +85,15 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         String sql = "UPDATE challenges SET accumulated_minutes = ?, status = ? WHERE id = ?";
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, accumulatedMinutes);
             pstmt.setString(2, status);
             pstmt.setLong(3, challengeId);
 
             pstmt.executeUpdate();
-            logger.debug("Acumulado do desafio Milestone ID {} atualizado para {} min.", challengeId, accumulatedMinutes);
+            logger.debug("Acumulado do desafio Milestone ID {} atualizado para {} min.", challengeId,
+                    accumulatedMinutes);
         } catch (SQLException e) {
             logger.error("Erro ao atualizar acumulado do desafio", e);
             throw new RuntimeException("Falha ao atualizar milestone no banco", e);
@@ -104,7 +105,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         String sql = "UPDATE challenges SET today_focus_minutes = ? WHERE id = ?";
 
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, minutes);
             pstmt.setLong(2, challengeId);
@@ -133,7 +134,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
     public Optional<Challenge> findById(Long id) {
         String sql = "SELECT * FROM challenges WHERE id = ?";
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, id);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next())
@@ -149,7 +150,7 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
     public void delete(Long id) {
         String sql = "DELETE FROM challenges WHERE id = ?";
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, id);
             pstmt.executeUpdate();
         } catch (SQLException e) {
@@ -157,10 +158,98 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         }
     }
 
+    @Override
+    public int countCompletedChallengesByTypeAndMinDuration(Long profileId, String type, int minDays) {
+        String sql = """
+                SELECT COUNT(*) FROM challenges
+                WHERE profile_id = ?
+                  AND status = 'COMPLETED'
+                  AND type = ?
+                  AND duration_days >= ?
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            pstmt.setString(2, type);
+            pstmt.setInt(3, minDays);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao contar desafios concluídos por tipo e duração mínima", e);
+        }
+        return 0;
+    }
+
+    @Override
+    public int countPerfectCompletedChallenges(Long profileId, int minDays) {
+        String sql = """
+                SELECT COUNT(*) FROM challenges
+                WHERE profile_id = ?
+                  AND status = 'COMPLETED'
+                  AND type = 'STREAK_CHALLENGE'
+                  AND duration_days >= ?
+                  AND lives_remaining = lives_total
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            pstmt.setInt(2, minDays);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao contar desafios perfeitos concluídos", e);
+        }
+        return 0;
+    }
+
+    @Override
+    public boolean hasCompletedIntensityChallenge(Long profileId, int minDays, int minTargetHours) {
+        // Converte horas da planilha para minutos (já que seu banco armazena
+        // target_total_minutes)
+        int minTargetMinutes = minTargetHours * 60;
+
+        String sql = """
+                SELECT 1 FROM challenges
+                WHERE profile_id = ?
+                  AND status = 'COMPLETED'
+                  AND type = 'MILESTONE_CHALLENGE'
+                  AND duration_days >= ?
+                  AND target_total_minutes >= ?
+                LIMIT 1
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            pstmt.setInt(2, minDays);
+            pstmt.setInt(3, minTargetMinutes);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next(); // Retorna true se encontrar pelo menos um registro correspondente
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao verificar existência de desafio de intensidade específico", e);
+        }
+        return false;
+    }
+
     private List<Challenge> findListByQuery(String sql, Long profileId) {
         List<Challenge> list = new ArrayList<>();
         try (Connection conn = DatabaseInitializer.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, profileId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -178,13 +267,13 @@ public class SQLiteChallengeRepository implements ChallengeRepository {
         c.setId(rs.getLong("id"));
         c.setProfileId(rs.getLong("profile_id"));
         c.setTitle(rs.getString("title"));
-        
+
         // Mapeamento dos novos campos Enum e Inteiros
         c.setType(ChallengeType.valueOf(rs.getString("type")));
         c.setTargetTotalMinutes(rs.getInt("target_total_minutes"));
         c.setAccumulatedMinutes(rs.getInt("accumulated_minutes"));
         c.setTodayFocusMinutes(rs.getInt("today_focus_minutes"));
-        
+
         c.setDurationDays(rs.getInt("duration_days"));
         c.setMinFocusMinutesPerDay(rs.getInt("min_focus_minutes_per_day"));
         c.setLivesTotal(rs.getInt("lives_total"));

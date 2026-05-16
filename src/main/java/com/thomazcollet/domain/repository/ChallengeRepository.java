@@ -33,4 +33,23 @@ public interface ChallengeRepository {
     void updateDailyFocus(Long challengeId, int minutes);
 
     void delete(Long id);
+
+    /**
+     * Conta a quantidade de desafios concluídos com sucesso filtrados por tipo
+     * e por uma duração mínima de dias.
+     */
+    int countCompletedChallengesByTypeAndMinDuration(Long profileId, String type, int minDays);
+
+    /**
+     * Conta a quantidade de desafios de constância concluídos com sucesso
+     * onde o usuário não perdeu nenhuma vida (Vidas Intactas / Perfeito).
+     */
+    int countPerfectCompletedChallenges(Long profileId, int minDays);
+
+    /**
+     * Verifica se existe ao menos um desafio de intensidade (Milestone) concluído
+     * que cumpra os requisitos mínimos combinados de dias de duração e meta total
+     * de horas.
+     */
+    boolean hasCompletedIntensityChallenge(Long profileId, int minDays, int minTargetHours);
 }
