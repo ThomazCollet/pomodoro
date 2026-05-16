@@ -37,4 +37,12 @@ public interface FocusSessionRepository {
      * Retorna um resumo diário de tempo focado (LocalDate para o Heatmap).
      */
     Map<LocalDate, Long> getDailyFocusTime(Long profileId, LocalDateTime since);
+
+    /**
+     * Busca o recorde histórico de minutos focados em um único dia por um perfil.
+     * Agrupa as sessões completadas do tipo 'FOCUS' por data e retorna a soma do
+     * dia mais produtivo.
+     */
+    int findMaxFocusMinutesInAGivenDay(Long profileId);
+
 }

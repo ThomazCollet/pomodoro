@@ -187,4 +187,32 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
                 rs.getInt("duration_seconds"),
                 rs.getBoolean("completed"));
     }
+
+    @Override
+    public int findMaxFocusMinutesInAGivenDay(Long profileId) {
+        String sql = """
+                SELECT MAX(total_daily_seconds) FROM (
+                    SELECT SUM(duration_seconds) as total_daily_seconds
+                    FROM focus_sessions
+                    WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1
+                    GROUP BY date(start_timestamp)
+                );
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    long maxSeconds = rs.getLong(1);
+                    return (int) (maxSeconds / 60); // Convertendo segundos brutos para minutos
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar o recorde diário de minutos focados para o perfil: {}", profileId, e);
+        }
+        return 0;
+    }
 }
