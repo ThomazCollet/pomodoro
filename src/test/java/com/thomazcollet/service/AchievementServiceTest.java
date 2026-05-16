@@ -3,7 +3,9 @@ package com.thomazcollet.service;
 import com.thomazcollet.domain.model.Achievement;
 import com.thomazcollet.domain.model.AchievementCategory;
 import com.thomazcollet.domain.model.AchievementTier;
+import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.repository.AchievementRepository;
+import com.thomazcollet.domain.repository.ProfileRepository;
 import com.thomazcollet.service.achievement.AchievementEvaluator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AchievementServiceTest {
 
     private MockAchievementRepository mockRepository;
+    private MockProfileRepository mockProfileRepository;
     private MockEvaluator mockDailyFocusEvaluator;
     private MockEvaluator mockStreakEvaluator;
     private MockAchievementsEvaluator mockAchievementsEvaluator;
@@ -30,26 +34,39 @@ class AchievementServiceTest {
     @BeforeEach
     void setUp() {
         mockRepository = new MockAchievementRepository();
+        mockProfileRepository = new MockProfileRepository();
+
         mockDailyFocusEvaluator = new MockEvaluator(AchievementCategory.DAILY_FOCUS);
         mockStreakEvaluator = new MockEvaluator(AchievementCategory.STREAK);
         mockAchievementsEvaluator = new MockAchievementsEvaluator();
         mockChallengeEvaluator = new MockEvaluator(AchievementCategory.CHALLENGE);
         mockRankingEvaluator = new MockEvaluator(AchievementCategory.RANKING);
 
-        achievementService = new AchievementService(mockRepository,
+        achievementService = new AchievementService(mockRepository, mockProfileRepository,
                 List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator, mockChallengeEvaluator,
                         mockRankingEvaluator));
     }
 
     @Test
-    @DisplayName("Deve lançar NullPointerException se o repositório fornecido for nulo")
+    @DisplayName("Deve lançar NullPointerException se o repositório de conquistas for nulo")
     void shouldThrowExceptionWhenRepositoryIsNull() {
         NullPointerException exception = assertThrows(NullPointerException.class, () -> {
-            new AchievementService(null,
+            new AchievementService(null, mockProfileRepository,
                     List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
                             mockChallengeEvaluator, mockRankingEvaluator));
         });
         assertEquals("AchievementRepository não pode ser nulo", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Deve lançar NullPointerException se o repositório de perfis for nulo")
+    void shouldThrowExceptionWhenProfileRepositoryIsNull() {
+        NullPointerException exception = assertThrows(NullPointerException.class, () -> {
+            new AchievementService(mockRepository, null,
+                    List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
+                            mockChallengeEvaluator, mockRankingEvaluator));
+        });
+        assertEquals("ProfileRepository não pode ser nulo", exception.getMessage());
     }
 
     @Test
@@ -155,8 +172,12 @@ class AchievementServiceTest {
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
-        assertFalse(saved.isEmpty(), "Deveria ter salvo a conquista de desafio pendente");
+        falseCase(saved.isEmpty(), "Deveria ter salvo a conquista de desafio pendente");
         assertEquals("challenge_constancy_days_7", saved.get(0).getAchievementKey());
+    }
+
+    private void falseCase(boolean condition, String message) {
+        assertFalse(condition, message);
     }
 
     @Test
@@ -213,25 +234,56 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve avaliar Meta-Conquistas por último permitindo ganho em cascata no mesmo ciclo")
     void shouldEvaluateMetaAchievementsLastEnablingCascadingUnlocks() {
-        // Usuário atinge o critério para ganhar Rank C (Categoria Base)
         mockRankingEvaluator.setTargetKeyAndValue("ranking_tier_c", 1);
-
-        // E atinge o critério para Meta_Total_5 se ganhar essa última medalha do Rank
         mockAchievementsEvaluator.setTargetKeyAndValue("meta_total_5", 5);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
 
-        // Com a ordem correta, as duas devem ser desbloqueadas juntas
         assertEquals(2, saved.size(), "Deveria processar o Rank primeiro e a Meta-conquista logo em seguida");
         assertEquals("ranking_tier_c", saved.get(0).getAchievementKey());
         assertEquals("meta_total_5", saved.get(1).getAchievementKey());
     }
 
     // ==========================================
-    // IMPLEMENTAÇÕES DE MOCKS MANUAIS CORRIGIDOS
+    // IMPLEMENTAÇÕES DE MOCKS MANUAIS
     // ==========================================
+
+    private static class MockProfileRepository implements ProfileRepository {
+        @Override
+        public Optional<Profile> findById(Long id) {
+            Profile fakeProfile = new Profile();
+            fakeProfile.setId(id);
+            fakeProfile.setXp(0);
+            return Optional.of(fakeProfile);
+        }
+
+        @Override
+        public void updateXp(Long profileId, int currentXp) {
+            // Apenas emula persistência de sucesso no ambiente isolado de testes
+        }
+
+        @Override
+        public void save(Profile profile) {
+            // Não precisa implementar lógica para o teste atual
+        }
+
+        @Override
+        public void delete(Long id) {
+            // Não precisa implementar lógica para o teste atual
+        }
+
+        @Override
+        public List<Profile> findAll() {
+            return List.of(); // Retorna uma lista vazia imutável padrão
+        }
+
+        @Override
+        public void updateStats(Long profileId, int totalFocusMinutes, int totalCycles, int currentStreak) {
+            // Não precisa implementar lógica para o teste atual
+        }
+    }
 
     private static class MockAchievementRepository implements AchievementRepository {
         private final List<Achievement> savedAchievements = new ArrayList<>();
@@ -287,7 +339,6 @@ class AchievementServiceTest {
 
         @Override
         public boolean evaluate(Long profileId, String achievementKey, int conditionValue) {
-            // CORREÇÃO: Evita que o prefixo 'ranking_' invalide a checagem prematuramente
             if (this.category == AchievementCategory.RANKING) {
                 if (!achievementKey.startsWith("ranking_"))
                     return false;

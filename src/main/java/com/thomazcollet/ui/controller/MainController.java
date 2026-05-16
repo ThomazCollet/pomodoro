@@ -83,10 +83,16 @@ public class MainController {
             var profileRepository = new SQLiteProfileRepository();
             var challengeRepository = new SQLiteChallengeRepository(); // Novo Repo
 
-            this.focusSessionService = new FocusSessionService(sessionRepository);
+            // ATUALIZAÇÃO AQUI: Injetando o profileRepository para computar o XP das
+            // sessões finalizadas
+            this.focusSessionService = new FocusSessionService(sessionRepository, profileRepository);
+
             this.profileService = new ProfileService(profileRepository);
             this.statsService = new StatsService(sessionRepository, profileRepository);
-            this.challengeService = new ChallengeService(challengeRepository); // Novo Service
+
+            // Passando o profileRepository como segundo argumento para o motor de XP dos
+            // desafios
+            this.challengeService = new ChallengeService(challengeRepository, profileRepository);
 
             profileService.ensureProfileExists();
             logger.info("Serviços de infraestrutura inicializados com sucesso.");

@@ -4,7 +4,9 @@ import com.thomazcollet.domain.exception.ChallengeNotFoundException;
 import com.thomazcollet.domain.model.Challenge;
 import com.thomazcollet.domain.model.ChallengeStatus;
 import com.thomazcollet.domain.model.ChallengeType;
+import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.repository.ChallengeRepository;
+import com.thomazcollet.domain.repository.ProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,15 +31,24 @@ class ChallengeServiceTest {
     @Mock
     private ChallengeRepository repository;
 
+    @Mock
+    private ProfileRepository profileRepository;
+
     @InjectMocks
     private ChallengeService service;
 
     private Challenge streakChallenge;
     private Challenge milestoneChallenge;
+    private Profile fakeProfile;
 
     @BeforeEach
     void setUp() {
-        // Mock de um desafio de Streak (Consistência)
+        // Mock do Perfil do Usuário
+        fakeProfile = new Profile();
+        fakeProfile.setId(10L);
+        fakeProfile.setXp(100);
+
+        // Mock de um desafio de Streak (Consistência) - 5 dias
         streakChallenge = new Challenge();
         streakChallenge.setId(1L);
         streakChallenge.setProfileId(10L);
@@ -47,13 +58,13 @@ class ChallengeServiceTest {
         streakChallenge.setMinFocusMinutesPerDay(30);
         streakChallenge.setLivesTotal(2);
 
-        // Mock de um desafio de Milestone (Acumulado)
+        // Mock de um desafio de Milestone (Acumulado) - 120 minutos
         milestoneChallenge = new Challenge();
         milestoneChallenge.setId(2L);
         milestoneChallenge.setProfileId(10L);
         milestoneChallenge.setType(ChallengeType.MILESTONE_CHALLENGE);
         milestoneChallenge.setTitle("Maratona Java");
-        milestoneChallenge.setTargetTotalMinutes(120); // 2 horas de foco total
+        milestoneChallenge.setTargetTotalMinutes(120);
         milestoneChallenge.setDurationDays(30);
     }
 
@@ -77,44 +88,44 @@ class ChallengeServiceTest {
 
         service.addFocusMinutes(1L, 25);
 
-        // Deve somar 10 + 25 = 35
         verify(repository).updateDailyFocus(1L, 35);
-        // NÃO deve chamar updateMilestoneProgress
         verify(repository, never()).updateMilestoneProgress(anyLong(), anyInt(), anyString());
+        verify(profileRepository, never()).updateXp(anyLong(), anyInt());
     }
 
     @Test
-    @DisplayName("Deve atualizar acumulado e completar Milestone quando meta é atingida")
+    @DisplayName("Deve atualizar acumulado, completar Milestone e conceder XP proporcional (Meta / 10)")
     void shouldCompleteMilestoneWhenTargetReached() {
         when(repository.findById(2L)).thenReturn(Optional.of(milestoneChallenge));
+        when(profileRepository.findById(10L)).thenReturn(Optional.of(fakeProfile));
+
         milestoneChallenge.setStatus(ChallengeStatus.ACTIVE);
         milestoneChallenge.setAccumulatedMinutes(100);
 
-        // Faltam 20 para 120. Adicionamos 25.
+        // Faltam 20 para 120. Adicionamos 25. Meta batida!
         service.addFocusMinutes(2L, 25);
 
         verify(repository).updateMilestoneProgress(2L, 125, "COMPLETED");
+
+        // MATRIZ NOVA: Meta de 120 minutos / 10 = 12 XP.
+        // 100 XP (Antigo) + 12 XP (Novo) = 112 XP
+        verify(profileRepository).updateXp(10L, 112);
     }
 
     @Test
     @DisplayName("Deve propagar minutos para todos os desafios ativos do perfil")
     void shouldPropagateMinutesToAllActiveChallenges() {
-        // CONFIGURAÇÃO: Garantir que ambos estão ATIVOS para passar pelo IF do service
         streakChallenge.setStatus(ChallengeStatus.ACTIVE);
         milestoneChallenge.setStatus(ChallengeStatus.ACTIVE);
 
         when(repository.findActiveByProfile(10L)).thenReturn(List.of(streakChallenge, milestoneChallenge));
-
         when(repository.findById(1L)).thenReturn(Optional.of(streakChallenge));
         when(repository.findById(2L)).thenReturn(Optional.of(milestoneChallenge));
 
-        // EXECUÇÃO
         service.addFocusMinutesToActiveChallenges(10L, 25);
 
-        // VERIFICAÇÃO
         verify(repository).updateDailyFocus(1L, 25);
         verify(repository).updateDailyFocus(2L, 25);
-        // Verifica se o Milestone também chamou o update de acumulado
         verify(repository).updateMilestoneProgress(eq(2L), anyInt(), anyString());
     }
 
@@ -125,47 +136,54 @@ class ChallengeServiceTest {
     void shouldDecrementLivesWhenGoalIsNotReached() {
         streakChallenge.setLivesRemaining(2);
         streakChallenge.setStatus(ChallengeStatus.ACTIVE);
-        // CONFIGURAÇÃO FUNDAMENTAL: O service agora lê o foco de dentro do objeto
-        streakChallenge.setTodayFocusMinutes(10); // Meta era 30
+        streakChallenge.setTodayFocusMinutes(10);
 
         when(repository.findActiveByProfile(10L)).thenReturn(List.of(streakChallenge));
 
-        service.processDailyProgress(10L, 0); // O segundo parâmetro agora é indiferente para a regra
+        service.processDailyProgress(10L, 0);
 
         verify(repository).updateProgress(1L, 0, 1, "ACTIVE");
         verify(repository).updateDailyFocus(1L, 0);
+        verify(profileRepository, never()).updateXp(anyLong(), anyInt());
     }
 
     @Test
-    @DisplayName("Deve completar Streak no último dia com sucesso")
+    @DisplayName("Deve completar Streak no último dia com sucesso e conceder XP proporcional (Dias * 10)")
     void shouldCompleteStreakOnLastDay() {
-        streakChallenge.setProgressDays(4); // Faltava 1 dia (total 5)
+        streakChallenge.setProgressDays(4);
         streakChallenge.setLivesRemaining(2);
         streakChallenge.setStatus(ChallengeStatus.ACTIVE);
-        // CONFIGURAÇÃO FUNDAMENTAL: Simula que o usuário bateu a meta neste desafio
-        // específico
         streakChallenge.setTodayFocusMinutes(30);
 
         when(repository.findActiveByProfile(10L)).thenReturn(List.of(streakChallenge));
+        when(profileRepository.findById(10L)).thenReturn(Optional.of(fakeProfile));
 
         service.processDailyProgress(10L, 0);
 
         verify(repository).updateProgress(1L, 5, 2, "COMPLETED");
+
+        // MATRIZ NOVA: 5 dias de duração x 10 XP = 50 XP.
+        // 100 XP (Antigo) + 50 XP (Novo) = 150 XP
+        verify(profileRepository).updateXp(10L, 150);
     }
 
     @Test
-    @DisplayName("Deve concluir Milestone no fechamento do dia se o progresso acumulado atingiu a meta total")
+    @DisplayName("Deve concluir Milestone no fechamento do dia e entregar XP se o progresso acumulado atingiu a meta")
     void shouldCompleteMilestoneOnDailyProgressIfTargetIsMet() {
         milestoneChallenge.setStatus(ChallengeStatus.ACTIVE);
-        milestoneChallenge.setAccumulatedMinutes(120); // Atingiu o target total de 120
+        milestoneChallenge.setAccumulatedMinutes(120);
         milestoneChallenge.setTodayFocusMinutes(20);
 
         when(repository.findActiveByProfile(10L)).thenReturn(List.of(milestoneChallenge));
+        when(profileRepository.findById(10L)).thenReturn(Optional.of(fakeProfile));
 
         service.processDailyProgress(10L, 0);
 
-        // Verifica se a malha de segurança capturou o status COMPLETED
         verify(repository).updateMilestoneProgress(2L, 120, "COMPLETED");
         verify(repository).updateDailyFocus(2L, 0);
+
+        // MATRIZ NOVA: Meta de 120 minutos / 10 = 12 XP.
+        // 100 XP (Antigo) + 12 XP (Novo) = 112 XP
+        verify(profileRepository).updateXp(10L, 112);
     }
 }

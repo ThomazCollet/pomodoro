@@ -5,19 +5,23 @@ import com.thomazcollet.domain.model.Challenge;
 import com.thomazcollet.domain.model.ChallengeStatus;
 import com.thomazcollet.domain.model.ChallengeType;
 import com.thomazcollet.domain.repository.ChallengeRepository;
+import com.thomazcollet.domain.repository.ProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ChallengeService {
 
     private static final Logger logger = LoggerFactory.getLogger(ChallengeService.class);
     private final ChallengeRepository repository;
+    private final ProfileRepository profileRepository;
 
-    public ChallengeService(ChallengeRepository repository) {
+    public ChallengeService(ChallengeRepository repository, ProfileRepository profileRepository) {
         this.repository = repository;
+        this.profileRepository = Objects.requireNonNull(profileRepository, "ProfileRepository não pode ser nulo");
     }
 
     public void createChallenge(Challenge challenge) {
@@ -58,32 +62,27 @@ public class ChallengeService {
             repository.updateMilestoneProgress(challengeId, newTotal, newStatus.name());
 
             if (newStatus == ChallengeStatus.COMPLETED) {
-                logger.info("MILSTONE CONCLUÍDO: {}", challenge.getTitle());
+                logger.info("MILESTONE CONCLUÍDO EM TEMPO REAL: {}", challenge.getTitle());
+                awardChallengeXp(challenge); // Distribui XP imediatamente
             }
         }
     }
 
     /**
      * Processamento de fim de dia (chamado geralmente à meia-noite ou ao iniciar o
-     * app no dia seguinte).
-     */
-    /**
-     * Processamento de fim de dia (chamado geralmente à meia-noite ou ao iniciar o
-     * app no dia seguinte).
+     * app).
      */
     public void processDailyProgress(Long profileId, int focusMinutesToday) {
         List<Challenge> activeChallenges = repository.findActiveByProfile(profileId);
 
         for (Challenge challenge : activeChallenges) {
             try {
-                // Fail-Fast: Se por algum motivo bizarro o desafio não estiver ativo, pula
+                // Fail-Fast estruturado
                 if (challenge.getStatus() != ChallengeStatus.ACTIVE) {
                     continue;
                 }
 
                 if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
-                    // CORREÇÃO: Passamos o foco específico acumulado NESTE desafio hoje,
-                    // e não o total global do perfil recebido por parâmetro.
                     processStreakLogic(challenge, challenge.getTodayFocusMinutes());
                 } else if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
                     processMilestoneLogic(challenge, challenge.getTodayFocusMinutes());
@@ -118,18 +117,23 @@ public class ChallengeService {
         }
 
         repository.updateProgress(challenge.getId(), currentProgress, currentLives, currentStatus.name());
+
+        // Se mudou para concluído na virada do dia, entrega a recompensa
+        if (currentStatus == ChallengeStatus.COMPLETED) {
+            awardChallengeXp(challenge);
+        }
     }
 
     private void processMilestoneLogic(Challenge challenge, int focusMinutesToday) {
-        // Garante que o progresso acumulado do Milestone seja validado e atualizado na
-        // virada do dia
-        // caso o fluxo em tempo real tenha sofrido alguma perda de estado.
+        // Proteção: se o Milestone já bateu a meta e foi completado em tempo real,
+        // ignora
+        if (challenge.getStatus() == ChallengeStatus.COMPLETED) {
+            return;
+        }
+
         int newTotal = challenge.getAccumulatedMinutes();
 
-        // Se o acumulado em memória não computou o dia de hoje, consolida
         if (challenge.getTodayFocusMinutes() > 0 && newTotal < challenge.getTargetTotalMinutes()) {
-            // Caso o update em tempo real não tenha rodado, aqui serve como barreira de
-            // segurança
             newTotal = repository.findById(challenge.getId())
                     .map(Challenge::getAccumulatedMinutes)
                     .orElse(challenge.getAccumulatedMinutes());
@@ -138,7 +142,36 @@ public class ChallengeService {
         if (newTotal >= challenge.getTargetTotalMinutes()) {
             repository.updateMilestoneProgress(challenge.getId(), newTotal, ChallengeStatus.COMPLETED.name());
             logger.info("MILESTONE CONCLUÍDO NO PROCESSAMENTO DIÁRIO: {}", challenge.getTitle());
+            awardChallengeXp(challenge);
         }
+    }
+
+    /**
+     * Calcula e concede o XP dinamicamente de acordo com a nova Matriz de
+     * Distribuição.
+     */
+    private void awardChallengeXp(Challenge challenge) {
+        int xpGained = 0;
+
+        if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
+            // Nova Regra: Duração em dias x 10 XP
+            xpGained = challenge.getDurationDays() * 10;
+        } else if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
+            // Nova Regra: Meta de minutos / 10 XP
+            xpGained = challenge.getTargetTotalMinutes() / 10;
+        }
+
+        if (xpGained <= 0) {
+            xpGained = 1; // Proteção mínima caso criem metas ínfimas
+        }
+
+        final int finalXp = xpGained;
+        profileRepository.findById(challenge.getProfileId()).ifPresent(profile -> {
+            profile.addXp(finalXp);
+            profileRepository.updateXp(profile.getId(), profile.getXp());
+            logger.info("✨ {} XP creditado ao perfil {} pela conclusão do desafio: '{}'",
+                    finalXp, challenge.getProfileId(), challenge.getTitle());
+        });
     }
 
     public List<Challenge> getChallengesByStatus(Long profileId, ChallengeStatus status) {
