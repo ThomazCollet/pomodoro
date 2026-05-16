@@ -28,7 +28,7 @@ class AchievementServiceTest {
         // Inicializa os dublês de testes limpos antes de cada execução
         mockRepository = new MockAchievementRepository();
         mockDailyFocusEvaluator = new MockEvaluator(AchievementCategory.DAILY_FOCUS);
-        
+
         // Instancia o serviço injetando manualmente as dependências (IoC puro)
         achievementService = new AchievementService(mockRepository, List.of(mockDailyFocusEvaluator));
     }
@@ -45,29 +45,32 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve pular a validação se a conquista já foi desbloqueada previamente (Fail-Fast)")
     void shouldSkipValidationWhenAchievementIsAlreadyUnlocked() {
-        // Cenário: O usuário já tem a conquista de Bronze salva no banco
-        mockRepository.simulateAlreadyUnlocked("focus_daily_1h_bronze");
-        
-        // Configuramos o avaliador para retornar true, mas limitamos o teto simulado 
-        // para a meta de Bronze (60), simulando que o usuário não atingiu os níveis superiores ainda
+        // Cenário: O usuário já tem a conquista de Bronze de horas salva no banco
+        mockRepository.simulateAlreadyUnlocked("focus_daily_1h_hours");
+
+        // Configuramos o avaliador para retornar true, mas limitamos o teto simulado
+        // para a meta de Bronze (60), simulando que o usuário não atingiu os níveis
+        // superiores ainda
         mockDailyFocusEvaluator.setEvaluateResult(true);
-        mockDailyFocusEvaluator.setMaxSimulatedLimit(60); 
+        mockDailyFocusEvaluator.setMaxSimulatedLimit(60);
 
         // Execução
         achievementService.checkAndUnlockNewAchievements(profileId);
 
-        // Verificação: Como a de Bronze já estava desbloqueada e as outras não atingiram os critérios,
+        // Verificação: Como a de Bronze já estava desbloqueada e as outras subregras
+        // não vazam,
         // nenhuma nova conquista deve ter sido adicionada à lista de salvamento.
-        assertTrue(mockRepository.getSavedAchievements().isEmpty(), 
+        assertTrue(mockRepository.getSavedAchievements().isEmpty(),
                 "Não deveria salvar uma nova conquista se a atual já está desbloqueada e as metas superiores não foram batidas.");
     }
 
     @Test
     @DisplayName("Deve desbloquear e salvar a conquista de Bronze se o critério for atingido")
     void shouldUnlockAndSaveAchievementWhenCriteriaIsMet() {
-        // Cenário: Usuário focou 70 minutos (passando a meta de 60 do Bronze, mas abaixo dos 120 da Prata)
-        mockDailyFocusEvaluator.setEvaluateResult(true); 
-        mockDailyFocusEvaluator.setMaxSimulatedLimit(60); 
+        // Cenário: Usuário focou 70 minutos (passando a meta de 60 do Bronze, mas
+        // abaixo dos 120 da Prata)
+        mockDailyFocusEvaluator.setEvaluateResult(true);
+        mockDailyFocusEvaluator.setMaxSimulatedLimit(60);
 
         // Execução
         achievementService.checkAndUnlockNewAchievements(profileId);
@@ -75,9 +78,9 @@ class AchievementServiceTest {
         // Verificação
         List<Achievement> saved = mockRepository.getSavedAchievements();
         assertEquals(1, saved.size(), "Deveria ter salvo exatamente 1 conquista");
-        
+
         Achievement bronze = saved.get(0);
-        assertEquals("focus_daily_1h_bronze", bronze.getAchievementKey());
+        assertEquals("focus_daily_1h_hours", bronze.getAchievementKey());
         assertEquals(AchievementCategory.DAILY_FOCUS, bronze.getCategory());
         assertEquals(AchievementTier.BRONZE, bronze.getTier());
         assertEquals(profileId, bronze.getProfileId());
@@ -89,7 +92,7 @@ class AchievementServiceTest {
         // Cenário: Usuário focou 150 minutos em um único dia.
         // Isso atinge os critérios de Bronze (60) e Prata (120) ao mesmo tempo!
         mockDailyFocusEvaluator.setEvaluateResult(true);
-        mockDailyFocusEvaluator.setMaxSimulatedLimit(120); 
+        mockDailyFocusEvaluator.setMaxSimulatedLimit(120);
 
         // Execução
         achievementService.checkAndUnlockNewAchievements(profileId);
@@ -97,9 +100,9 @@ class AchievementServiceTest {
         // Verificação
         List<Achievement> saved = mockRepository.getSavedAchievements();
         assertEquals(2, saved.size(), "Deveria ter salvo 2 conquistas (Bronze e Prata)");
-        
-        assertEquals("focus_daily_1h_bronze", saved.get(0).getAchievementKey());
-        assertEquals("focus_daily_2h_silver", saved.get(1).getAchievementKey());
+
+        assertEquals("focus_daily_1h_hours", saved.get(0).getAchievementKey());
+        assertEquals("focus_daily_2h_hours", saved.get(1).getAchievementKey());
     }
 
     @Test
@@ -112,7 +115,7 @@ class AchievementServiceTest {
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         // Verificação
-        assertTrue(mockRepository.getSavedAchievements().isEmpty(), 
+        assertTrue(mockRepository.getSavedAchievements().isEmpty(),
                 "Nenhuma conquista deveria ser salva se os critérios falharem.");
     }
 
@@ -157,7 +160,8 @@ class AchievementServiceTest {
     }
 
     /**
-     * Dublê estanque (Mock/Stub) que simula o comportamento dos Evaluators de domínio.
+     * Dublê estanque (Mock/Stub) que simula o comportamento dos Evaluators de
+     * domínio.
      */
     private static class MockEvaluator implements AchievementEvaluator {
         private final AchievementCategory category;
@@ -176,8 +180,16 @@ class AchievementServiceTest {
             this.maxSimulatedLimit = maxSimulatedLimit;
         }
 
+        // MockEvaluator:
         @Override
-        public boolean evaluate(Long profileId, int conditionValue) {
+        public boolean evaluate(Long profileId, String achievementKey, int conditionValue) {
+            // Ajustado de endsWith("_hours") para verificar explicitamente o prefixo
+            // diário.
+            // Isso evita que chaves de acúmulo histórico histórico de horas interfiram nos
+            // asserts de foco diário.
+            if (!achievementKey.startsWith("focus_daily_") || !achievementKey.endsWith("_hours")) {
+                return false;
+            }
             return evaluateResult && (conditionValue <= maxSimulatedLimit);
         }
 

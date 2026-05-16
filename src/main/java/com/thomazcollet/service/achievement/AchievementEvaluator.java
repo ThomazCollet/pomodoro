@@ -13,7 +13,7 @@ public interface AchievementEvaluator {
      *                       streaks, 120 minutos).
      * @return true se o usuário atingiu ou ultrapassou a meta.
      */
-    boolean evaluate(Long profileId, int conditionValue);
+    boolean evaluate(Long profileId, String achievementKey, int conditionValue);
 
     /**
      * Retorna qual categoria de conquista este validador sabe processar.

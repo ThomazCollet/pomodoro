@@ -215,4 +215,60 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         }
         return 0;
     }
+
+    @Override
+    public int countCompletedSessionsByProfileId(Long profileId) {
+        String sql = "SELECT COUNT(*) FROM focus_sessions WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1;";
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next())
+                    return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao contar ciclos pomodoro completados para o perfil: {}", profileId, e);
+        }
+        return 0;
+    }
+
+    @Override
+    public int countDistinctDaysWithCompletedFocus(Long profileId) {
+        String sql = "SELECT COUNT(DISTINCT date(start_timestamp)) FROM focus_sessions WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1;";
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next())
+                    return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao contar dias distintos de foco para o perfil: {}", profileId, e);
+        }
+        return 0;
+    }
+
+    @Override
+    public int sumTotalFocusMinutesByProfileId(Long profileId) {
+        String sql = "SELECT SUM(duration_seconds) FROM focus_sessions WHERE profile_id = ? AND type = 'FOCUS' AND completed = 1;";
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    long totalSeconds = rs.getLong(1);
+                    return (int) (totalSeconds / 60); // Convertendo segundos brutos acumulados para minutos
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao somar minutos históricos totais de foco para o perfil: {}", profileId, e);
+        }
+        return 0;
+    }
 }

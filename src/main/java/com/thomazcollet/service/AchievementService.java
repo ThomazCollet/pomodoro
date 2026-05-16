@@ -46,9 +46,7 @@ public class AchievementService {
     public void checkAndUnlockNewAchievements(Long profileId) {
         logger.info("Iniciando verificação de conquistas para o perfil: {}", profileId);
 
-        // Aqui mapeamos as regras da sua planilha (Pode ser carregado de um arquivo,
-        // ENUM ou constantes)
-        // Como exemplo didático, vamos usar uma lista estática de mapeamento das chaves
+        // Mapeamento estruturado vindo do planejamento de gamificação
         List<AchievementDefinition> definitions = getDefinitionsFromPlanilha();
 
         for (AchievementDefinition def : definitions) {
@@ -65,8 +63,9 @@ public class AchievementService {
                 continue;
             }
 
-            // Executa a validação em isolamento
-            if (evaluator.evaluate(profileId, def.conditionValue())) {
+            // Executa a validação passando a chave contextual da conquista para suportar
+            // sub-regras granulares
+            if (evaluator.evaluate(profileId, def.key(), def.conditionValue())) {
                 Achievement newAchievement = new Achievement();
                 newAchievement.setProfileId(profileId);
                 newAchievement.setAchievementKey(def.key());
@@ -88,14 +87,46 @@ public class AchievementService {
 
     private List<AchievementDefinition> getDefinitionsFromPlanilha() {
         return List.of(
-                // Categoria: Foco Diário (Exemplos vindos da imagem)
-                new AchievementDefinition("focus_daily_1h_bronze", AchievementCategory.DAILY_FOCUS,
+                // Linha 1: Tempo focado em um único dia (Valores convertidos em minutos)
+                new AchievementDefinition("focus_daily_1h_hours", AchievementCategory.DAILY_FOCUS,
                         AchievementTier.BRONZE, 60),
-                new AchievementDefinition("focus_daily_2h_silver", AchievementCategory.DAILY_FOCUS,
+                new AchievementDefinition("focus_daily_2h_hours", AchievementCategory.DAILY_FOCUS,
                         AchievementTier.SILVER, 120),
-                new AchievementDefinition("focus_daily_4h_gold", AchievementCategory.DAILY_FOCUS, AchievementTier.GOLD,
-                        240),
-                new AchievementDefinition("focus_daily_6h_platinum", AchievementCategory.DAILY_FOCUS,
-                        AchievementTier.PLATINUM, 360));
+                new AchievementDefinition("focus_daily_4h_hours", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.GOLD, 240),
+                new AchievementDefinition("focus_daily_6h_hours", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.PLATINUM, 360),
+
+                // Linha 2: Quantidade de ciclos pomodoro completos acumulados
+                new AchievementDefinition("focus_cycles_1_bronze", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.BRONZE, 1),
+                new AchievementDefinition("focus_cycles_10_silver", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.SILVER, 10),
+                new AchievementDefinition("focus_cycles_25_gold", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.GOLD, 25),
+                new AchievementDefinition("focus_cycles_100_platinum", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.PLATINUM, 100),
+
+                // Linha 3: Total de dias distintos com foco realizado
+                new AchievementDefinition("focus_total_days_15_bronze", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.BRONZE, 15),
+                new AchievementDefinition("focus_total_days_30_silver", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.SILVER, 30),
+                new AchievementDefinition("focus_total_days_90_gold", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.GOLD, 90),
+                new AchievementDefinition("focus_total_days_365_platinum", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.PLATINUM, 365),
+
+                // Linha Nova (Foco Acumulado Histórico): Horas totais acumuladas convertidas
+                // para minutos
+                new AchievementDefinition("focus_accumulated_12h_hours", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.BRONZE, 720), // 12h * 60min
+                new AchievementDefinition("focus_accumulated_24h_hours", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.SILVER, 1440), // 24h * 60min
+                new AchievementDefinition("focus_accumulated_300h_hours", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.GOLD, 18000), // 300h * 60min
+                new AchievementDefinition("focus_accumulated_1000h_hours", AchievementCategory.DAILY_FOCUS,
+                        AchievementTier.PLATINUM, 60000) // 1000h * 60min
+        );
     }
 }

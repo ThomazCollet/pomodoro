@@ -45,4 +45,20 @@ public interface FocusSessionRepository {
      */
     int findMaxFocusMinutesInAGivenDay(Long profileId);
 
+    /**
+     * Conta o total acumulado de sessões de foco completadas com sucesso por um
+     * perfil.
+     * Atende à linha: "Completar ciclos pomodoro completos".
+     */
+    int countCompletedSessionsByProfileId(Long profileId);
+
+    /**
+     * Conta em quantos dias distintos o usuário realizou pelo menos uma sessão de
+     * foco completada.
+     * Atende à linha: "Completar um total de X dias de foco".
+     */
+    int countDistinctDaysWithCompletedFocus(Long profileId);
+
+    int sumTotalFocusMinutesByProfileId(Long profileId);
+
 }
