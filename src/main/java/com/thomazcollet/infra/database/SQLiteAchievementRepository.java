@@ -122,4 +122,28 @@ public class SQLiteAchievementRepository implements AchievementRepository {
 
         return achievement;
     }
+
+    @Override
+    public java.util.Set<String> findUnlockedKeysByProfileId(Long profileId) {
+        String sql = "SELECT achievement_key FROM achievements WHERE profile_id = ?;";
+        java.util.Set<String> unlockedKeys = new java.util.HashSet<>();
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    unlockedKeys.add(rs.getString("achievement_key"));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar chaves de conquistas desbloqueadas para o perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao consultar chaves de conquistas no banco", e);
+        }
+
+        return unlockedKeys;
+    }
 }

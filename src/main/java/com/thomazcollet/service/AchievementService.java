@@ -20,12 +20,21 @@ public class AchievementService {
     private static final Logger logger = LoggerFactory.getLogger(AchievementService.class);
 
     private final AchievementRepository achievementRepository;
-    private final ProfileRepository profileRepository; // Adicionado para distribuição de XP
+    private final ProfileRepository profileRepository;
     private final Map<AchievementCategory, AchievementEvaluator> evaluators = new EnumMap<>(AchievementCategory.class);
 
-    public AchievementService(AchievementRepository achievementRepository, 
-                              ProfileRepository profileRepository, 
-                              List<AchievementEvaluator> evaluatorList) {
+    /**
+     * Record público que serve como a definição estática de cada conquista mapeada.
+     * Utilizado tanto pelo motor de regras quanto pela UI para renderizar os
+     * cartões.
+     */
+    public record AchievementDefinition(String key, AchievementCategory category, AchievementTier tier,
+            int conditionValue) {
+    }
+
+    public AchievementService(AchievementRepository achievementRepository,
+            ProfileRepository profileRepository,
+            List<AchievementEvaluator> evaluatorList) {
         this.achievementRepository = Objects.requireNonNull(achievementRepository,
                 "AchievementRepository não pode ser nulo");
         this.profileRepository = Objects.requireNonNull(profileRepository,
@@ -43,35 +52,38 @@ public class AchievementService {
         }
     }
 
+    /**
+     * Expõe a lista de todas as conquistas mapeadas na planilha para que a UI possa
+     * listá-las.
+     */
+    public List<AchievementDefinition> getDefinitions() {
+        return getDefinitionsFromPlanilha();
+    }
+
     public void checkAndUnlockNewAchievements(Long profileId) {
         logger.info("Iniciando verificação de conquistas para o perfil: {}", profileId);
 
         List<AchievementDefinition> definitions = getDefinitionsFromPlanilha();
 
-        // Lista separada para adiar a avaliação das Meta-Conquistas
         List<AchievementDefinition> metaAchievements = new ArrayList<>();
 
-        // Passo 1: Avalia todas as categorias base (DAILY_FOCUS, STREAK, CHALLENGE, RANKING)
+        // Passo 1: Avalia todas as categorias base
         for (AchievementDefinition def : definitions) {
             if (def.category() == AchievementCategory.ACHIEVEMENTS) {
-                metaAchievements.add(def); // Guarda para o final
+                metaAchievements.add(def);
                 continue;
             }
 
             processEvaluation(profileId, def);
         }
 
-        // Passo 2: Avalia as Meta-Conquistas por último (Garante consistência na contagem)
+        // Passo 2: Avalia as Meta-Conquistas por último
         for (AchievementDefinition def : metaAchievements) {
             processEvaluation(profileId, def);
         }
     }
 
-    /**
-     * Isolamento da lógica de avaliação, desbloqueio e premiação de XP
-     */
     private void processEvaluation(Long profileId, AchievementDefinition def) {
-        // Fail-Fast estruturado: evita processamento redundante se a insígnia já existe
         if (achievementRepository.isUnlocked(profileId, def.key())) {
             return;
         }
@@ -82,7 +94,6 @@ public class AchievementService {
         }
 
         if (evaluator.evaluate(profileId, def.key(), def.conditionValue())) {
-            // 1. Instancia e salva a Conquista
             Achievement newAchievement = new Achievement();
             newAchievement.setProfileId(profileId);
             newAchievement.setAchievementKey(def.key());
@@ -92,7 +103,6 @@ public class AchievementService {
             achievementRepository.save(newAchievement);
             logger.info("🏆 CONQUISTA DESBLOQUEADA: {} [{}]", def.key(), def.tier());
 
-            // 2. Motor de Recompensa: Calcula o XP com base na matriz planejada
             int xpReward = switch (def.tier()) {
                 case BRONZE -> 100;
                 case SILVER -> 300;
@@ -100,19 +110,14 @@ public class AchievementService {
                 case PLATINUM -> 2500;
             };
 
-            // 3. Concede o XP ao perfil e persiste a alteração
             profileRepository.findById(profileId).ifPresent(profile -> {
-                profile.addXp(xpReward); // Aplica a lógica interna/Fail-fast do seu modelo
+                profile.addXp(xpReward);
                 profileRepository.updateXp(profile.getId(), profile.getXp());
                 logger.info("✨ {} XP concedido ao perfil ID {} por desbloquear a conquista!", xpReward, profileId);
             });
 
             // TODO: Notificar a UI (JavaFX) para disparar o Toast animado na tela
         }
-    }
-
-    private record AchievementDefinition(String key, AchievementCategory category, AchievementTier tier,
-            int conditionValue) {
     }
 
     private List<AchievementDefinition> getDefinitionsFromPlanilha() {
@@ -161,19 +166,25 @@ public class AchievementService {
         // CATEGORIA: STREAK (Ofensivas)
         // =========================================================================
         list.add(new AchievementDefinition("streak_current_5", AchievementCategory.STREAK, AchievementTier.BRONZE, 5));
-        list.add(new AchievementDefinition("streak_current_12", AchievementCategory.STREAK, AchievementTier.SILVER, 12));
+        list.add(
+                new AchievementDefinition("streak_current_12", AchievementCategory.STREAK, AchievementTier.SILVER, 12));
         list.add(new AchievementDefinition("streak_current_15", AchievementCategory.STREAK, AchievementTier.GOLD, 15));
-        list.add(new AchievementDefinition("streak_current_30", AchievementCategory.STREAK, AchievementTier.PLATINUM, 30));
+        list.add(new AchievementDefinition("streak_current_30", AchievementCategory.STREAK, AchievementTier.PLATINUM,
+                30));
 
         list.add(new AchievementDefinition("streak_count_5_x3", AchievementCategory.STREAK, AchievementTier.BRONZE, 5));
-        list.add(new AchievementDefinition("streak_count_12_x3", AchievementCategory.STREAK, AchievementTier.SILVER, 12));
+        list.add(new AchievementDefinition("streak_count_12_x3", AchievementCategory.STREAK, AchievementTier.SILVER,
+                12));
         list.add(new AchievementDefinition("streak_count_15_x3", AchievementCategory.STREAK, AchievementTier.GOLD, 15));
-        list.add(new AchievementDefinition("streak_count_30_x3", AchievementCategory.STREAK, AchievementTier.PLATINUM, 30));
+        list.add(new AchievementDefinition("streak_count_30_x3", AchievementCategory.STREAK, AchievementTier.PLATINUM,
+                30));
 
         list.add(new AchievementDefinition("streak_count_5_x5", AchievementCategory.STREAK, AchievementTier.BRONZE, 5));
-        list.add(new AchievementDefinition("streak_count_12_x5", AchievementCategory.STREAK, AchievementTier.SILVER, 12));
+        list.add(new AchievementDefinition("streak_count_12_x5", AchievementCategory.STREAK, AchievementTier.SILVER,
+                12));
         list.add(new AchievementDefinition("streak_count_15_x5", AchievementCategory.STREAK, AchievementTier.GOLD, 15));
-        list.add(new AchievementDefinition("streak_count_30_x5", AchievementCategory.STREAK, AchievementTier.PLATINUM, 30));
+        list.add(new AchievementDefinition("streak_count_30_x5", AchievementCategory.STREAK, AchievementTier.PLATINUM,
+                30));
 
         // =========================================================================
         // CATEGORIA: CHALLENGE (Desafios)
@@ -269,17 +280,27 @@ public class AchievementService {
         // =========================================================================
         // CATEGORIA: ACHIEVEMENTS (Meta-Conquistas)
         // =========================================================================
-        list.add(new AchievementDefinition("meta_first_gold", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE, 1));
-        list.add(new AchievementDefinition("meta_first_platinum", AchievementCategory.ACHIEVEMENTS, AchievementTier.SILVER, 1));
-        list.add(new AchievementDefinition("meta_total_5", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE, 5));
-        list.add(new AchievementDefinition("meta_total_15", AchievementCategory.ACHIEVEMENTS, AchievementTier.SILVER, 15));
-        list.add(new AchievementDefinition("meta_total_30", AchievementCategory.ACHIEVEMENTS, AchievementTier.GOLD, 30));
-        list.add(new AchievementDefinition("meta_all_gold", AchievementCategory.ACHIEVEMENTS, AchievementTier.PLATINUM, 7));
+        list.add(new AchievementDefinition("meta_first_gold", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE,
+                1));
+        list.add(new AchievementDefinition("meta_first_platinum", AchievementCategory.ACHIEVEMENTS,
+                AchievementTier.SILVER, 1));
+        list.add(
+                new AchievementDefinition("meta_total_5", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE, 5));
+        list.add(new AchievementDefinition("meta_total_15", AchievementCategory.ACHIEVEMENTS, AchievementTier.SILVER,
+                15));
+        list.add(
+                new AchievementDefinition("meta_total_30", AchievementCategory.ACHIEVEMENTS, AchievementTier.GOLD, 30));
+        list.add(new AchievementDefinition("meta_all_gold", AchievementCategory.ACHIEVEMENTS, AchievementTier.PLATINUM,
+                7));
 
-        list.add(new AchievementDefinition("meta_total_platinum_1", AchievementCategory.ACHIEVEMENTS, AchievementTier.BRONZE, 1));
-        list.add(new AchievementDefinition("meta_total_platinum_3", AchievementCategory.ACHIEVEMENTS, AchievementTier.SILVER, 3));
-        list.add(new AchievementDefinition("meta_total_platinum_7", AchievementCategory.ACHIEVEMENTS, AchievementTier.GOLD, 7));
-        list.add(new AchievementDefinition("meta_total_platinum_12", AchievementCategory.ACHIEVEMENTS, AchievementTier.PLATINUM, 12));
+        list.add(new AchievementDefinition("meta_total_platinum_1", AchievementCategory.ACHIEVEMENTS,
+                AchievementTier.BRONZE, 1));
+        list.add(new AchievementDefinition("meta_total_platinum_3", AchievementCategory.ACHIEVEMENTS,
+                AchievementTier.SILVER, 3));
+        list.add(new AchievementDefinition("meta_total_platinum_7", AchievementCategory.ACHIEVEMENTS,
+                AchievementTier.GOLD, 7));
+        list.add(new AchievementDefinition("meta_total_platinum_12", AchievementCategory.ACHIEVEMENTS,
+                AchievementTier.PLATINUM, 12));
 
         // =========================================================================
         // CATEGORIA: RANKING (Sistema de Elos)
@@ -287,7 +308,8 @@ public class AchievementService {
         list.add(new AchievementDefinition("ranking_tier_c", AchievementCategory.RANKING, AchievementTier.BRONZE, 1));
         list.add(new AchievementDefinition("ranking_tier_a", AchievementCategory.RANKING, AchievementTier.SILVER, 2));
         list.add(new AchievementDefinition("ranking_tier_s", AchievementCategory.RANKING, AchievementTier.GOLD, 3));
-        list.add(new AchievementDefinition("ranking_tier_ss", AchievementCategory.RANKING, AchievementTier.PLATINUM, 4));
+        list.add(
+                new AchievementDefinition("ranking_tier_ss", AchievementCategory.RANKING, AchievementTier.PLATINUM, 4));
 
         return list;
     }

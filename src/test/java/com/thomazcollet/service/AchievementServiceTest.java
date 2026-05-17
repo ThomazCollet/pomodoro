@@ -276,12 +276,13 @@ class AchievementServiceTest {
 
         @Override
         public List<Profile> findAll() {
-            return List.of(); // Retorna uma lista vazia imutável padrão
+            return List.of();
         }
 
         @Override
-        public void updateStats(Long profileId, int totalFocusMinutes, int totalCycles, int currentStreak) {
-            // Não precisa implementar lógica para o teste atual
+        public void updateStats(Long profileId, int maxStreak, int maxFocusDaySeconds, int totalFocusSessions) {
+            // Ajustado para bater exatamente com a assinatura correta do
+            // SQLiteProfileRepository
         }
     }
 
@@ -305,11 +306,18 @@ class AchievementServiceTest {
         @Override
         public void save(Achievement achievement) {
             savedAchievements.add(achievement);
+            unlockedKeys.add(achievement.getAchievementKey()); // Sincroniza salvamento com as chaves ativas
         }
 
         @Override
         public boolean isUnlocked(Long profileId, String achievementKey) {
             return unlockedKeys.contains(achievementKey);
+        }
+
+        @Override
+        public Set<String> findUnlockedKeysByProfileId(Long profileId) {
+            // AQUI ESTÁ A ADIÇÃO CRUCIAL PARA FAZER A CLASSE COMPILAR!
+            return unlockedKeys;
         }
 
         @Override

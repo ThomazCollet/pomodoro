@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox prefHeight="650.0" prefWidth="900.0" 
+      stylesheets="@../styles/achievements.css" 
+      styleClass="main-achievements-container" 
+      fx:controller="com.thomazcollet.ui.controller.AchievementViewController"
+      xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+    
+    <VBox spacing="4.0" styleClass="view-header">
+        <padding>
+            <Insets top="20.0" right="24.0" bottom="10.0" left="24.0"/>
+        </padding>
+        <Label text="CENTRAL DE PROGRESSO" styleClass="view-main-title"/>
+        <Label text="Acompanhe suas metas, complete desafios e conquiste seu Rank" styleClass="view-subtitle"/>
+    </VBox>
+
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" styleClass="custom-tab-pane">
+        
+        <Tab text="Central de Conquistas">
+            <ScrollPane fitToWidth="true" styleClass="achievements-scroll">
+                <VBox spacing="24.0" styleClass="scroll-content-wrapper">
+                    <padding>
+                        <Insets top="16.0" right="24.0" bottom="24.0" left="24.0"/>
+                    </padding>
+
+                    <VBox spacing="10.0" styleClass="category-section">
+                        <Label text="🔥 Ofensiva de Streak" styleClass="category-section-title"/>
+                        <FlowPane fx:id="streakCategoryPane" hgap="16.0" vgap="16.0" styleClass="category-flow-pane">
+                            </FlowPane>
+                    </VBox>
+
+                    <VBox spacing="10.0" styleClass="category-section">
+                        <Label text="⚔️ Desafios Completados" styleClass="category-section-title"/>
+                        <FlowPane fx:id="challengeCategoryPane" hgap="16.0" vgap="16.0" styleClass="category-flow-pane">
+                            </FlowPane>
+                    </VBox>
+
+                    <VBox spacing="10.0" styleClass="category-section">
+                        <Label text="⏱️ Foco Acumulado e Ciclos" styleClass="category-section-title"/>
+                        <FlowPane fx:id="focusCategoryPane" hgap="16.0" vgap="16.0" styleClass="category-flow-pane">
+                            </FlowPane>
+                    </VBox>
+
+                    <VBox spacing="10.0" styleClass="category-section">
+                        <Label text="🏆 Coleção &amp; Jornada" styleClass="category-section-title"/>
+                        <FlowPane fx:id="metaCategoryPane" hgap="16.0" vgap="16.0" styleClass="category-flow-pane">
+                            </FlowPane>
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+        
+        <Tab text="Troféus de Platina">
+            <ScrollPane fitToWidth="true" styleClass="achievements-scroll">
+                <VBox spacing="16.0" styleClass="scroll-content-wrapper">
+                    <padding>
+                        <Insets top="20.0" right="24.0" bottom="24.0" left="24.0"/>
+                    </padding>
+                    <Label text="💎 Relíquias de Platina" styleClass="category-section-title"/>
+                    <Label text="Conquistas lendárias desbloqueadas automaticamente ao gabaritar as trilhas de Ouro." styleClass="platinum-hint-text"/>
+                    
+                    <FlowPane fx:id="platinumGridPane" hgap="16.0" vgap="16.0" styleClass="category-flow-pane">
+                        </FlowPane>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+        
+    </TabPane>
+</VBox>

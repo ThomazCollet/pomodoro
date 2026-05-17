@@ -1,9 +1,11 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.domain.repository.AchievementRepository;
 import com.thomazcollet.infra.database.SQLiteChallengeRepository;
 import com.thomazcollet.infra.database.SQLiteFocusSessionRepository;
 import com.thomazcollet.infra.database.SQLiteProfileRepository;
+import com.thomazcollet.infra.database.SQLiteAchievementRepository;
 import com.thomazcollet.service.*;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
@@ -27,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,7 +50,9 @@ public class MainController {
     @FXML
     private Button btnStats;
     @FXML
-    private Button btnChallenges; // Novo botão injetado
+    private Button btnChallenges;
+    @FXML
+    private Button btnAchievements;
     @FXML
     private Circle avatarCircle;
     @FXML
@@ -58,7 +63,11 @@ public class MainController {
     private FocusSessionService focusSessionService;
     private ProfileService profileService;
     private StatsService statsService;
-    private ChallengeService challengeService; // Novo Service
+    private ChallengeService challengeService;
+    private AchievementService achievementService;
+
+    // Repositories para injeção dinâmica
+    private AchievementRepository achievementRepository;
 
     // Cache de Views e Controllers
     private final Map<String, Parent> viewCache = new HashMap<>();
@@ -81,18 +90,18 @@ public class MainController {
         try {
             var sessionRepository = new SQLiteFocusSessionRepository();
             var profileRepository = new SQLiteProfileRepository();
-            var challengeRepository = new SQLiteChallengeRepository(); // Novo Repo
+            var challengeRepository = new SQLiteChallengeRepository();
+            this.achievementRepository = new SQLiteAchievementRepository();
 
-            // ATUALIZAÇÃO AQUI: Injetando o profileRepository para computar o XP das
-            // sessões finalizadas
+            // Computação de XP e Core Services
             this.focusSessionService = new FocusSessionService(sessionRepository, profileRepository);
-
             this.profileService = new ProfileService(profileRepository);
             this.statsService = new StatsService(sessionRepository, profileRepository);
-
-            // Passando o profileRepository como segundo argumento para o motor de XP dos
-            // desafios
             this.challengeService = new ChallengeService(challengeRepository, profileRepository);
+
+            // Inicialização do Service de Conquistas
+            this.achievementService = new AchievementService(achievementRepository, profileRepository,
+                    java.util.List.of());
 
             profileService.ensureProfileExists();
             logger.info("Serviços de infraestrutura inicializados com sucesso.");
@@ -104,7 +113,8 @@ public class MainController {
     private void setupNavigation() {
         btnTimer.setOnAction(e -> loadTimerView());
         btnStats.setOnAction(e -> loadStatsView());
-        btnChallenges.setOnAction(e -> loadChallengesView()); // Nova navegação
+        btnChallenges.setOnAction(e -> loadChallengesView());
+        btnAchievements.setOnAction(e -> loadAchievementsView());
         avatarContainer.setOnMouseClicked(this::handleAvatarClick);
         avatarContainer.setCursor(javafx.scene.Cursor.HAND);
     }
@@ -125,11 +135,9 @@ public class MainController {
 
                 this.timerController = loader.getController();
 
-                // Localize este bloco dentro do seu MainController.java
                 if (pomodoroService == null) {
                     Profile activeProfile = profileService.getActiveProfile();
 
-                    // ATUALIZAÇÃO AQUI: Adicionado o challengeService como 4º parâmetro
                     this.pomodoroService = new PomodoroService(
                             activeProfile,
                             timerController,
@@ -166,11 +174,8 @@ public class MainController {
 
     private void loadChallengesView() {
         try {
-            // Recarregamos a view de desafios para sempre pegar os dados mais novos do
-            // banco
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ChallengeView.fxml"));
 
-            // Injeção de dependência manual para o ChallengeController
             loader.setControllerFactory(param -> {
                 if (param == ChallengeController.class) {
                     return new ChallengeController(challengeService);
@@ -187,10 +192,38 @@ public class MainController {
         }
     }
 
+    /**
+     * Mapeado com @FXML para responder diretamente à ação do botão configurada no
+     * XML.
+     */
+    @FXML
+    private void loadAchievementsView() {
+        try {
+            // Corrigido para buscar o arquivo real no singular: AchievementView.fxml
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AchievementView.fxml"));
+            Parent achievementsView = loader.load();
+
+            AchievementViewController controller = loader.getController();
+
+            // Passa a lista limpa e original diretamente do Service
+            controller.initializeData(
+                    profileService.getActiveProfile(),
+                    achievementRepository,
+                    achievementService.getDefinitions());
+
+            updateContentArea(achievementsView);
+            updateNavStyles(btnAchievements);
+
+        } catch (IOException e) {
+            logger.error("Erro ao carregar AchievementView: ", e);
+        }
+    }
+
     private void updateNavStyles(Button activeBtn) {
         btnTimer.getStyleClass().remove("nav-button-active");
         btnStats.getStyleClass().remove("nav-button-active");
         btnChallenges.getStyleClass().remove("nav-button-active");
+        btnAchievements.getStyleClass().remove("nav-button-active");
 
         activeBtn.getStyleClass().add("nav-button-active");
     }
@@ -201,6 +234,10 @@ public class MainController {
 
     // --- LÓGICA DO POPOVER DE PERFIL ---
 
+    /**
+     * Responde ao evento de clique no avatar container, mapeado via
+     * setupNavigation.
+     */
     private void handleAvatarClick(MouseEvent event) {
         if (profilePopup != null && profilePopup.isShowing()) {
             profilePopup.hide();
@@ -235,18 +272,15 @@ public class MainController {
         root.setAlignment(Pos.CENTER);
         root.setOpacity(0);
 
-        // Header Avatar
         StackPane headerAvatar = new StackPane();
         Circle bigCircle = new Circle(40, avatarCircle.getFill());
         Label bigInitial = new Label(profileService.getProfileInitial());
         bigInitial.setStyle("-fx-font-size: 26px; -fx-text-fill: white; -fx-font-weight: bold;");
         headerAvatar.getChildren().addAll(bigCircle, bigInitial);
 
-        // Info
         Label lblName = new Label(profileService.getActiveProfile().getUsername());
         lblName.getStyleClass().add("popover-name");
 
-        // Stats Grid
         GridPane grid = new GridPane();
         grid.getStyleClass().add("stats-grid");
         grid.setAlignment(Pos.CENTER);

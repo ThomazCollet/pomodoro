@@ -698,27 +698,298 @@
 /* Card de Constância - Foco em manter o hábito (Rosa) */
 .card-streak {
     -fx-border-color: #f38ba8;
-    -fx-border-width: 0 0 0 5; /* Borda esquerda mais grossa */
-    -fx-background-color: rgba(243, 139, 168, 0.03); /* Leve fundo rosado */
+    -fx-border-width: 0 0 0 5;
+    /* Borda esquerda mais grossa */
+    -fx-background-color: rgba(243, 139, 168, 0.03);
+    /* Leve fundo rosado */
 }
 
 /* Card de Intensidade - Foco em volume de horas (Azul) */
 .card-milestone {
     -fx-border-color: #89b4fa;
-    -fx-border-width: 0 0 0 5; /* Borda esquerda mais grossa */
-    -fx-background-color: rgba(137, 180, 250, 0.03); /* Leve fundo azulado */
+    -fx-border-width: 0 0 0 5;
+    /* Borda esquerda mais grossa */
+    -fx-background-color: rgba(137, 180, 250, 0.03);
+    /* Leve fundo azulado */
 }
 
 /* Hover para o desafio de Constância (Streak - Rosa) */
 .card-streak:hover {
-    -fx-background-color: #3e4059; /* Cor de fundo que você já gosta */
-    -fx-border-color: #f38ba8;     /* Mantém o Rosa, mas você pode usar uma cor levemente mais clara se quiser */
-    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.4), 10, 0, 0, 0); /* Brilho neon rosa */
+    -fx-background-color: #3e4059;
+    /* Cor de fundo que você já gosta */
+    -fx-border-color: #f38ba8;
+    /* Mantém o Rosa, mas você pode usar uma cor levemente mais clara se quiser */
+    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.4), 10, 0, 0, 0);
+    /* Brilho neon rosa */
 }
 
 /* Hover para o desafio de Intensidade (Milestone - Azul) */
 .card-milestone:hover {
     -fx-background-color: #3e4059;
-    -fx-border-color: #89b4fa;     /* Mantém o Azul */
-    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.4), 10, 0, 0, 0); /* Brilho neon azul */
+    -fx-border-color: #89b4fa;
+    /* Mantém o Azul */
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.4), 10, 0, 0, 0);
+    /* Brilho neon azul */
+}
+
+/* ==========================================================================
+   ESTILO BASE DO CARD DE CONQUISTAS
+   ========================================================================== */
+
+/* Tema escuro padrão para os cartões */
+.sub-card-base {
+    -fx-background-color: #1e2530;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 12px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 5, 0, 0, 3);
+}
+
+.card-content {
+    -fx-max-width: 170px;
+}
+
+/* Títulos do Tier (Bronze, Prata, Ouro) */
+.tier-title {
+    -fx-font-family: "System";
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-text-fill: #a0aec0;
+}
+
+/* Descrição da Tarefa (Planilha) */
+.task-description {
+    -fx-font-family: "System";
+    -fx-font-size: 11px;
+    -fx-text-fill: #e2e8f0;
+    -fx-min-height: 45px;
+    -fx-max-height: 45px;
+}
+
+/* Texto do contador (Ex: 2/5) */
+.progress-counter-text {
+    -fx-font-family: "System";
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #718096;
+}
+
+/* Camada de Sobreposição para Ícones (Cadeado / Check) */
+.card-overlay {
+    -fx-background-radius: 8px;
+}
+
+.status-overlay-icon {
+    -fx-font-size: 24px;
+}
+
+/* ==========================================================================
+   ESTADOS CRUCIAL: BLOQUEADO, ATIVO E CONCLUÍDO
+   ========================================================================== */
+
+/* 1. ESTADO: BLOQUEADO (🔒) */
+.sub-card-locked {
+    -fx-border-color: #4a5568;
+    -fx-border-width: 1px;
+    -fx-border-style: dashed;
+}
+
+.sub-card-locked .card-content {
+    -fx-opacity: 0.35;
+    /* Esmaece o conteúdo para focar no cadeado */
+}
+
+.sub-card-locked .card-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.15);
+    /* Sombra sutil por cima */
+}
+
+.sub-card-locked .status-overlay-icon {
+    -fx-text-fill: #718096;
+    -fx-opacity: 0.8;
+}
+
+/* 2. ESTADO: ATIVO / UNLOCKED (Objetivo Atual) */
+.sub-card-active {
+    -fx-border-color: #4a5568;
+    -fx-border-width: 1.5px;
+    -fx-border-style: solid;
+}
+
+.sub-card-active:hover {
+    -fx-border-color: #3182ce;
+    /* Brilho azul sutil ao passar o mouse */
+    -fx-cursor: hand;
+}
+
+.sub-card-active .card-overlay {
+    -fx-visible: false;
+    /* Esconde completamente o painel de sobreposição */
+}
+
+/* 3. ESTADO: CONCLUÍDO (✅) */
+.sub-card-completed {
+    -fx-border-color: #48bb78;
+    /* Borda verde indicando sucesso */
+    -fx-border-width: 1.5px;
+    -fx-border-style: solid;
+}
+
+.sub-card-completed .card-content {
+    -fx-opacity: 0.85;
+}
+
+.sub-card-completed .status-overlay-icon {
+    -fx-text-fill: #48bb78;
+    /* Alinha o ícone de Check no canto superior direito do card */
+    -fx-alignment: top-right;
+    -fx-padding: 2px 2px 0px 0px;
+    -fx-font-size: 16px;
+}
+
+.sub-card-completed .tier-title {
+    -fx-text-fill: #48bb78;
+    /* Destaca o título em verde */
+}
+
+/* ==========================================================================
+   CUSTOMIZAÇÃO DA BARRA DE PROGRESSO JAVAFX
+   ========================================================================== */
+.custom-progress-bar {
+    -fx-pref-height: 6px;
+    -fx-min-height: 6px;
+    -fx-max-height: 6px;
+}
+
+/* Fundo da barra (Trilho) */
+.custom-progress-bar .track {
+    -fx-background-color: #2d3748;
+    -fx-background-radius: 4px;
+}
+
+/* Preenchimento dinâmico da barra */
+.custom-progress-bar .bar {
+    -fx-background-color: #3182ce;
+    /* Azul para progresso ativo */
+    -fx-background-radius: 4px;
+}
+
+/* Altera a cor da barra para verde se atingir 100% */
+.sub-card-completed .custom-progress-bar .bar {
+    -fx-background-color: #48bb78;
+}
+
+/* ==========================================================================
+   ESTILO DO CONTAINER DE GRUPO (A LINHA DA PLANILHA)
+   ========================================================================== */
+
+.group-card-container {
+    -fx-background-color: #1a202c;
+    /* Fundo ligeiramente mais escuro que os sub-cards */
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-color: #2d3748;
+    -fx-border-width: 1px;
+    -fx-max-width: 610px;
+    /* Largura ideal para travar as 3 medalhas sem quebrar linha */
+}
+
+/* Título principal do grupo (Ex: MEDALHISTA OLÍMPICO) */
+.group-card-title {
+    -fx-font-family: "System";
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #edf2f7;
+    -fx-letter-spacing: 0.5px;
+}
+
+.group-subcards-wrapper {
+    -fx-min-width: 570px;
+}
+
+/* ==========================================================================
+   ESTILO DA TELA PRINCIPAL E ABAS (TABPANE / SCROLLPANE)
+   ========================================================================== */
+
+.main-achievements-container {
+    -fx-background-color: #12151e;
+    /* Fundo geral ultra dark */
+}
+
+.view-main-title {
+    -fx-font-family: "System";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+    -fx-text-fill: #ffffff;
+}
+
+.view-subtitle {
+    -fx-font-family: "System";
+    -fx-font-size: 12px;
+    -fx-text-fill: #718096;
+}
+
+/* Customização do TabPane */
+.custom-tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #12151e;
+}
+
+.custom-tab-pane .tab {
+    -fx-background-color: #1a202c;
+    -fx-background-insets: 0 1 0 0;
+    -fx-background-radius: 4px 4px 0 0;
+    -fx-padding: 8px 16px;
+}
+
+.custom-tab-pane .tab:selected {
+    -fx-background-color: #1e2530;
+    -fx-border-color: #3182ce;
+    -fx-border-width: 0 0 2px 0;
+    /* Linha azul embaixo da aba ativa */
+}
+
+.custom-tab-pane .tab .tab-label {
+    -fx-text-fill: #a0aec0;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.custom-tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #ffffff;
+}
+
+/* ScrollPane Transparente */
+.achievements-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.achievements-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-content-wrapper {
+    -fx-background-color: #12151e;
+}
+
+/* Títulos de Categorias (Streak, Challenge, etc.) */
+.category-section-title {
+    -fx-font-family: "System";
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+    -fx-text-fill: #cbd5e0;
+    -fx-border-color: #2d3748;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 0 0 4px 0;
+}
+
+.platinum-hint-text {
+    -fx-font-family: "System";
+    -fx-font-size: 12px;
+    -fx-text-fill: #a0aec0;
+    -fx-font-style: italic;
+}
+
+.category-flow-pane {
+    -fx-padding: 4px 0 0 0;
 }
