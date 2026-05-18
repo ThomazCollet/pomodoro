@@ -15,7 +15,6 @@ public class ChallengeAchievementEvaluator implements AchievementEvaluator {
     @Override
     public boolean evaluate(Long profileId, String achievementKey, int conditionValue) {
 
-        // Fail-Fast estrutural
         if (!achievementKey.startsWith("challenge_")) {
             return false;
         }
@@ -38,7 +37,7 @@ public class ChallengeAchievementEvaluator implements AchievementEvaluator {
         }
 
         // =========================================================================
-        // REGRA 3: Linha 9 - Caso Especial da Platina Tripla (3 desafios de 365 dias)
+        // REGRA 3: Platina Tripla (3 desafios de 365 dias)
         // =========================================================================
         if (achievementKey.equals("challenge_intensity_hours_365_triple")) {
             int totalTriple = challengeRepository.countCompletedChallengesByTypeAndMinDuration(
@@ -47,39 +46,31 @@ public class ChallengeAchievementEvaluator implements AchievementEvaluator {
         }
 
         // =========================================================================
-        // REGRA 4: Desafios de Intensidade com Metas de Horas (Dinâmico)
-        // Mapeia os blocos de 15, 30 e os targets puros da Linha 9 (90, 180, 365 dias)
+        // REGRA 4: Desafios de Intensidade com Metas de Horas
         // =========================================================================
         if (achievementKey.startsWith("challenge_intensity_hours_")) {
 
-            // Tratamento específico para as durações puras da Linha 9 (Bronze, Prata, Ouro)
+            // Linha 9 da planilha: durações puras (90, 180, 365 dias) — sem meta de horas
+            // Identificados pelas keys que NÃO são parseáveis como integer simples,
+            // ou que possuem conditionValue >= 90 (dias de ciclo)
             if (achievementKey.equals("challenge_intensity_hours_66")) {
-                // Completar desafio de intensidade de 90 dias ou mais (Sem meta de horas
-                // obrigatória)
-                int count = challengeRepository.countCompletedChallengesByTypeAndMinDuration(profileId,
-                        "MILESTONE_CHALLENGE", 90);
-                return count > 0;
+                return challengeRepository.countCompletedChallengesByTypeAndMinDuration(
+                        profileId, "MILESTONE_CHALLENGE", 90) > 0;
             }
             if (achievementKey.equals("challenge_intensity_hours_132")) {
-                // Completar desafio de intensidade de 180 dias ou mais
-                int count = challengeRepository.countCompletedChallengesByTypeAndMinDuration(profileId,
-                        "MILESTONE_CHALLENGE", 180);
-                return count > 0;
+                return challengeRepository.countCompletedChallengesByTypeAndMinDuration(
+                        profileId, "MILESTONE_CHALLENGE", 180) > 0;
             }
             if (achievementKey.equals("challenge_intensity_hours_200")) {
-                // Completar desafio de intensidade de 365 dias ou mais
-                int count = challengeRepository.countCompletedChallengesByTypeAndMinDuration(profileId,
-                        "MILESTONE_CHALLENGE", 365);
-                return count > 0;
+                return challengeRepository.countCompletedChallengesByTypeAndMinDuration(
+                        profileId, "MILESTONE_CHALLENGE", 365) > 0;
             }
 
-            // Fallback dinâmico para os blocos de 15 e 30 dias que dependem de horas
-            // Captura o valor numérico do final da chave (Ex: challenge_intensity_hours_10
-            // -> 10)
-            String parts = achievementKey.substring("challenge_intensity_hours_".length());
+            // Blocos de 15, 30 e 90 dias com metas de horas — conditionValue = dias do
+            // ciclo
+            String suffix = achievementKey.substring("challenge_intensity_hours_".length());
             try {
-                int targetHours = Integer.parseInt(parts);
-                // conditionValue extraído do Service define se a régua é de 15 ou 30 dias
+                int targetHours = Integer.parseInt(suffix);
                 return challengeRepository.hasCompletedIntensityChallenge(profileId, conditionValue, targetHours);
             } catch (NumberFormatException e) {
                 return false;
@@ -87,17 +78,30 @@ public class ChallengeAchievementEvaluator implements AchievementEvaluator {
         }
 
         // =========================================================================
-        // REGRA 5: Totalizadores Cumulativos (Quantidade total de desafios concluídos)
+        // REGRA 5: Totalizadores Cumulativos de Constância
+        // BUG CORRIGIDO: min_15 e min_30 não tinham regra e sempre retornavam false.
+        // Solução: extraímos o limiar mínimo de dias diretamente da chave,
+        // eliminando a necessidade de duplicar o bloco para cada variante.
         // =========================================================================
-
-        // Acumulador de desafios de Constância
-        if (achievementKey.startsWith("challenge_count_constancy_min_7_")) {
-            int totalConstancy = challengeRepository.countCompletedChallengesByTypeAndMinDuration(
-                    profileId, "STREAK_CHALLENGE", 7);
-            return totalConstancy >= conditionValue;
+        if (achievementKey.startsWith("challenge_count_constancy_min_")) {
+            // Extrai o número de dias mínimos da chave.
+            // Ex: "challenge_count_constancy_min_15_6" → minDays = 15
+            String afterMin = achievementKey.substring("challenge_count_constancy_min_".length());
+            // afterMin = "15_6" → pega só o primeiro segmento antes do "_"
+            String[] parts = afterMin.split("_");
+            try {
+                int minDays = Integer.parseInt(parts[0]);
+                int totalConstancy = challengeRepository.countCompletedChallengesByTypeAndMinDuration(
+                        profileId, "STREAK_CHALLENGE", minDays);
+                return totalConstancy >= conditionValue;
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
 
-        // Acumulador de desafios de Intensidade
+        // =========================================================================
+        // REGRA 6: Totalizadores Cumulativos de Intensidade
+        // =========================================================================
         if (achievementKey.startsWith("challenge_count_intensity_min_15_")) {
             int totalIntensity = challengeRepository.countCompletedChallengesByTypeAndMinDuration(
                     profileId, "MILESTONE_CHALLENGE", 15);

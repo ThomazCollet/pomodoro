@@ -34,10 +34,15 @@ public class PomodoroApplication extends Application {
     private void setupStage(Stage stage, Scene scene) {
         stage.setTitle("Pomodoro Focus - Thomaz Collet");
         stage.setScene(scene);
-        stage.setResizable(false);
 
-        // Define o ícone da aplicação (O "cafezinho" ou ícone personalizado)
-        // Certifique-se de ter uma imagem em: src/main/resources/assets/icon.png
+        // CORRIGIDO: Permite redimensionar a janela e ativa os botões de maximizar
+        stage.setResizable(true);
+
+        // ADICIONADO: Faz a aplicação iniciar maximizada (tela cheia) para vermos o
+        // comportamento do layout
+        stage.setMaximized(true);
+
+        // Define o ícone da aplicação
         try {
             var iconResource = getClass().getResourceAsStream("/assets/img/icon.png");
             if (iconResource != null) {
@@ -45,7 +50,7 @@ public class PomodoroApplication extends Application {
             }
         } catch (Exception e) {
             // Se falhar, o Java usa o ícone padrão do sistema sem travar o app
-            System.err.println("Aviso: Ícone da aplicação não encontrado em /assets/icon.png");
+            System.err.println("Aviso: Ícone da aplicação não encontrado em /assets/img/icon.png");
         }
     }
 

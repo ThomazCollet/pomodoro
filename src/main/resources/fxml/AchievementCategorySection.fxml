@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="16.0" styleClass="category-section-card" 
+      xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.thomazcollet.ui.controller.AchievementCategorySectionController">
+    
+    <HBox alignment="CENTER_LEFT" styleClass="category-internal-header">
+        
+        <VBox spacing="2.0" HBox.hgrow="ALWAYS">
+            <Label fx:id="categoryTitleLabel" text="CATEGORIA" styleClass="category-section-title"/>
+            <Label fx:id="categoryGroupProgressLabel" text="0 de 0 trilhas completadas" styleClass="category-group-subtitle"/>
+        </VBox>
+        
+        <HBox spacing="12.0" alignment="CENTER_RIGHT" styleClass="category-mini-medals">
+            <HBox alignment="CENTER" spacing="4.0" styleClass="mini-medal-box">
+                <Label text="🥉" styleClass="mini-medal-icon"/>
+                <Label fx:id="lblMiniBronzeCount" text="0/0" styleClass="mini-medal-count"/>
+            </HBox>
+            <HBox alignment="CENTER" spacing="4.0" styleClass="mini-medal-box">
+                <Label text="🥈" styleClass="mini-medal-icon"/>
+                <Label fx:id="lblMiniSilverCount" text="0/0" styleClass="mini-medal-count"/>
+            </HBox>
+            <HBox alignment="CENTER" spacing="4.0" styleClass="mini-medal-box">
+                <Label text="🥇" styleClass="mini-medal-icon"/>
+                <Label fx:id="lblMiniGoldCount" text="0/0" styleClass="mini-medal-count"/>
+            </HBox>
+        </HBox>
+        
+    </HBox>
+    
+    <VBox fx:id="categoryContainer" spacing="20.0" alignment="TOP_CENTER" fillWidth="false" styleClass="category-vbox-container" VBox.vgrow="ALWAYS"/>
+    
+</VBox>

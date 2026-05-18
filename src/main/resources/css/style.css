@@ -733,20 +733,25 @@
 }
 
 /* ==========================================================================
-   ESTILO BASE DO CARD DE CONQUISTAS
+   ESTILO BASE DO CARD DE CONQUISTAS (SUB-CARD)
    ========================================================================== */
 
-/* Tema escuro padrão para os cartões */
+/* Tema escuro padrão para os cartões individuais (Bronze, Prata, Ouro) */
 .sub-card-base {
     -fx-background-color: #1e2530;
     -fx-background-radius: 8px;
     -fx-border-radius: 8px;
     -fx-padding: 12px;
+    -fx-pref-width: 160px;
+    -fx-min-width: 160px;
+    -fx-max-width: 160px;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 5, 0, 0, 3);
 }
 
+/* Garante que o conteúdo interno preencha o tamanho travado do card */
 .card-content {
-    -fx-max-width: 170px;
+    -fx-alignment: TOP_CENTER;
+    -fx-max-width: 150px;
 }
 
 /* Títulos do Tier (Bronze, Prata, Ouro) */
@@ -777,6 +782,7 @@
 /* Camada de Sobreposição para Ícones (Cadeado / Check) */
 .card-overlay {
     -fx-background-radius: 8px;
+    -fx-alignment: CENTER;
 }
 
 .status-overlay-icon {
@@ -796,12 +802,10 @@
 
 .sub-card-locked .card-content {
     -fx-opacity: 0.35;
-    /* Esmaece o conteúdo para focar no cadeado */
 }
 
 .sub-card-locked .card-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.15);
-    /* Sombra sutil por cima */
+    -fx-background-color: rgba(0, 0, 0, 0.4);
 }
 
 .sub-card-locked .status-overlay-icon {
@@ -818,19 +822,15 @@
 
 .sub-card-active:hover {
     -fx-border-color: #3182ce;
-    /* Brilho azul sutil ao passar o mouse */
-    -fx-cursor: hand;
 }
 
 .sub-card-active .card-overlay {
     -fx-visible: false;
-    /* Esconde completamente o painel de sobreposição */
 }
 
 /* 3. ESTADO: CONCLUÍDO (✅) */
 .sub-card-completed {
     -fx-border-color: #48bb78;
-    /* Borda verde indicando sucesso */
     -fx-border-width: 1.5px;
     -fx-border-style: solid;
 }
@@ -839,17 +839,18 @@
     -fx-opacity: 0.85;
 }
 
+.sub-card-completed .card-overlay {
+    -fx-alignment: TOP_RIGHT;
+}
+
 .sub-card-completed .status-overlay-icon {
     -fx-text-fill: #48bb78;
-    /* Alinha o ícone de Check no canto superior direito do card */
-    -fx-alignment: top-right;
-    -fx-padding: 2px 2px 0px 0px;
-    -fx-font-size: 16px;
+    -fx-padding: 6px 8px 0px 0px;
+    -fx-font-size: 14px;
 }
 
 .sub-card-completed .tier-title {
     -fx-text-fill: #48bb78;
-    /* Destaca o título em verde */
 }
 
 /* ==========================================================================
@@ -861,79 +862,88 @@
     -fx-max-height: 6px;
 }
 
-/* Fundo da barra (Trilho) */
 .custom-progress-bar .track {
     -fx-background-color: #2d3748;
     -fx-background-radius: 4px;
 }
 
-/* Preenchimento dinâmico da barra */
 .custom-progress-bar .bar {
     -fx-background-color: #3182ce;
-    /* Azul para progresso ativo */
     -fx-background-radius: 4px;
 }
 
-/* Altera a cor da barra para verde se atingir 100% */
 .sub-card-completed .custom-progress-bar .bar {
     -fx-background-color: #48bb78;
 }
 
 /* ==========================================================================
-   ESTILO DO CONTAINER DE GRUPO (A LINHA DA PLANILHA)
+   ESTILO DO CONTAINER DE GRUPO (A ESTEIRA HORIZONTAL)
    ========================================================================== */
 
 .group-card-container {
     -fx-background-color: #1a202c;
-    /* Fundo ligeiramente mais escuro que os sub-cards */
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
     -fx-border-color: #2d3748;
     -fx-border-width: 1px;
-    -fx-max-width: 610px;
-    /* Largura ideal para travar as 3 medalhas sem quebrar linha */
+    -fx-padding: 16px;
+    -fx-pref-width: 530px;
+    -fx-max-width: 530px;
 }
 
-/* Título principal do grupo (Ex: MEDALHISTA OLÍMPICO) */
 .group-card-title {
     -fx-font-family: "System";
     -fx-font-weight: bold;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-text-fill: #edf2f7;
-    -fx-letter-spacing: 0.5px;
 }
 
 .group-subcards-wrapper {
-    -fx-min-width: 570px;
+    -fx-alignment: CENTER;
+    -fx-spacing: 12px;
 }
 
 /* ==========================================================================
-   ESTILO DA TELA PRINCIPAL E ABAS (TABPANE / SCROLLPANE)
+   CORREÇÃO CIRÚRGICA DOS CONTADORES APAGADOS DO TOPO
    ========================================================================== */
-
-.main-achievements-container {
-    -fx-background-color: #12151e;
-    /* Fundo geral ultra dark */
-}
-
-.view-main-title {
+.medal-summary-card .summary-medal-tier {
     -fx-font-family: "System";
     -fx-font-weight: bold;
-    -fx-font-size: 20px;
-    -fx-text-fill: #ffffff;
+    -fx-font-size: 11px;
+    -fx-text-fill: #a0aec0;
+    /* Deixa o nome "BRONZE", "PRATA" cinza claro legível */
 }
 
-.view-subtitle {
+.medal-summary-card .summary-medal-count {
     -fx-font-family: "System";
-    -fx-font-size: 12px;
-    -fx-text-fill: #718096;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #ffffff;
+    /* Deixa os números "0 / 21" brancos e destacados */
 }
 
-/* Customização do TabPane */
+.summary-medal-icon {
+    -fx-font-size: 20px;
+}
+
+/* ==========================================================================
+   CORREÇÃO DEFINITIVA E FORÇADA DO TABPANE (ABAS ESCURAS)
+   ========================================================================== */
+.custom-tab-pane {
+    -fx-background-color: #12151e;
+}
+
+/* Remove a borda cinza padrão e pinta o fundo do cabeçalho */
+.custom-tab-pane .tab-header-area {
+    -fx-background-color: #12151e;
+    -fx-padding: 0;
+}
+
 .custom-tab-pane .tab-header-area .tab-header-background {
     -fx-background-color: #12151e;
 }
 
+/* Estilo base de cada aba individual desmarcada */
 .custom-tab-pane .tab {
     -fx-background-color: #1a202c;
     -fx-background-insets: 0 1 0 0;
@@ -941,15 +951,18 @@
     -fx-padding: 8px 16px;
 }
 
+/* Customização da aba selecionada */
 .custom-tab-pane .tab:selected {
     -fx-background-color: #1e2530;
     -fx-border-color: #3182ce;
     -fx-border-width: 0 0 2px 0;
-    /* Linha azul embaixo da aba ativa */
+    /* Linha azul de destaque */
 }
 
+/* Alvo direto nos Labels internos para herdar a cor do texto do layout escuro */
 .custom-tab-pane .tab .tab-label {
     -fx-text-fill: #a0aec0;
+    -fx-font-family: "System";
     -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
@@ -958,38 +971,11 @@
     -fx-text-fill: #ffffff;
 }
 
-/* ScrollPane Transparente */
-.achievements-scroll {
-    -fx-background-color: transparent;
-    -fx-background-insets: 0;
+/* Remove completamente a linha tracejada nativa de foco do JavaFX */
+.custom-tab-pane .tab:focused .focus-indicator {
+    -fx-border-color: transparent;
 }
 
-.achievements-scroll .viewport {
-    -fx-background-color: transparent;
-}
-
-.scroll-content-wrapper {
+.custom-tab-pane .tab-content-area {
     -fx-background-color: #12151e;
-}
-
-/* Títulos de Categorias (Streak, Challenge, etc.) */
-.category-section-title {
-    -fx-font-family: "System";
-    -fx-font-weight: bold;
-    -fx-font-size: 15px;
-    -fx-text-fill: #cbd5e0;
-    -fx-border-color: #2d3748;
-    -fx-border-width: 0 0 1px 0;
-    -fx-padding: 0 0 4px 0;
-}
-
-.platinum-hint-text {
-    -fx-font-family: "System";
-    -fx-font-size: 12px;
-    -fx-text-fill: #a0aec0;
-    -fx-font-style: italic;
-}
-
-.category-flow-pane {
-    -fx-padding: 4px 0 0 0;
 }

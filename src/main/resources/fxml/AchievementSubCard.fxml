@@ -5,20 +5,21 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.StackPane?>
 
-<StackPane fx:id="rootPane" prefWidth="180.0" prefHeight="160.0" 
+<StackPane fx:id="rootPane" 
            stylesheets="@../styles/achievements.css" 
            styleClass="sub-card-base, sub-card-locked" 
            fx:controller="com.thomazcollet.ui.controller.AchievementSubCardController"
            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
     
     <VBox alignment="CENTER" spacing="8.0" styleClass="card-content">
-        <Label fx:id="tierLabel" text="🥉 BRONZE" styleClass="tier-title"/>
+        <Label fx:id="tierLabel" text="BRONZE" styleClass="tier-title"/>
         
         <Label fx:id="descriptionLabel" text="Atingir um total de 5 streaks" 
-               wrapText="true" alignment="CENTER" textAlignment="CENTER" styleClass="task-description"/>
+               wrapText="true" alignment="CENTER" textAlignment="CENTER" styleClass="task-description"
+               VBox.vgrow="ALWAYS" maxHeight="Infinity"/>
         
         <VBox alignment="CENTER" spacing="2.0" styleClass="progress-container">
-            <ProgressBar fx:id="progressBar" progress="0.4" prefWidth="150.0" styleClass="custom-progress-bar"/>
+            <ProgressBar fx:id="progressBar" progress="0.4" maxWidth="Infinity" styleClass="custom-progress-bar"/>
             <Label fx:id="progressText" text="2/5" styleClass="progress-counter-text"/>
         </VBox>
     </VBox>

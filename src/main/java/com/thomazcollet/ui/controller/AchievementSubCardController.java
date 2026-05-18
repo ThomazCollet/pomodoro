@@ -24,9 +24,14 @@ public class AchievementSubCardController {
     private Label statusIcon;
 
     /**
-     * Alimenta o card dinamicamente com os dados do modelo de exibição
+     * Alimenta o card dinamicamente com os dados do modelo de exibição.
      */
     public void setCardData(AchievementDisplayModel model) {
+        // Princípio Fail-Fast
+        if (model == null) {
+            throw new IllegalArgumentException("O modelo de exibição da conquista não pode ser nulo.");
+        }
+
         // 1. Define textos dinâmicos da planilha
         descriptionLabel.setText(model.getDescription());
         progressText.setText(model.getProgressText());
@@ -41,8 +46,7 @@ public class AchievementSubCardController {
         };
         tierLabel.setText(emoji + model.getTier().name());
 
-        // 3. Aplica o estado visual limpando estilos antigos e aplicando os novos do
-        // CSS
+        // 3. Aplica o estado visual limpando estilos antigos e adicionando os novos
         rootPane.getStyleClass().removeAll("sub-card-locked", "sub-card-active", "sub-card-completed");
 
         switch (model.getState()) {
@@ -53,7 +57,7 @@ public class AchievementSubCardController {
             }
             case ACTIVE -> {
                 rootPane.getStyleClass().add("sub-card-active");
-                overlayPane.setVisible(false); // Remove o cadeado de cima do progresso ativo
+                overlayPane.setVisible(false);
             }
             case COMPLETED -> {
                 rootPane.getStyleClass().add("sub-card-completed");

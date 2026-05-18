@@ -11,7 +11,9 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class SQLiteAchievementRepository implements AchievementRepository {
 
@@ -34,8 +36,8 @@ public class SQLiteAchievementRepository implements AchievementRepository {
             pstmt.setString(4, achievement.getTier().name());
 
             pstmt.executeUpdate();
-            logger.info("Conquista '{}' salva com sucesso para o perfil id: {}", achievement.getAchievementKey(),
-                    achievement.getProfileId());
+            logger.info("Conquista '{}' salva com sucesso para o perfil id: {}",
+                    achievement.getAchievementKey(), achievement.getProfileId());
 
         } catch (SQLException e) {
             logger.error("Erro ao salvar conquista no banco SQLite: ", e);
@@ -76,7 +78,7 @@ public class SQLiteAchievementRepository implements AchievementRepository {
             pstmt.setString(2, achievementKey);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                return rs.next(); // Se houver registro, retorna true
+                return rs.next();
             }
 
         } catch (SQLException e) {
@@ -96,15 +98,76 @@ public class SQLiteAchievementRepository implements AchievementRepository {
             pstmt.setString(2, tier);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
+                if (rs.next())
                     return rs.getInt(1);
-                }
             }
 
         } catch (SQLException e) {
             logger.error("Erro ao contar conquistas por tier '{}': ", tier, e);
         }
         return 0;
+    }
+
+    @Override
+    public Set<String> findUnlockedKeysByProfileId(Long profileId) {
+        String sql = "SELECT achievement_key FROM achievements WHERE profile_id = ?;";
+        Set<String> unlockedKeys = new HashSet<>();
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, profileId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    unlockedKeys.add(rs.getString("achievement_key"));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar chaves de conquistas desbloqueadas para o perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao consultar chaves de conquistas no banco", e);
+        }
+
+        return unlockedKeys;
+    }
+
+    /**
+     * Retorna o total de conquistas definidas no sistema para um dado tier,
+     * excluindo meta-conquistas (prefixo "meta_").
+     *
+     * Como o projeto não possui tabela de definições no banco (as conquistas
+     * são definidas em código no AchievementService), optamos por um Map
+     * hardcoded e documentado, espelhando exatamente o
+     * getDefinitionsFromPlanilha().
+     *
+     * MANUTENÇÃO: atualizar estes valores sempre que conquistas forem
+     * adicionadas ou removidas do AchievementService.
+     *
+     * Contagem atual (excluindo meta_* e platinas das trilhas normais):
+     * GOLD:
+     * DAILY_FOCUS : focus_daily(1) + focus_cycles(1) + focus_total_days(1) +
+     * focus_accumulated(1) = 4
+     * STREAK : streak_current(1) + streak_count_x3(1) + streak_count_x5(1) = 3
+     * CHALLENGE : constancy_days trilha curta(1) + trilha longa(1) +
+     * perfect_days(1)
+     * + count_constancy_min_7(1) + min_15(1) + min_30(1)
+     * + intensity_15d(1) + intensity_30d(1) + intensity_90d(1)
+     * + count_intensity_min_15(1) = 10
+     * RANKING : ranking_tier_s(1) = 1
+     * Total GOLD = 18
+     *
+     * BRONZE: contar analogamente se necessário no futuro.
+     * SILVER: idem.
+     */
+    private static final java.util.Map<String, Integer> TOTAL_DEFINED_BY_TIER = java.util.Map.of(
+            "GOLD", 18,
+            "SILVER", 18, // mesma estrutura de trilhas, 1 prata por trilha
+            "BRONZE", 18 // mesma estrutura de trilhas, 1 bronze por trilha
+    );
+
+    @Override
+    public int countTotalDefinedByTier(String tier) {
+        return TOTAL_DEFINED_BY_TIER.getOrDefault(tier.toUpperCase(), 0);
     }
 
     private Achievement mapResultSetToAchievement(ResultSet rs) throws SQLException {
@@ -121,29 +184,5 @@ public class SQLiteAchievementRepository implements AchievementRepository {
         }
 
         return achievement;
-    }
-
-    @Override
-    public java.util.Set<String> findUnlockedKeysByProfileId(Long profileId) {
-        String sql = "SELECT achievement_key FROM achievements WHERE profile_id = ?;";
-        java.util.Set<String> unlockedKeys = new java.util.HashSet<>();
-
-        try (Connection conn = DatabaseInitializer.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setLong(1, profileId);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    unlockedKeys.add(rs.getString("achievement_key"));
-                }
-            }
-
-        } catch (SQLException e) {
-            logger.error("Erro ao buscar chaves de conquistas desbloqueadas para o perfil ID: {}", profileId, e);
-            throw new RuntimeException("Falha ao consultar chaves de conquistas no banco", e);
-        }
-
-        return unlockedKeys;
     }
 }

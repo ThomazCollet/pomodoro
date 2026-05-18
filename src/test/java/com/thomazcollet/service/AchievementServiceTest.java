@@ -43,37 +43,45 @@ class AchievementServiceTest {
         mockRankingEvaluator = new MockEvaluator(AchievementCategory.RANKING);
 
         achievementService = new AchievementService(mockRepository, mockProfileRepository,
-                List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator, mockChallengeEvaluator,
-                        mockRankingEvaluator));
+                List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
+                        mockChallengeEvaluator, mockRankingEvaluator));
     }
+
+    // ==========================================
+    // SCENARIOS DE TESTE: CONSTRUTOR / FAIL-FAST
+    // ==========================================
 
     @Test
     @DisplayName("Deve lançar NullPointerException se o repositório de conquistas for nulo")
     void shouldThrowExceptionWhenRepositoryIsNull() {
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> {
-            new AchievementService(null, mockProfileRepository,
-                    List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
-                            mockChallengeEvaluator, mockRankingEvaluator));
-        });
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> new AchievementService(null, mockProfileRepository,
+                        List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
+                                mockChallengeEvaluator, mockRankingEvaluator)));
         assertEquals("AchievementRepository não pode ser nulo", exception.getMessage());
     }
 
     @Test
     @DisplayName("Deve lançar NullPointerException se o repositório de perfis for nulo")
     void shouldThrowExceptionWhenProfileRepositoryIsNull() {
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> {
-            new AchievementService(mockRepository, null,
-                    List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
-                            mockChallengeEvaluator, mockRankingEvaluator));
-        });
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> new AchievementService(mockRepository, null,
+                        List.of(mockDailyFocusEvaluator, mockStreakEvaluator, mockAchievementsEvaluator,
+                                mockChallengeEvaluator, mockRankingEvaluator)));
         assertEquals("ProfileRepository não pode ser nulo", exception.getMessage());
     }
+
+    // ==========================================
+    // SCENARIOS DE TESTE: DAILY FOCUS
+    // ==========================================
 
     @Test
     @DisplayName("Deve pular a validação se a conquista já foi desbloqueada previamente (Fail-Fast)")
     void shouldSkipValidationWhenAchievementIsAlreadyUnlocked() {
-        mockRepository.simulateAlreadyUnlocked("focus_daily_1h_hours");
-        mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_1h_hours", 60);
+        // CORRIGIDO: key renomeada de focus_daily_1h_hours → focus_daily_2h_hours
+        // conforme planilha (Bronze = 2 horas, não 1 hora)
+        mockRepository.simulateAlreadyUnlocked("focus_daily_2h_hours");
+        mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
 
@@ -82,9 +90,11 @@ class AchievementServiceTest {
     }
 
     @Test
-    @DisplayName("Deve desbloquear e salvar a conquista de Bronze se o critério for atingido")
+    @DisplayName("Deve desbloquear e salvar a conquista de Bronze de foco diário se o critério for atingido")
     void shouldUnlockAndSaveAchievementWhenCriteriaIsMet() {
-        mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_1h_hours", 60);
+        // CORRIGIDO: key e conditionValue atualizados para o novo Bronze de foco diário
+        // (2h/120min)
+        mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
 
@@ -92,25 +102,27 @@ class AchievementServiceTest {
         assertEquals(1, saved.size(), "Deveria ter salvo exatamente 1 conquista");
 
         Achievement bronze = saved.get(0);
-        assertEquals("focus_daily_1h_hours", bronze.getAchievementKey());
+        assertEquals("focus_daily_2h_hours", bronze.getAchievementKey());
         assertEquals(AchievementCategory.DAILY_FOCUS, bronze.getCategory());
         assertEquals(AchievementTier.BRONZE, bronze.getTier());
         assertEquals(profileId, bronze.getProfileId());
     }
 
     @Test
-    @DisplayName("Deve desbloquear múltiplas conquistas em cadeia se o critério atingir níveis mais altos")
+    @DisplayName("Deve desbloquear Bronze e Prata de foco diário em cadeia quando ambos os critérios forem atingidos")
     void shouldUnlockMultipleAchievementsInChain() {
-        mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_1h_hours", 60);
+        // CORRIGIDO: keys atualizadas — Bronze=2h(120min), Prata=3h(180min)
+        // As keys antigas focus_daily_1h e focus_daily_2h não existem mais no Service.
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
+        mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_3h_hours", 180);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
         assertEquals(2, saved.size(), "Deveria ter salvo 2 conquistas (Bronze e Prata)");
 
-        assertEquals("focus_daily_1h_hours", saved.get(0).getAchievementKey());
-        assertEquals("focus_daily_2h_hours", saved.get(1).getAchievementKey());
+        assertEquals("focus_daily_2h_hours", saved.get(0).getAchievementKey());
+        assertEquals("focus_daily_3h_hours", saved.get(1).getAchievementKey());
     }
 
     @Test
@@ -172,12 +184,8 @@ class AchievementServiceTest {
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
-        falseCase(saved.isEmpty(), "Deveria ter salvo a conquista de desafio pendente");
+        assertFalse(saved.isEmpty(), "Deveria ter salvo a conquista de desafio pendente");
         assertEquals("challenge_constancy_days_7", saved.get(0).getAchievementKey());
-    }
-
-    private void falseCase(boolean condition, String message) {
-        assertFalse(condition, message);
     }
 
     @Test
@@ -196,14 +204,15 @@ class AchievementServiceTest {
     }
 
     // ==========================================
-    // SCENARIOS DE TESTE: META-CONQUISTAS (ACHIEVEMENTS)
+    // SCENARIOS DE TESTE: META-CONQUISTAS
     // ==========================================
 
     @Test
-    @DisplayName("Deve desbloquear meta-conquista de Bronze ao atingir o total de 5 conquests normais")
+    @DisplayName("Deve desbloquear meta-conquista de Bronze ao atingir o total de 5 conquistas normais")
     void shouldUnlockMetaTotalAchievementsWhenCountHitsFive() {
         mockAchievementsEvaluator.setTargetKeyAndValue("meta_total_5", 5);
-        mockRepository.simulateAlreadyUnlocked("meta_first_gold");
+        // CORRIGIDO: key renomeada de meta_first_gold → meta_gold_count_1
+        mockRepository.simulateAlreadyUnlocked("meta_gold_count_1");
         mockRepository.simulateAlreadyUnlocked("meta_total_15");
         mockRepository.simulateAlreadyUnlocked("meta_total_30");
 
@@ -214,8 +223,24 @@ class AchievementServiceTest {
         assertTrue(hasTotal5Key, "A chave salva deveria ser 'meta_total_5'");
     }
 
+    @Test
+    @DisplayName("Deve desbloquear meta-conquista de Bronze da trilha de Ouros ao obter a primeira conquista ouro")
+    void shouldUnlockMetaGoldCountBronzeWhenFirstGoldIsObtained() {
+        // Teste novo: cobre a trilha meta_gold_count_X que substituiu
+        // meta_first_gold/platinum
+        mockAchievementsEvaluator.setTargetKeyAndValue("meta_gold_count_1", 1);
+        mockRepository.simulateAlreadyUnlocked("meta_gold_count_5");
+        mockRepository.simulateAlreadyUnlocked("meta_gold_count_10");
+
+        achievementService.checkAndUnlockNewAchievements(profileId);
+
+        List<Achievement> saved = mockRepository.getSavedAchievements();
+        boolean hasKey = saved.stream().anyMatch(a -> "meta_gold_count_1".equals(a.getAchievementKey()));
+        assertTrue(hasKey, "Deveria desbloquear meta_gold_count_1 ao obter a primeira conquista ouro");
+    }
+
     // ==========================================
-    // SCENARIOS DE TESTE: RANKING & ORDEM CASCATA
+    // SCENARIOS DE TESTE: RANKING & CASCATA
     // ==========================================
 
     @Test
@@ -240,7 +265,6 @@ class AchievementServiceTest {
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
-
         assertEquals(2, saved.size(), "Deveria processar o Rank primeiro e a Meta-conquista logo em seguida");
         assertEquals("ranking_tier_c", saved.get(0).getAchievementKey());
         assertEquals("meta_total_5", saved.get(1).getAchievementKey());
@@ -261,17 +285,14 @@ class AchievementServiceTest {
 
         @Override
         public void updateXp(Long profileId, int currentXp) {
-            // Apenas emula persistência de sucesso no ambiente isolado de testes
         }
 
         @Override
         public void save(Profile profile) {
-            // Não precisa implementar lógica para o teste atual
         }
 
         @Override
         public void delete(Long id) {
-            // Não precisa implementar lógica para o teste atual
         }
 
         @Override
@@ -281,8 +302,6 @@ class AchievementServiceTest {
 
         @Override
         public void updateStats(Long profileId, int maxStreak, int maxFocusDaySeconds, int totalFocusSessions) {
-            // Ajustado para bater exatamente com a assinatura correta do
-            // SQLiteProfileRepository
         }
     }
 
@@ -292,21 +311,39 @@ class AchievementServiceTest {
 
         public void simulateAlreadyUnlocked(String key) {
             unlockedKeys.add(key);
-            if (key.contains("platinum") || key.endsWith("_30") || key.contains("365_triple")) {
-                Achievement fakePlat = new Achievement();
-                fakePlat.setTier(AchievementTier.PLATINUM);
-                savedAchievements.add(fakePlat);
+            // Simula um objeto Achievement salvo com tier inferido pela chave,
+            // necessário para que countByProfileAndTier e findByProfileId funcionem
+            // corretamente nos evaluators que consultam o repositório em memória.
+            Achievement fake = new Achievement();
+            fake.setAchievementKey(key);
+            if (key.contains("platinum") || key.endsWith("_triple")) {
+                fake.setTier(AchievementTier.PLATINUM);
+            } else if (key.endsWith("_gold") || key.contains("_ouro") || key.endsWith("_s")) {
+                fake.setTier(AchievementTier.GOLD);
+            } else if (key.endsWith("_silver") || key.endsWith("_a")) {
+                fake.setTier(AchievementTier.SILVER);
+            } else {
+                fake.setTier(AchievementTier.BRONZE);
             }
+            savedAchievements.add(fake);
         }
 
         public List<Achievement> getSavedAchievements() {
-            return savedAchievements;
+            // Retorna apenas as conquistas efetivamente salvas durante o teste,
+            // excluindo as pré-populadas por simulateAlreadyUnlocked.
+            // Para isso, rastreamos separadamente o que foi salvo via save().
+            return newlySaved;
         }
+
+        // Lista separada para distinguir o que foi "salvo durante o teste"
+        // do que foi "pré-populado como já desbloqueado"
+        private final List<Achievement> newlySaved = new ArrayList<>();
 
         @Override
         public void save(Achievement achievement) {
+            newlySaved.add(achievement);
             savedAchievements.add(achievement);
-            unlockedKeys.add(achievement.getAchievementKey()); // Sincroniza salvamento com as chaves ativas
+            unlockedKeys.add(achievement.getAchievementKey());
         }
 
         @Override
@@ -316,7 +353,6 @@ class AchievementServiceTest {
 
         @Override
         public Set<String> findUnlockedKeysByProfileId(Long profileId) {
-            // AQUI ESTÁ A ADIÇÃO CRUCIAL PARA FAZER A CLASSE COMPILAR!
             return unlockedKeys;
         }
 
@@ -330,6 +366,19 @@ class AchievementServiceTest {
             return (int) savedAchievements.stream()
                     .filter(a -> a.getTier() != null && a.getTier().name().equalsIgnoreCase(tier))
                     .count();
+        }
+
+        // ADICIONADO: implementação do novo método da interface.
+        // Retorna o mesmo valor que o SQLiteAchievementRepository usa em produção,
+        // garantindo consistência nos testes que validam meta_all_gold.
+        @Override
+        public int countTotalDefinedByTier(String tier) {
+            return switch (tier.toUpperCase()) {
+                case "GOLD" -> 18;
+                case "SILVER" -> 18;
+                case "BRONZE" -> 18;
+                default -> 0;
+            };
         }
     }
 
@@ -358,7 +407,6 @@ class AchievementServiceTest {
                 if (!achievementKey.startsWith(expectedPrefix))
                     return false;
             }
-
             return activeKeys.contains(achievementKey + "_" + conditionValue);
         }
 
@@ -375,9 +423,8 @@ class AchievementServiceTest {
 
         @Override
         public boolean evaluate(Long profileId, String achievementKey, int conditionValue) {
-            if (!achievementKey.startsWith("meta_")) {
+            if (!achievementKey.startsWith("meta_"))
                 return false;
-            }
             return activeKeys.contains(achievementKey + "_" + conditionValue);
         }
     }
