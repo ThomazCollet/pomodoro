@@ -5,20 +5,21 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="TOP_CENTER" spacing="12.0" 
-      prefWidth="530.0" minWidth="530.0" maxWidth="530.0"
-      stylesheets="@../styles/achievements.css" 
-      styleClass="group-card-container" 
+<VBox alignment="TOP_CENTER" spacing="12.0"
+      maxWidth="Infinity"
+      stylesheets="@../styles/achievements.css"
+      styleClass="group-card-container"
       fx:controller="com.thomazcollet.ui.controller.AchievementGroupCardController"
       xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
-    
+
     <padding>
-        <Insets top="14.0" right="16.0" bottom="16.0" left="16.0"/>
+        <Insets top="14.0" right="24.0" bottom="16.0" left="24.0"/>
     </padding>
 
     <Label fx:id="groupTitleLabel" text="NOME DA CONQUISTA" styleClass="group-card-title"/>
 
-    <HBox fx:id="subCardsContainer" alignment="CENTER" spacing="14.0" styleClass="group-subcards-wrapper">
-    </HBox>
-    
+    <HBox fx:id="subCardsContainer" alignment="CENTER" spacing="24.0"
+          maxWidth="Infinity"
+          styleClass="group-subcards-wrapper"/>
+
 </VBox>

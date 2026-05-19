@@ -741,17 +741,19 @@
     -fx-background-color: #1e2530;
     -fx-background-radius: 8px;
     -fx-border-radius: 8px;
-    -fx-padding: 12px;
-    -fx-pref-width: 160px;
-    -fx-min-width: 160px;
-    -fx-max-width: 160px;
+    -fx-padding: 14px;
+    /* CORRIGIDO: aumentado de 160px para 200px para aproveitar o espaço horizontal
+       agora disponível após liberar o GroupCard de sua largura fixa de 530px. */
+    -fx-pref-width: 200px;
+    -fx-min-width: 180px;
+    -fx-max-width: 240px;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.3), 5, 0, 0, 3);
 }
 
-/* Garante que o conteúdo interno preencha o tamanho travado do card */
+/* Garante que o conteúdo interno preencha o tamanho do card */
 .card-content {
     -fx-alignment: TOP_CENTER;
-    -fx-max-width: 150px;
+    -fx-max-width: 200px;
 }
 
 /* Títulos do Tier (Bronze, Prata, Ouro) */
@@ -767,8 +769,8 @@
     -fx-font-family: "System";
     -fx-font-size: 11px;
     -fx-text-fill: #e2e8f0;
-    -fx-min-height: 45px;
-    -fx-max-height: 45px;
+    -fx-min-height: 52px;
+    -fx-max-height: 52px;
 }
 
 /* Texto do contador (Ex: 2/5) */
@@ -886,9 +888,10 @@
     -fx-border-radius: 10px;
     -fx-border-color: #2d3748;
     -fx-border-width: 1px;
-    -fx-padding: 16px;
-    -fx-pref-width: 530px;
-    -fx-max-width: 530px;
+    -fx-padding: 16px 24px;
+    /* CORRIGIDO: removido pref/max-width fixos em 530px que comprimiam os cards.
+       O tamanho agora é controlado pelo FXML (maxWidth=Infinity + fillWidth=true),
+       permitindo que cada GroupCard ocupe toda a largura disponível da seção. */
 }
 
 .group-card-title {

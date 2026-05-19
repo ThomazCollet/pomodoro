@@ -214,23 +214,179 @@ public class AchievementViewController {
         };
     }
 
+    /**
+     * Gera descrições amigáveis e específicas para cada conquista,
+     * baseadas nos textos da planilha mas refinadas para o usuário final.
+     * Cada key tem seu texto exato em vez de um template genérico.
+     */
     private String translateDescription(String key, int val) {
         if (key == null)
             return "";
-        String k = key.toLowerCase();
-        if (k.contains("streak_current"))
-            return "Atingir uma ofensiva atual de " + val + " dias.";
-        if (k.contains("streak_count"))
-            return "Atingir a marca de " + val + " streaks acumulados.";
-        if (k.contains("focus_daily"))
-            return "Manter " + val + " minutos de foco em um único dia.";
-        if (k.contains("focus_accumulated"))
-            return "Acumular um total de " + val + " minutos de foco.";
-        if (k.contains("focus_cycles"))
-            return "Completar " + val + " ciclos pomodoro.";
-        if (k.contains("focus_total_days"))
-            return "Permanecer ativo por " + val + " dias no app.";
-        return "Meta de progresso: " + val;
+
+        // Fórmula da planilha: "nome criativo + descrição amigável ao usuário"
+        // Textos em duas linhas: linha 1 = título criativo, linha 2 = instrução clara
+        return switch (key.toLowerCase()) {
+
+            // ── STREAK: Ofensiva Atual ──────────────────────────────────────────
+            case "streak_current_5" -> "Faísca Inicial 🔥\nMantenha uma ofensiva ativa de 5 dias seguidos.";
+            case "streak_current_12" -> "Chama Crescente 🔥\nAlcance 12 dias consecutivos sem quebrar a ofensiva.";
+            case "streak_current_15" -> "Máquina de Hábitos 💪\nSustente uma ofensiva de 15 dias sem parar.";
+            case "streak_current_30" -> "Lenda da Constância 🏆\nConquiste 30 dias seguidos de foco diário.";
+
+            // ── STREAK: Contador X3 ─────────────────────────────────────────────
+            case "streak_count_5_x3" -> "Rei do Recomeço 🥉\nAtinja uma ofensiva de 5 dias por 3 vezes.";
+            case "streak_count_12_x3" -> "Persistência Total 🥈\nChegue a 12 dias de streak por 3 vezes.";
+            case "streak_count_15_x3" -> "Guerreiro do Foco 🥇\nRepita uma ofensiva de 15 dias por 3 vezes.";
+            case "streak_count_30_x3" -> "Triplicador Lendário 💎\nAtinja 30 dias de ofensiva por 3 vezes.";
+
+            // ── STREAK: Contador X5 ─────────────────────────────────────────────
+            case "streak_count_5_x5" -> "Cinco Inícios 🥉\nAtinja uma ofensiva de 5 dias por 5 vezes.";
+            case "streak_count_12_x5" -> "Mestre da Repetição 🥈\nChegue a 12 dias de streak por 5 vezes.";
+            case "streak_count_15_x5" -> "Cinco Vezes Guerreiro 🥇\nRepita uma ofensiva de 15 dias por 5 vezes.";
+            case "streak_count_30_x5" -> "Pentacampeão do Foco 💎\nAtinja 30 dias de ofensiva por 5 vezes.";
+
+            // ── FOCO DIÁRIO ─────────────────────────────────────────────────────
+            case "focus_daily_2h_hours" -> "Bloco de Foco 🥉\nConcentre-se por 2 horas em um único dia.";
+            case "focus_daily_3h_hours" -> "Turno Produtivo 🥈\nAcumule 3 horas de foco em um mesmo dia.";
+            case "focus_daily_4h_hours" -> "Modo Ultra Foco 🥇\nDomine 4 horas de concentração em um único dia.";
+            case "focus_daily_6h_hours" -> "Dia de Elite 💎\nAtinja 6 horas de foco absoluto em um único dia.";
+
+            // ── FOCO ACUMULADO ──────────────────────────────────────────────────
+            case "focus_accumulated_12h_hours" -> "Primeiras Horas 🥉\nAcumule 12 horas de foco ao longo do tempo.";
+            case "focus_accumulated_24h_hours" -> "Um Dia Inteiro 🥈\nSome 24 horas de concentração na sua jornada.";
+            case "focus_accumulated_300h_hours" -> "Mestre do Tempo 🥇\nAcumule 300 horas de foco no histórico.";
+            case "focus_accumulated_1000h_hours" -> "As 1000 Horas 💎\nAtinja a marca lendária de 1.000 horas de foco.";
+
+            // ── CICLOS POMODORO ─────────────────────────────────────────────────
+            case "focus_cycles_1_bronze" -> "Primeiro Ciclo 🥉\nConclua seu primeiro ciclo Pomodoro completo.";
+            case "focus_cycles_10_silver" -> "Ritmo Estabelecido 🥈\nComplete 10 ciclos Pomodoro ao todo.";
+            case "focus_cycles_25_gold" -> "Veterano dos Ciclos 🥇\nFinalize 25 ciclos Pomodoro na plataforma.";
+            case "focus_cycles_100_platinum" -> "Centenário do Foco 💎\nConclua 100 ciclos Pomodoro completos.";
+
+            // ── DIAS ATIVOS ─────────────────────────────────────────────────────
+            case "focus_total_days_15_bronze" -> "Primeiros Passos 🥉\nRegistre foco em pelo menos 15 dias diferentes.";
+            case "focus_total_days_30_silver" -> "Um Mês Ativo 🥈\nEsteja presente com foco em 30 dias distintos.";
+            case "focus_total_days_90_gold" -> "Trimestre de Ouro 🥇\nMantenha-se ativo por 90 dias de foco.";
+            case "focus_total_days_365_platinum" ->
+                "Um Ano de Dedicação 💎\nRegistre foco em 365 dias ao longo da jornada.";
+
+            // ── DESAFIO: Constância — Trilha Iniciante ──────────────────────────
+            case "challenge_constancy_days_7" -> "Semana de Desafio 🥉\nConclua um desafio de constância de 7+ dias.";
+            case "challenge_constancy_days_15" ->
+                "Quinzena Cumprida 🥈\nFinalize um desafio de constância de 15+ dias.";
+            case "challenge_constancy_days_30" -> "Mês Completo 🥇\nConclua um desafio de constância de 30+ dias.";
+
+            // ── DESAFIO: Constância — Trilha Avançada ───────────────────────────
+            case "challenge_constancy_days_90" ->
+                "Trimestre do Desafio 🥉\nVença um desafio de constância de 90+ dias.";
+            case "challenge_constancy_days_180" ->
+                "Meio Ano de Constância 🥈\nFinalize um desafio de 180+ dias sem desistir.";
+            case "challenge_constancy_days_365" -> "Ano Épico 🥇\nConclua um desafio de constância de 365+ dias.";
+
+            // ── DESAFIO: Dias Perfeitos ──────────────────────────────────────────
+            case "challenge_perfect_days_5" -> "Perfeccionista 🥉\nConclua 5 dias de desafio sem perder nenhuma vida.";
+            case "challenge_perfect_days_7" ->
+                "Semana Imaculada 🥈\nFinalize 7 dias de desafio com todas as vidas intactas.";
+            case "challenge_perfect_days_15" ->
+                "Quinzena Impecável 🥇\nConclua 15 dias de desafio sem gastar nenhuma vida.";
+            case "challenge_perfect_days_30" ->
+                "Mestre da Perfeição 💎\nAtinja 30 dias de desafio sem perder uma vida sequer.";
+
+            // ── DESAFIO: Repetição Constância ≥ 7 dias ──────────────────────────
+            case "challenge_count_constancy_min_7_3" ->
+                "Tripla Constância 🥉\nConclua 3 desafios de constância de 7+ dias.";
+            case "challenge_count_constancy_min_7_6" ->
+                "Seis Semanas de Garra 🥈\nFinalize 6 desafios de constância de 7+ dias.";
+            case "challenge_count_constancy_min_7_10" ->
+                "Dez e Constante 🥇\nConclua 10 desafios de constância de 7+ dias.";
+            case "challenge_count_constancy_min_7_24" ->
+                "Veterano da Constância 💎\nFinalize 24 desafios de constância de 7+ dias.";
+
+            // ── DESAFIO: Repetição Constância ≥ 15 dias ─────────────────────────
+            case "challenge_count_constancy_min_15_3" ->
+                "Tripla Quinzena 🥉\nConclua 3 desafios de constância de 15+ dias.";
+            case "challenge_count_constancy_min_15_6" ->
+                "Seis Quinzenas 🥈\nFinalize 6 desafios de constância de 15+ dias.";
+            case "challenge_count_constancy_min_15_10" ->
+                "Dez Quinzenas 🥇\nConclua 10 desafios de constância de 15+ dias.";
+            case "challenge_count_constancy_min_15_24" ->
+                "Mestre das Quinzenas 💎\nFinalize 24 desafios de constância de 15+ dias.";
+
+            // ── DESAFIO: Repetição Constância ≥ 30 dias ─────────────────────────
+            case "challenge_count_constancy_min_30_3" ->
+                "Trio Mensal 🥉\nConclua 3 desafios de constância de 30+ dias.";
+            case "challenge_count_constancy_min_30_6" ->
+                "Seis Meses de Desafio 🥈\nFinalize 6 desafios de constância de 30+ dias.";
+            case "challenge_count_constancy_min_30_10" ->
+                "Dez Meses Superados 🥇\nConclua 10 desafios de constância de 30+ dias.";
+            case "challenge_count_constancy_min_30_18" ->
+                "Lenda dos Desafios 💎\nFinalize 18 desafios de constância de 30+ dias.";
+
+            // ── DESAFIO: Intensidade — Ciclo de 15 Dias ─────────────────────────
+            case "challenge_intensity_hours_10" -> "Aquecimento 🥉\nConclua um desafio de 15 dias com 10h+ de foco.";
+            case "challenge_intensity_hours_20" ->
+                "Intensidade Crescente 🥈\nConclua um desafio de 15 dias com 20h+ de foco.";
+            case "challenge_intensity_hours_40" ->
+                "Bloco de Potência 🥇\nAtinja 40h+ de foco em um desafio de 15 dias.";
+            case "challenge_intensity_hours_60" ->
+                "Quinzena de Fogo 💎\nConclua um desafio de 15 dias com 60h+ de foco.";
+
+            // ── DESAFIO: Intensidade — Ciclo de 30 Dias ─────────────────────────
+            case "challenge_intensity_hours_22" -> "Mês com Ritmo 🥉\nConclua um desafio de 30 dias com 22h+ de foco.";
+            case "challenge_intensity_hours_44" -> "Dobro do Esforço 🥈\nAtinja 44h+ de foco em um desafio de 30 dias.";
+            case "challenge_intensity_hours_90" -> "Mês de Ouro 🥇\nConclua um desafio de 30 dias com 90h+ de foco.";
+            case "challenge_intensity_hours_120" ->
+                "Mês Lendário 💎\nAtinja 120h+ de foco em um único desafio de 30 dias.";
+
+            // ── DESAFIO: Intensidade — Ciclo de 90 Dias ─────────────────────────
+            case "challenge_intensity_hours_66" ->
+                "Trimestre do Bem 🥉\nConclua um desafio de intensidade de 90+ dias.";
+            case "challenge_intensity_hours_132" ->
+                "Meio Ano de Força 🥈\nFinalize um desafio de intensidade de 180+ dias.";
+            case "challenge_intensity_hours_200" ->
+                "Um Ano de Elite 🥇\nConclua um desafio de intensidade de 365+ dias.";
+            case "challenge_intensity_hours_270" ->
+                "Trimestre de Lenda 💎\nAtinja 270h+ de foco em um desafio de 90 dias.";
+
+            // ── DESAFIO: Platina Especial ────────────────────────────────────────
+            case "challenge_intensity_hours_365_triple" ->
+                "A Trindade Épica 💎\nConclua 3 desafios de intensidade de 365 dias.";
+
+            // ── DESAFIO: Repetição de Intensidade ───────────────────────────────
+            case "challenge_count_intensity_min_15_3" ->
+                "Trio de Intensidade 🥉\nConclua 3 desafios de intensidade de 15+ dias.";
+            case "challenge_count_intensity_min_15_6" ->
+                "Seis Vezes Intenso 🥈\nFinalize 6 desafios de intensidade de 15+ dias.";
+            case "challenge_count_intensity_min_15_10" ->
+                "Dez Desafios Intensos 🥇\nConclua 10 desafios de intensidade de 15+ dias.";
+            case "challenge_count_intensity_min_15_30" ->
+                "Veterano da Intensidade 💎\nFinalize 30 desafios de intensidade de 15+ dias.";
+
+            // ── META: Conquistador de Ouros ──────────────────────────────────────
+            case "meta_gold_count_1" -> "Primeiro Ouro 🥉\nObtenha sua primeira conquista de nível Ouro.";
+            case "meta_gold_count_5" -> "Colecionador de Ouros 🥈\nReúna 5 conquistas de nível Ouro.";
+            case "meta_gold_count_10" -> "Medalhista de Ouro 🥇\nAlcance 10 conquistas de nível Ouro.";
+            case "meta_all_gold" -> "Gabarito Total 💎\nDesbloqueie todas as conquistas de Ouro do sistema.";
+
+            // ── META: Total de Conquistas ────────────────────────────────────────
+            case "meta_total_5" -> "Colecionador Iniciante 🥉\nDesbloqueie um total de 5 conquistas.";
+            case "meta_total_15" -> "Caçador de Medalhas 🥈\nAcumule um total de 15 conquistas.";
+            case "meta_total_30" -> "Grande Colecionador 🥇\nAtinja a marca de 30 conquistas desbloqueadas.";
+
+            // ── META: Jornada das Platinas ───────────────────────────────────────
+            case "meta_total_platinum_1" -> "Primeira Relíquia 🥉\nObtenha sua primeira conquista de Platina.";
+            case "meta_total_platinum_3" -> "Trio de Platina 🥈\nReúna 3 conquistas de nível Platina.";
+            case "meta_total_platinum_7" -> "Coleção Sagrada 🥇\nAlcance 7 conquistas lendárias de Platina.";
+            case "meta_total_platinum_12" -> "Senhor das Platinas 💎\nDesbloqueie 12 conquistas de Platina.";
+
+            // ── RANKING ──────────────────────────────────────────────────────────
+            case "ranking_tier_c" -> "Primeiro Posto 🥉\nAlcance o Rank C acumulando 2.000 XP.";
+            case "ranking_tier_a" -> "Escalada de Elite 🥈\nAtinja o Rank A com 15.000 XP acumulados.";
+            case "ranking_tier_s" -> "Alto Desempenho 🥇\nConquiste o cobiçado Rank S (40.000 XP).";
+            case "ranking_tier_ss" -> "Ápice Absoluto 💎\nAlcance o lendário Rank SS com 100.000 XP.";
+
+            default -> "Meta: " + val;
+        };
     }
 
     /**
