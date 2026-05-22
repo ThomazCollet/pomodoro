@@ -217,4 +217,12 @@ public class PomodoroService {
     public int getTotalSessionDuration() {
         return totalSessionDuration;
     }
+
+    public void toggleAudioMute() {
+        audioService.toggleMute();
+    }
+
+    public boolean isAudioMuted() {
+        return audioService.isMuted();
+    }
 }

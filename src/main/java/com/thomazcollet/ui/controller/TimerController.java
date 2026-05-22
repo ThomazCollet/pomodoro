@@ -4,11 +4,12 @@ import com.thomazcollet.domain.model.SessionType;
 import com.thomazcollet.domain.model.TimerState;
 import com.thomazcollet.service.PomodoroService;
 import com.thomazcollet.service.TimerChangeListener;
-import com.thomazcollet.ui.util.DialogHelper; // Import da nova utilitária
+import com.thomazcollet.ui.util.DialogHelper;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.Circle;
 import javafx.scene.media.AudioClip;
@@ -24,9 +25,13 @@ public class TimerController implements TimerChangeListener {
     @FXML
     private Label lblStatus;
     @FXML
+    private StackPane timerStackPane;
+    @FXML
     private Arc arcProgress;
     @FXML
     private Button btnStart, btnPause, btnReset, btnSkip;
+    @FXML
+    private Button btnMute;
     @FXML
     private HBox hboxPips;
 
@@ -36,6 +41,28 @@ public class TimerController implements TimerChangeListener {
         this.pomodoroService = service;
         updateDisplay(service.getRemainingSeconds());
         updateSessionPips();
+        initArcCentering();
+    }
+
+    /**
+     * Remove o Arc do cálculo de layout (setManaged=false) para que a sua
+     * bounding box variável não cause deslocamento a cada tick.
+     * Em seguida, vincula centerX/centerY ao centro real do StackPane.
+     */
+    private void initArcCentering() {
+        arcProgress.setManaged(false);
+
+        Runnable center = () -> {
+            arcProgress.setCenterX(timerStackPane.getWidth()  / 2.0);
+            arcProgress.setCenterY(timerStackPane.getHeight() / 2.0);
+        };
+
+        // Recentra quando o StackPane for redimensionado (ex: janela maximizada)
+        timerStackPane.widthProperty().addListener((obs, o, n)  -> center.run());
+        timerStackPane.heightProperty().addListener((obs, o, n) -> center.run());
+
+        // Primeiro layout ainda não aconteceu — aguarda o próximo pulso da UI
+        Platform.runLater(center);
     }
 
     @FXML
@@ -48,6 +75,7 @@ public class TimerController implements TimerChangeListener {
             btnReset.setOnAction(e -> handleReset());
         if (btnSkip != null)
             btnSkip.setOnAction(e -> handleSkip());
+        // btnMute usa onAction="#handleToggleMute" direto no FXML
     }
 
     private void handleStart() {
@@ -103,6 +131,18 @@ public class TimerController implements TimerChangeListener {
             updateSessionPips();
         } else if (wasRunning) {
             pomodoroService.start();
+        }
+    }
+
+    @FXML
+    private void handleToggleMute() {
+        if (pomodoroService == null) return;
+        pomodoroService.toggleAudioMute();
+        boolean muted = pomodoroService.isAudioMuted();
+        btnMute.setText(muted ? "🔇" : "🔊");
+        btnMute.getStyleClass().removeAll("mute-button-active");
+        if (muted) {
+            btnMute.getStyleClass().add("mute-button-active");
         }
     }
 

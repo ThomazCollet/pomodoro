@@ -7,9 +7,22 @@ public class AudioService {
 
     private AudioClip timerStartClip;
     private AudioClip timerEndClip;
+    private boolean muted = false;
 
     public AudioService() {
         loadSounds();
+    }
+
+    public boolean isMuted() {
+        return muted;
+    }
+
+    public void setMuted(boolean muted) {
+        this.muted = muted;
+    }
+
+    public void toggleMute() {
+        this.muted = !this.muted;
     }
 
     private void loadSounds() {
@@ -17,28 +30,29 @@ public class AudioService {
             URL startUrl = getClass().getResource("/assets/sounds/start_notification.wav");
             URL endUrl = getClass().getResource("/assets/sounds/timer_end.wav");
 
-            if (startUrl != null) timerStartClip = new AudioClip(startUrl.toExternalForm());
-            if (endUrl != null) timerEndClip = new AudioClip(endUrl.toExternalForm());
+            if (startUrl != null)
+                timerStartClip = new AudioClip(startUrl.toExternalForm());
+            if (endUrl != null)
+                timerEndClip = new AudioClip(endUrl.toExternalForm());
         } catch (Exception e) {
             System.err.println("Erro ao carregar arquivos de áudio: " + e.getMessage());
         }
     }
 
     public void playTimerStart() {
-        if (timerStartClip != null) {
+        if (!muted && timerStartClip != null) {
             timerStartClip.play();
         }
     }
 
     public void playNotification() {
-        // Como você optou por usar o mesmo arquivo, ele reaproveita o mesmo clip
-        if (timerStartClip != null) {
+        if (!muted && timerStartClip != null) {
             timerStartClip.play();
         }
     }
 
     public void playTimerEnd() {
-        if (timerEndClip != null) {
+        if (!muted && timerEndClip != null) {
             timerEndClip.play();
         }
     }

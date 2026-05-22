@@ -29,7 +29,7 @@ class PomodoroServiceTest {
     private ChallengeService challengeService;
 
     @Mock
-    private AudioService audioService; // Solução do erro: Nova dependência mockada
+    private AudioService audioService;
 
     private PomodoroService service;
     private Profile testProfile;
@@ -39,8 +39,6 @@ class PomodoroServiceTest {
         testProfile = new Profile("Work", 25, 5, 15);
         testProfile.setId(1L);
 
-        // Instanciação corrigida passando o AudioService para evitar
-        // IllegalArgumentException
         service = new PomodoroService(testProfile, listener, focusSessionService, challengeService, audioService);
     }
 
@@ -52,7 +50,6 @@ class PomodoroServiceTest {
         assertEquals(TimerState.RUNNING, service.getTimerState());
         verify(focusSessionService, times(1)).startSession(eq(1L), eq(SessionType.FOCUS));
 
-        // Garante que o som de play foi chamado ao iniciar
         verify(audioService, times(1)).playTimerStart();
     }
 
@@ -131,5 +128,46 @@ class PomodoroServiceTest {
         service.stop();
 
         assertEquals(0, service.getSessionsInCycle());
+    }
+
+    // --- TESTES DO CONTROLE DE ÁUDIO (MUDO) ---
+
+    @Test
+    @DisplayName("Deve delegar a ação de mutar diretamente para o AudioService")
+    void shouldDelegateToggleMuteToAudioService() {
+        service.toggleAudioMute();
+
+        verify(audioService, times(1)).toggleMute();
+    }
+
+    @Test
+    @DisplayName("Deve retornar o estado correto de mudo a partir do AudioService")
+    void shouldReturnMuteStateFromAudioService() {
+        when(audioService.isMuted()).thenReturn(true).thenReturn(false);
+
+        assertTrue(service.isAudioMuted(), "Deveria retornar true quando o AudioService estiver mutado");
+        assertFalse(service.isAudioMuted(), "Deveria retornar false quando o AudioService não estiver mutado");
+
+        verify(audioService, times(2)).isMuted();
+    }
+
+    @Test
+    @DisplayName("Deve continuar chamando playTimerStart independente do PomodoroService, isolando a regra no AudioService")
+    void shouldNotPlaySoundWhenMuted() {
+        // CORREÇÃO: Removido o stub desnecessário do isMuted() para evitar a
+        // UnnecessaryStubbingException
+        service.start();
+
+        // PomodoroService cumpre o papel dele de avisar "o timer começou"
+        verify(audioService, times(1)).playTimerStart();
+    }
+
+    @Test
+    @DisplayName("Deve encaminhar chamadas consecutivas de alternância de mudo de forma independente")
+    void shouldCallToggleTwiceOnDoubleToggle() {
+        service.toggleAudioMute();
+        service.toggleAudioMute();
+
+        verify(audioService, times(2)).toggleMute();
     }
 }

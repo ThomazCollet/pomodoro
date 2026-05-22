@@ -345,6 +345,41 @@
     -fx-fill: #89b4fa;
 }
 
+/* Botão de Mudo/Som */
+.mute-button {
+    -fx-background-color: #313244;
+    -fx-text-fill: #9399b2;
+    -fx-font-size: 18px;
+    -fx-cursor: hand;
+    -fx-background-radius: 50;
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
+    -fx-pref-width: 44px;
+    -fx-pref-height: 44px;
+    -fx-padding: 0;
+    -fx-border-color: #45475a;
+    -fx-border-radius: 50;
+    -fx-border-width: 1;
+}
+
+.mute-button:hover {
+    -fx-background-color: #45475a;
+    -fx-text-fill: #cdd6f4;
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.25), 8, 0, 0, 0);
+}
+
+/* Estado mutado: destaque em vermelho suave */
+.mute-button-active {
+    -fx-background-color: rgba(243, 139, 168, 0.15);
+    -fx-text-fill: #f38ba8;
+    -fx-border-color: #f38ba8;
+}
+
+.mute-button-active:hover {
+    -fx-background-color: rgba(243, 139, 168, 0.28);
+    -fx-text-fill: #f38ba8;
+}
+
 /* --- Diálogos --- */
 .my-dialog.dialog-pane {
     -fx-background-color: #1e1e2e;
