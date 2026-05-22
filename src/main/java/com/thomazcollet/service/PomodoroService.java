@@ -22,7 +22,8 @@ public class PomodoroService {
     private ScheduledFuture<?> task;
     private final TimerChangeListener listener;
     private final FocusSessionService focusSessionService;
-    private final ChallengeService challengeService; // Nova dependência
+    private final ChallengeService challengeService;
+    private final AudioService audioService; // Nova dependência de Áudio
 
     private int sessionsInCycle = 0;
 
@@ -36,9 +37,11 @@ public class PomodoroService {
     public PomodoroService(Profile profile,
             TimerChangeListener listener,
             FocusSessionService focusSessionService,
-            ChallengeService challengeService) { // Construtor atualizado
+            ChallengeService challengeService,
+            AudioService audioService) { // Construtor atualizado com AudioService
 
-        if (profile == null || listener == null || focusSessionService == null || challengeService == null) {
+        if (profile == null || listener == null || focusSessionService == null || challengeService == null
+                || audioService == null) {
             throw new IllegalArgumentException("Dependências obrigatórias não podem ser nulas.");
         }
 
@@ -46,6 +49,7 @@ public class PomodoroService {
         this.listener = listener;
         this.focusSessionService = focusSessionService;
         this.challengeService = challengeService;
+        this.audioService = audioService; // Inicialização
         this.executor = Executors.newSingleThreadScheduledExecutor();
         this.timerState = TimerState.STOPPED;
 
@@ -72,6 +76,10 @@ public class PomodoroService {
             focusSessionService.startSession(currentProfile.getId(), currentSessionType);
         }
 
+        // GATILHO SONORO: Toca o som de início/notificação assim que o foco ou a pausa
+        // começam a rodar
+        audioService.playTimerStart();
+
         timerState = TimerState.RUNNING;
         task = executor.scheduleAtFixedRate(() -> {
             if (remainingSeconds <= 0) {
@@ -86,6 +94,9 @@ public class PomodoroService {
     private void handleSessionCompletion() {
         cancelTask();
         timerState = TimerState.STOPPED;
+
+        // GATILHO SONORO: O timer zerou naturalmente, solta o som de sucesso/conclusão!
+        audioService.playTimerEnd();
 
         if (currentSessionType == SessionType.FOCUS) {
             incrementCycle();
@@ -122,7 +133,6 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
 
-        // NOVO: Notifica os desafios antes de mudar de sessão
         if (currentSessionType == SessionType.FOCUS) {
             int minutesSpent = totalSessionDuration / 60;
             if (minutesSpent > 0) {
@@ -133,8 +143,6 @@ public class PomodoroService {
 
         SessionType nextType;
         if (currentSessionType == SessionType.FOCUS) {
-            // Se após o incremento o ciclo resetou para 0, significa que completamos o 4º
-            // foco
             nextType = (sessionsInCycle == 0) ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
         } else {
             nextType = SessionType.FOCUS;
@@ -156,7 +164,6 @@ public class PomodoroService {
         if (timerState != TimerState.STOPPED) {
             int elapsedSeconds = totalSessionDuration - remainingSeconds;
 
-            // Computa tempo parcial para os desafios se for uma sessão de FOCUS
             if (currentSessionType == SessionType.FOCUS && elapsedSeconds >= 60) {
                 challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), elapsedSeconds / 60);
             }

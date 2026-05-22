@@ -13,12 +13,12 @@
       xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
 
     <padding>
-        <Insets top="14.0" right="24.0" bottom="16.0" left="24.0"/>
+        <Insets top="14.0" right="32.0" bottom="16.0" left="32.0"/>
     </padding>
 
     <Label fx:id="groupTitleLabel" text="NOME DA CONQUISTA" styleClass="group-card-title"/>
 
-    <HBox fx:id="subCardsContainer" alignment="CENTER" spacing="24.0"
+    <HBox fx:id="subCardsContainer" alignment="CENTER" spacing="14.0"
           maxWidth="Infinity"
           styleClass="group-subcards-wrapper"/>
 

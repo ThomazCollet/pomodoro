@@ -9,44 +9,45 @@
             xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
             fx:controller="com.thomazcollet.ui.controller.MainController">
    
-   <left>
-      <VBox prefWidth="220.0" styleClass="sidebar" spacing="15.0" alignment="TOP_CENTER">
-         <padding>
-            <Insets top="40.0" left="20.0" right="20.0" />
-         </padding>
-         
-         <StackPane fx:id="avatarContainer" alignment="CENTER" maxWidth="Infinity" styleClass="avatar-container">
-            <Circle fx:id="avatarCircle" radius="28.0" />
-            <Label fx:id="initialLabel" text="?" styleClass="avatar-text" mouseTransparent="true" />
-            <VBox.margin>
-               <Insets bottom="25.0" />
-            </VBox.margin>
-         </StackPane>
+    <left>
+        <VBox prefWidth="220.0" styleClass="sidebar" spacing="15.0" alignment="TOP_CENTER">
+            <padding>
+                <Insets top="40.0" left="20.0" right="20.0" />
+            </padding>
+            
+            <StackPane fx:id="avatarContainer" alignment="CENTER" maxWidth="Infinity" styleClass="avatar-container">
+                <Circle fx:id="avatarCircle" radius="28.0" />
+                <Label fx:id="initialLabel" text="?" styleClass="avatar-text" mouseTransparent="true" />
+                <!-- hex sidebar badge injetado via código em setupAvatar() -->
+                <VBox.margin>
+                    <Insets bottom="25.0" />
+                </VBox.margin>
+            </StackPane>
 
-         <Label text="POMODORO" styleClass="logo-text">
-            <VBox.margin>
-               <Insets bottom="10.0" />
-            </VBox.margin>
-         </Label>
-         
-         <Separator opacity="0.1" maxWidth="140.0" />
+            <Label text="POMODORO" styleClass="logo-text">
+                <VBox.margin>
+                    <Insets bottom="10.0" />
+                </VBox.margin>
+            </Label>
+            
+            <Separator opacity="0.1" maxWidth="140.0" />
 
-         <Button fx:id="btnTimer" text="⏱   Timer" styleClass="menu-button" maxWidth="180.0" />
-         <Button fx:id="btnChallenges" text="🏆   Desafios" styleClass="menu-button" maxWidth="180.0" />
-         <Button fx:id="btnAchievements" text="🎖   Conquistas" styleClass="menu-button" maxWidth="180.0" onAction="#loadAchievementsView" />
-         <Button fx:id="btnStats" text="📊   Estatísticas" styleClass="menu-button" maxWidth="180.0" />
-         <Button fx:id="btnSettings" text="⚙   Configurações" styleClass="menu-button" maxWidth="180.0" />
-         
-         <Region VBox.vgrow="ALWAYS" />
-         
-         <Label text="Streak: 🔥 5 dias" styleClass="streak-label" />
-      </VBox>
-   </left>
+            <Button fx:id="btnTimer" text="⏱   Timer" styleClass="menu-button" maxWidth="180.0" />
+            <Button fx:id="btnChallenges" text="🏆   Desafios" styleClass="menu-button" maxWidth="180.0" />
+            <Button fx:id="btnAchievements" text="🎖   Conquistas" styleClass="menu-button" maxWidth="180.0" onAction="#loadAchievementsView" />
+            <Button fx:id="btnStats" text="📊   Estatísticas" styleClass="menu-button" maxWidth="180.0" />
+            <Button fx:id="btnSettings" text="⚙   Configurações" styleClass="menu-button" maxWidth="180.0" />
+            
+            <Region VBox.vgrow="ALWAYS" />
+            
+            <Label text="Streak: 🔥 5 dias" styleClass="streak-label" />
+        </VBox>
+    </left>
 
-   <center>
-      <StackPane fx:id="contentArea" styleClass="content-pane">
-         <Label text="Selecione uma opção no menu" style="-fx-text-fill: white; -fx-font-size: 18px;" />
-      </StackPane>
-   </center>
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-pane">
+            <Label text="Selecione uma opção no menu" style="-fx-text-fill: white; -fx-font-size: 18px;" />
+        </StackPane>
+    </center>
    
 </BorderPane>

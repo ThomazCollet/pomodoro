@@ -1,6 +1,7 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.domain.model.RankingType;
 import com.thomazcollet.domain.repository.AchievementRepository;
 import com.thomazcollet.infra.database.SQLiteChallengeRepository;
 import com.thomazcollet.infra.database.SQLiteFocusSessionRepository;
@@ -16,12 +17,15 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Polygon;
 import javafx.stage.Popup;
 import javafx.util.Duration;
 import org.slf4j.Logger;
@@ -32,11 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Controller principal que gerencia a navegação e o ciclo de vida das views.
- * Implementa cache de views para preservar o estado do Timer durante a
- * navegação.
- */
 public class MainController {
 
     private static final Logger logger = LoggerFactory.getLogger(MainController.class);
@@ -65,11 +64,10 @@ public class MainController {
     private StatsService statsService;
     private ChallengeService challengeService;
     private AchievementService achievementService;
+    private AudioService audioService; // Nova dependência de serviço gerenciador de áudio
 
-    // Repositories para injeção dinâmica
     private AchievementRepository achievementRepository;
 
-    // Cache de Views e Controllers
     private final Map<String, Parent> viewCache = new HashMap<>();
     private TimerController timerController;
 
@@ -93,18 +91,15 @@ public class MainController {
             var challengeRepository = new SQLiteChallengeRepository();
             this.achievementRepository = new SQLiteAchievementRepository();
 
-            // Computação de XP e Core Services
             this.focusSessionService = new FocusSessionService(sessionRepository, profileRepository);
             this.profileService = new ProfileService(profileRepository);
             this.statsService = new StatsService(sessionRepository, profileRepository);
             this.challengeService = new ChallengeService(challengeRepository, profileRepository);
-
-            // Inicialização do Service de Conquistas
-            this.achievementService = new AchievementService(achievementRepository, profileRepository,
-                    java.util.List.of());
+            this.achievementService = new AchievementService(achievementRepository, profileRepository, List.of());
+            this.audioService = new AudioService(); // Inicialização limpa e única do serviço de áudio
 
             profileService.ensureProfileExists();
-            logger.info("Serviços de infraestrutura inicializados com sucesso.");
+            logger.info("Serviços de infraestrutura e áudio inicializados com sucesso.");
         } catch (Exception e) {
             logger.error("Erro crítico ao inicializar serviços core: ", e);
         }
@@ -123,9 +118,17 @@ public class MainController {
         String hexColor = profileService.getAvatarColor();
         avatarCircle.setFill(Paint.valueOf(hexColor));
         initialLabel.setText(profileService.getProfileInitial());
-    }
 
-    // --- GERENCIAMENTO DE TELAS (CACHE E NAVEGAÇÃO) ---
+        // Constrói o hex badge da sidebar e injeta no avatarContainer
+        Profile activeProfile = profileService.getActiveProfile();
+        RankingType currentRank = RankingType.fromXp(activeProfile.getXp());
+
+        StackPane sidebarHex = buildHexBadge(currentRank, 13.0, 9.0);
+        sidebarHex.setMouseTransparent(true);
+        StackPane.setAlignment(sidebarHex, javafx.geometry.Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(sidebarHex, new javafx.geometry.Insets(0, 44, -4, 0));
+        avatarContainer.getChildren().add(sidebarHex);
+    }
 
     private void loadTimerView() {
         try {
@@ -138,19 +141,19 @@ public class MainController {
                 if (pomodoroService == null) {
                     Profile activeProfile = profileService.getActiveProfile();
 
+                    // Instanciação atualizada com a passagem obrigatória do audioService
                     this.pomodoroService = new PomodoroService(
                             activeProfile,
                             timerController,
                             focusSessionService,
-                            challengeService);
+                            challengeService,
+                            audioService);
                 }
                 timerController.setPomodoroService(pomodoroService);
                 viewCache.put("timer", root);
             }
-
             updateContentArea(viewCache.get("timer"));
             updateNavStyles(btnTimer);
-
         } catch (IOException e) {
             logger.error("Erro ao carregar TimerView: ", e);
         }
@@ -166,7 +169,6 @@ public class MainController {
 
             updateContentArea(statsView);
             updateNavStyles(btnStats);
-
         } catch (IOException e) {
             logger.error("Erro ao carregar StatsView: ", e);
         }
@@ -186,26 +188,18 @@ public class MainController {
             Parent challengesView = loader.load();
             updateContentArea(challengesView);
             updateNavStyles(btnChallenges);
-
         } catch (IOException e) {
             logger.error("Erro ao carregar ChallengeView: ", e);
         }
     }
 
-    /**
-     * Mapeado com @FXML para responder diretamente à ação do botão configurada no
-     * XML.
-     */
     @FXML
     private void loadAchievementsView() {
         try {
-            // Corrigido para buscar o arquivo real no singular: AchievementView.fxml
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AchievementView.fxml"));
             Parent achievementsView = loader.load();
 
             AchievementViewController controller = loader.getController();
-
-            // Passa a lista limpa e original diretamente do Service
             controller.initializeData(
                     profileService.getActiveProfile(),
                     achievementRepository,
@@ -213,7 +207,6 @@ public class MainController {
 
             updateContentArea(achievementsView);
             updateNavStyles(btnAchievements);
-
         } catch (IOException e) {
             logger.error("Erro ao carregar AchievementView: ", e);
         }
@@ -232,12 +225,6 @@ public class MainController {
         contentArea.getChildren().setAll(view);
     }
 
-    // --- LÓGICA DO POPOVER DE PERFIL ---
-
-    /**
-     * Responde ao evento de clique no avatar container, mapeado via
-     * setupNavigation.
-     */
     private void handleAvatarClick(MouseEvent event) {
         if (profilePopup != null && profilePopup.isShowing()) {
             profilePopup.hide();
@@ -272,24 +259,39 @@ public class MainController {
         root.setAlignment(Pos.CENTER);
         root.setOpacity(0);
 
+        Profile profile = profileService.getActiveProfile();
+        RankingType currentRank = RankingType.fromXp(profile.getXp());
+
         StackPane headerAvatar = new StackPane();
         Circle bigCircle = new Circle(40, avatarCircle.getFill());
         Label bigInitial = new Label(profileService.getProfileInitial());
         bigInitial.setStyle("-fx-font-size: 26px; -fx-text-fill: white; -fx-font-weight: bold;");
         headerAvatar.getChildren().addAll(bigCircle, bigInitial);
 
-        Label lblName = new Label(profileService.getActiveProfile().getUsername());
+        Label lblName = new Label(profile.getUsername());
         lblName.getStyleClass().add("popover-name");
+
+        // Badge hexagonal de rank para o popup
+        VBox rankBadgeContainer = new VBox(6);
+        rankBadgeContainer.setAlignment(Pos.CENTER);
+
+        Label lblRankTitle = new Label("RANK ATUAL");
+        lblRankTitle.setStyle(
+                "-fx-font-size: 10px; -fx-text-fill: #8a8f9d; -fx-font-weight: bold; -fx-text-alignment: center;");
+
+        StackPane popupHex = buildHexBadge(currentRank, 38.0, 13.0);
+        rankBadgeContainer.getChildren().addAll(lblRankTitle, popupHex);
 
         GridPane grid = new GridPane();
         grid.getStyleClass().add("stats-grid");
         grid.setAlignment(Pos.CENTER);
+        grid.setHgap(20);
+        grid.setVgap(12);
 
-        Profile profile = profileService.getActiveProfile();
         addStat(grid, "Streak", "🔥 " + profile.getMaxStreak() + "d", 0, 0);
-        addStat(grid, "Recorde", formatTime(profile.getMaxFocusDaySeconds()), 0, 1);
-        addStat(grid, "Nível", "⭐ Jr.", 1, 0);
-        addStat(grid, "Foco Total", profile.getTotalFocusSessions() + " ses.", 1, 1);
+        addStat(grid, "Recorde streak 🔥", profile.getMaxStreak() + "d", 1, 0);
+        addStat(grid, "Foco Total", profile.getTotalFocusSessions() + " ses.", 0, 1);
+        addStat(grid, "Experiência", profile.getXp() + " XP", 1, 1);
 
         Button btnSync = new Button("Sincronizar Dados");
         btnSync.getStyleClass().add("sync-button");
@@ -297,10 +299,110 @@ public class MainController {
         btnSync.setCursor(javafx.scene.Cursor.HAND);
         btnSync.setOnAction(e -> showSyncAlert());
 
-        root.getChildren().addAll(headerAvatar, lblName, new Separator(), grid, btnSync);
+        root.getChildren().addAll(headerAvatar, lblName, rankBadgeContainer, new Separator(), grid, btnSync);
         root.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
         return root;
+    }
+
+    private StackPane buildHexBadge(RankingType rank, double radius, double fontSize) {
+        Polygon hex = new Polygon();
+        for (int i = 0; i < 6; i++) {
+            double angleDeg = 60.0 * i - 90.0;
+            double angleRad = Math.toRadians(angleDeg);
+            hex.getPoints().addAll(
+                    radius + radius * Math.cos(angleRad),
+                    radius + radius * Math.sin(angleRad));
+        }
+
+        Color fill;
+        Color glowColor;
+        String letterColor;
+
+        switch (rank) {
+            case E -> {
+                fill = Color.web("#313244");
+                glowColor = null;
+                letterColor = "#a6adc8";
+            }
+            case D -> {
+                fill = Color.web("#4c1d95");
+                glowColor = Color.web("#7c3aed");
+                letterColor = "#ddd6fe";
+            }
+            case C -> {
+                fill = Color.web("#1e3a8a");
+                glowColor = Color.web("#3b82f6");
+                letterColor = "#bfdbfe";
+            }
+            case B -> {
+                fill = Color.web("#134e4a");
+                glowColor = Color.web("#0d9488");
+                letterColor = "#99f6e4";
+            }
+            case A -> {
+                fill = Color.web("#14532d");
+                glowColor = Color.web("#22c55e");
+                letterColor = "#bbf7d0";
+            }
+            case S -> {
+                fill = Color.web("#78350f");
+                glowColor = Color.web("#f59e0b");
+                letterColor = "#fde68a";
+            }
+            case SS -> {
+                fill = Color.web("#1e293b");
+                glowColor = Color.web("#94a3b8");
+                letterColor = "#e2e8f0";
+            }
+            default -> {
+                fill = Color.web("#313244");
+                glowColor = null;
+                letterColor = "#a6adc8";
+            }
+        }
+
+        hex.setFill(fill);
+        hex.setStroke(fill.brighter());
+        hex.setStrokeWidth(radius > 20 ? 1.2 : 0.8);
+
+        if (glowColor != null) {
+            DropShadow glow = new DropShadow();
+            glow.setColor(glowColor);
+            glow.setRadius(radius > 20 ? 14 : 6);
+            glow.setSpread(0.2);
+            hex.setEffect(glow);
+        }
+
+        Label lblRank = new Label(rank.name());
+        lblRank.setStyle(String.format(
+                "-fx-font-size: %.0fpx; -fx-font-weight: bold; -fx-text-fill: %s; -fx-padding: 0;",
+                fontSize, letterColor));
+        lblRank.setMouseTransparent(true);
+
+        StackPane container = new StackPane(hex, lblRank);
+        container.setAlignment(Pos.CENTER);
+        container.setPrefSize(radius * 2, radius * 2);
+        container.setMaxSize(radius * 2, radius * 2);
+
+        if (radius > 20) {
+            String accent = switch (rank) {
+                case S -> "★";
+                case SS -> "♛";
+                default -> null;
+            };
+            if (accent != null) {
+                Label lblAccent = new Label(accent);
+                String accentColor = rank == RankingType.SS ? "#94a3b8" : "#fbbf24";
+                lblAccent.setStyle(String.format(
+                        "-fx-font-size: 13px; -fx-text-fill: %s; -fx-padding: 0 0 %dpx 0;",
+                        accentColor, (int) (radius * 1.75)));
+                lblAccent.setMouseTransparent(true);
+                container.getChildren().add(lblAccent);
+            }
+        }
+
+        return container;
     }
 
     private void addStat(GridPane grid, String label, String value, int col, int row) {

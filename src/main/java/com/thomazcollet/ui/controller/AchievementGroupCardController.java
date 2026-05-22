@@ -19,29 +19,17 @@ public class AchievementGroupCardController {
     @FXML
     private HBox subCardsContainer;
 
-    /**
-     * Inicializa o grupo com um título unificado e monta os sub-cards internos.
-     * Garante rigorosamente a ordem visual sequencial: Bronze, Prata, Ouro e
-     * Platina,
-     * distribuindo-os de forma perfeitamente centralizada e simétrica na UI.
-     */
     public void setGroupData(String groupTitle, List<AchievementDisplayModel> childCards) {
-        // Princípio Fail-Fast: Validação rígida de dados de entrada
         if (childCards == null || childCards.isEmpty()) {
             throw new IllegalArgumentException("A lista de sub-cards de um grupo não pode ser nula ou vazia.");
         }
 
         groupTitleLabel.setText(groupTitle.toUpperCase());
 
-        // Limpa o container e força o alinhamento centralizado dos troféus
         subCardsContainer.getChildren().clear();
         subCardsContainer.setAlignment(Pos.CENTER);
+        subCardsContainer.setSpacing(14.0);
 
-        // Garante um espaçamento horizontal equilibrado de 15px entre as medalhas
-        subCardsContainer.setSpacing(15.0);
-
-        // Cria uma cópia mutável para evitar alterar a lista original e ordena por
-        // ordem natural do Enum Tier (BRONZE, SILVER, GOLD, PLATINUM)
         List<AchievementDisplayModel> sortedCards = new ArrayList<>(childCards);
         sortedCards.sort(Comparator.comparing(AchievementDisplayModel::getTier));
 
@@ -50,12 +38,11 @@ public class AchievementGroupCardController {
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/AchievementSubCard.fxml"));
                 StackPane subCardNode = loader.load();
 
-                // Recupera o controller do sub-card para injetar o modelo de exibição
-                // atualizado
                 AchievementSubCardController subCardController = loader.getController();
                 subCardController.setCardData(childModel);
 
-                // Adiciona o nó na HBox horizontal de forma centralizada e ordenada
+                // Sem hgrow — o CSS controla a largura fixa do subcard.
+                // O HBox centraliza o grupo de 3 cards no meio do groupcard full-width.
                 subCardsContainer.getChildren().add(subCardNode);
 
             } catch (IOException e) {
