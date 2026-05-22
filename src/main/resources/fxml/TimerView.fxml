@@ -4,18 +4,18 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Tooltip?>
 
-<VBox alignment="CENTER" spacing="50.0" styleClass="content-pane" 
+<VBox alignment="CENTER" spacing="40.0" styleClass="content-pane" 
       xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
       fx:controller="com.thomazcollet.ui.controller.TimerController">
     
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+        <Insets bottom="30.0" left="20.0" right="20.0" top="20.0" />
     </padding>
 
     <Label fx:id="lblStatus" text="HORA DE FOCAR" styleClass="status-label" />
 
-    <!-- fx:id no StackPane permite ao controller fixar o centro do Arc via bind -->
     <StackPane fx:id="timerStackPane">
         <Circle radius="160.0" stroke="#313244" strokeWidth="8.0" fill="TRANSPARENT" />
 
@@ -25,15 +25,32 @@
         <Label fx:id="lblTime" text="25:00" styleClass="timer-text" />
     </StackPane>
 
-    <HBox alignment="CENTER" spacing="25.0">
-        <Button fx:id="btnStart" text="START" styleClass="action-button, start-button" />
-        <Button fx:id="btnPause" text="PAUSE" styleClass="action-button, pause-button" />
-        <Button fx:id="btnReset" text="RESET" styleClass="action-button, reset-button" />
-        <Button fx:id="btnSkip" text="SKIP" styleClass="action-button, skip-button" />
-    </HBox>
-
     <HBox fx:id="hboxPips" alignment="CENTER" spacing="12.0" styleClass="pip-container" />
 
-    <Button fx:id="btnMute" text="🔊" styleClass="mute-button" onAction="#handleToggleMute" />
+    <HBox alignment="CENTER" spacing="20.0" styleClass="timer-control-dock">
+        <padding>
+            <Insets left="25.0" right="25.0" top="12.0" bottom="12.0"/>
+        </padding>
+
+        <Button fx:id="btnMute" text="🔊" styleClass="dock-util-button, dock-mute" onAction="#handleToggleMute">
+            <tooltip><Tooltip text="Mutar/Desmutar sons" /></tooltip>
+        </Button>
+        
+        <Button fx:id="btnReset" text="🔄" styleClass="dock-media-button, dock-reset">
+            <tooltip><Tooltip text="Reiniciar cronômetro" /></tooltip>
+        </Button>
+        
+        <Button fx:id="btnPlayPause" text="▶" styleClass="dock-main-button">
+            <tooltip><Tooltip text="Iniciar / Pausar" /></tooltip>
+        </Button>
+        
+        <Button fx:id="btnSkip" text="⏭" styleClass="dock-media-button, dock-skip">
+            <tooltip><Tooltip text="Pular sessão atual" /></tooltip>
+        </Button>
+        
+        <Button fx:id="btnFloat" text="🗗" styleClass="dock-util-button, dock-float" onAction="#handleToggleFloatingWindow">
+            <tooltip><Tooltip text="Abrir em modo mini/flutuante" /></tooltip>
+        </Button>
+    </HBox>
     
 </VBox>

@@ -1027,3 +1027,124 @@
     -fx-text-fill: #8a8f9d;
     -fx-text-alignment: center;
 }
+
+/* ==========================================================================
+   🎨 CONTROL DOCK SYSTEM (PAINEL DO CRONÔMETRO)
+   ========================================================================== */
+
+/* Container Principal em formato de Pílula Flutuante */
+.timer-control-dock {
+    -fx-background-color: #1e1e2e;
+    /* Fundo ligeiramente mais escuro que a janela para dar profundidade */
+    -fx-background-radius: 40px;
+    /* Cantos totalmente arredondados (estilo pílula/iOS) */
+    -fx-border-color: #313244;
+    /* Borda fina e elegante para destacar o painel */
+    -fx-border-radius: 40px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.25), 15, 0, 0, 8);
+    /* Sombra suave para flutuar */
+}
+
+/* 🌟 O PROTAGONISTA: Botão Central (Play/Pause) */
+.dock-main-button {
+    -fx-background-color: linear-gradient(to bottom right, #89b4fa, #b4befe);
+    /* Gradiente moderno azul/roxo */
+    -fx-text-fill: #11111b;
+    /* Ícone escuro para dar contraste máximo */
+    -fx-font-size: 20px;
+    /* Ícone imponente */
+    -fx-min-width: 56px;
+    /* Formato circular perfeito */
+    -fx-max-width: 56px;
+    -fx-min-height: 56px;
+    -fx-max-height: 56px;
+    -fx-background-radius: 28px;
+    -fx-cursor: hand;
+}
+
+.dock-main-button:hover {
+    /* Efeito de brilho neon suave ao passar o mouse */
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.5), 12, 0, 0, 0);
+    -fx-background-color: linear-gradient(to bottom right, #a6e3a1, #89b4fa);
+    /* Muda levemente o tom indicando ação */
+}
+
+.dock-main-button:pressed {
+    -fx-scale-x: 0.95;
+    /* Feedback tátil físico de clique (encolhe de leve) */
+    -fx-scale-y: 0.95;
+}
+
+/* 🔄 ⏭️ BOTÕES DE MÍDIA SATÉLITES (Reset e Skip) */
+.dock-media-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cdd6f4;
+    /* Branco fosco sofisticado */
+    -fx-font-size: 18px;
+    -fx-min-width: 42px;
+    -fx-max-width: 42px;
+    -fx-min-height: 42px;
+    -fx-max-height: 42px;
+    -fx-background-radius: 21px;
+    -fx-cursor: hand;
+}
+
+.dock-media-button:hover {
+    -fx-background-color: #313244;
+    /* Fundo sutil cinza ao focar */
+    -fx-text-fill: #89b4fa;
+    /* Ícone acende na cor de destaque */
+}
+
+.dock-media-button:pressed {
+    -fx-scale-x: 0.92;
+}
+
+/* 🔊 🗗 BOTÕES UTILITÁRIOS DAS EXTREMIDADES (Mute e Janela Flutuante) */
+.dock-util-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6c7086;
+    /* Cor mais apagada/discreta (Low opacity visual) */
+    -fx-font-size: 14px;
+    -fx-min-width: 36px;
+    -fx-max-width: 36px;
+    -fx-min-height: 36px;
+    -fx-max-height: 36px;
+    -fx-background-radius: 18px;
+    -fx-cursor: hand;
+}
+
+.dock-util-button:hover {
+    -fx-background-color: #252538;
+    -fx-text-fill: #f5e0dc;
+    /* Cor suave pastel ao passar o mouse */
+}
+
+.timer-control-dock {
+    /* ... outras propriedades ... */
+    -fx-max-width: 340px; 
+}
+
+/* 🎨 ESTILIZAÇÃO DO HOVER DESCRITIVO (TOOLTIP BUBBLE) */
+.tooltip {
+    -fx-background-color: #313244;
+    /* Caixa escura minimalista */
+    -fx-background-radius: 6px;
+    -fx-text-fill: #cdd6f4;
+    /* Texto limpo */
+    -fx-font-size: 11px;
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-padding: 5px 10px 5px 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.15), 5, 0, 0, 2);
+}
+
+/* Estado quando o áudio estiver mutado */
+.dock-util-button.dock-mute-active {
+    -fx-background-color: #f38ba8; /* Vermelho/Pastel elegante (Estilo Catppuccin) */
+    -fx-text-fill: #11111b;        /* Ícone escuro para dar leitura perfeita */
+}
+
+.dock-util-button.dock-mute-active:hover {
+    -fx-background-color: #eba0b3; /* Tom levemente mais claro no hover */
+}

@@ -28,8 +28,11 @@ public class TimerController implements TimerChangeListener {
     private StackPane timerStackPane;
     @FXML
     private Arc arcProgress;
+
+    // CORRIGIDO: Removidos btnStart/btnPause e adicionados os novos controles do
+    // Dock
     @FXML
-    private Button btnStart, btnPause, btnReset, btnSkip;
+    private Button btnPlayPause, btnReset, btnSkip, btnFloat;
     @FXML
     private Button btnMute;
     @FXML
@@ -42,49 +45,53 @@ public class TimerController implements TimerChangeListener {
         updateDisplay(service.getRemainingSeconds());
         updateSessionPips();
         initArcCentering();
+        updatePlayPauseButtonIcon(); // Garante o ícone correto ao iniciar
     }
 
-    /**
-     * Remove o Arc do cálculo de layout (setManaged=false) para que a sua
-     * bounding box variável não cause deslocamento a cada tick.
-     * Em seguida, vincula centerX/centerY ao centro real do StackPane.
-     */
     private void initArcCentering() {
         arcProgress.setManaged(false);
 
         Runnable center = () -> {
-            arcProgress.setCenterX(timerStackPane.getWidth()  / 2.0);
+            arcProgress.setCenterX(timerStackPane.getWidth() / 2.0);
             arcProgress.setCenterY(timerStackPane.getHeight() / 2.0);
         };
 
-        // Recentra quando o StackPane for redimensionado (ex: janela maximizada)
-        timerStackPane.widthProperty().addListener((obs, o, n)  -> center.run());
+        timerStackPane.widthProperty().addListener((obs, o, n) -> center.run());
         timerStackPane.heightProperty().addListener((obs, o, n) -> center.run());
 
-        // Primeiro layout ainda não aconteceu — aguarda o próximo pulso da UI
         Platform.runLater(center);
     }
 
     @FXML
     public void initialize() {
-        if (btnStart != null)
-            btnStart.setOnAction(e -> handleStart());
-        if (btnPause != null)
-            btnPause.setOnAction(e -> pomodoroService.pause());
+        // CORRIGIDO: Configuração do botão unificado Play/Pause
+        if (btnPlayPause != null)
+            btnPlayPause.setOnAction(e -> handlePlayPauseToggle());
+
         if (btnReset != null)
             btnReset.setOnAction(e -> handleReset());
         if (btnSkip != null)
             btnSkip.setOnAction(e -> handleSkip());
-        // btnMute usa onAction="#handleToggleMute" direto no FXML
     }
 
-    private void handleStart() {
+    /**
+     * CORRIGIDO: Gerencia a alternância entre iniciar e pausar no mesmo botão
+     */
+    private void handlePlayPauseToggle() {
+        if (pomodoroService == null)
+            return;
+
         try {
-            playFeedbackSound();
-            pomodoroService.start();
+            if (pomodoroService.getTimerState() == TimerState.RUNNING) {
+                pomodoroService.pause();
+            } else {
+                playFeedbackSound();
+                pomodoroService.start();
+            }
             updateUIState();
+            updatePlayPauseButtonIcon();
         } catch (Exception e) {
-            System.err.println("Erro ao iniciar o timer: " + e.getMessage());
+            System.err.println("Erro ao alternar o estado do timer: " + e.getMessage());
         }
     }
 
@@ -107,6 +114,7 @@ public class TimerController implements TimerChangeListener {
             lblStatus.setText("TIMER REINICIADO");
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
+            updatePlayPauseButtonIcon(); // Reseta o ícone para Play (▶)
         } else if (wasRunning) {
             pomodoroService.start();
         }
@@ -129,6 +137,7 @@ public class TimerController implements TimerChangeListener {
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
             updateSessionPips();
+            updatePlayPauseButtonIcon(); // Ajusta o ícone se o estado mudar
         } else if (wasRunning) {
             pomodoroService.start();
         }
@@ -136,13 +145,42 @@ public class TimerController implements TimerChangeListener {
 
     @FXML
     private void handleToggleMute() {
-        if (pomodoroService == null) return;
+        if (pomodoroService == null)
+            return;
         pomodoroService.toggleAudioMute();
         boolean muted = pomodoroService.isAudioMuted();
         btnMute.setText(muted ? "🔇" : "🔊");
-        btnMute.getStyleClass().removeAll("mute-button-active");
+
+        // CORRIGIDO: Limpeza e aplicação das classes novas com base no seu CSS
+        // customizado
+        btnMute.getStyleClass().remove("dock-mute-active");
         if (muted) {
-            btnMute.getStyleClass().add("mute-button-active");
+            btnMute.getStyleClass().add("dock-mute-active");
+        }
+    }
+
+    /**
+     * ADICIONADO: Tratamento temporário para o botão de janela flutuante
+     * para evitar que o JavaFX quebre ao carregar o FXML.
+     */
+    @FXML
+    private void handleToggleFloatingWindow() {
+        System.out.println("Feature futura: Abrindo mini janela flutuante...");
+        // Sua lógica de Picture-in-Picture entrará aqui!
+    }
+
+    /**
+     * ADICIONADO: Sincroniza visualmente o ícone do botão central com o estado do
+     * Service
+     */
+    private void updatePlayPauseButtonIcon() {
+        if (pomodoroService == null || btnPlayPause == null)
+            return;
+
+        if (pomodoroService.getTimerState() == TimerState.RUNNING) {
+            btnPlayPause.setText("⏸");
+        } else {
+            btnPlayPause.setText("▶");
         }
     }
 
@@ -175,6 +213,7 @@ public class TimerController implements TimerChangeListener {
             updateDisplay(0);
             arcProgress.setLength(0);
             updateSessionPips();
+            updatePlayPauseButtonIcon(); // Garante o retorno para o ícone de Play
         });
     }
 
