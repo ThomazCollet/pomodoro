@@ -26,7 +26,10 @@ class PomodoroServiceTest {
     private FocusSessionService focusSessionService;
 
     @Mock
-    private ChallengeService challengeService; // NOVO MOCK
+    private ChallengeService challengeService;
+
+    @Mock
+    private AudioService audioService; // Solução do erro: Nova dependência mockada
 
     private PomodoroService service;
     private Profile testProfile;
@@ -36,17 +39,21 @@ class PomodoroServiceTest {
         testProfile = new Profile("Work", 25, 5, 15);
         testProfile.setId(1L);
 
-        // Atualizado com o novo parâmetro do construtor
-        service = new PomodoroService(testProfile, listener, focusSessionService, challengeService);
+        // Instanciação corrigida passando o AudioService para evitar
+        // IllegalArgumentException
+        service = new PomodoroService(testProfile, listener, focusSessionService, challengeService, audioService);
     }
 
     @Test
-    @DisplayName("Deve iniciar o timer e registrar o início da sessão no FocusSessionService")
+    @DisplayName("Deve iniciar o timer, registrar o início da sessão e disparar o áudio de início")
     void shouldStartTimerAndRegisterInService() {
         service.start();
 
         assertEquals(TimerState.RUNNING, service.getTimerState());
         verify(focusSessionService, times(1)).startSession(eq(1L), eq(SessionType.FOCUS));
+
+        // Garante que o som de play foi chamado ao iniciar
+        verify(audioService, times(1)).playTimerStart();
     }
 
     @Test
@@ -78,26 +85,16 @@ class PomodoroServiceTest {
     @DisplayName("Deve notificar o ChallengeService ao dar STOP após pelo menos 1 minuto de foco")
     void shouldNotifyChallengesWhenStoppedAfterOneMinute() {
         service.start();
-        
-        // Simulamos que passou tempo (restam 1400s de 1500s originais = 100s passados)
-        // Como não podemos manipular o tempo real facilmente sem Clock, 
-        // usamos um "hack" técnico para este teste ou verificamos a lógica do método stop
-        
-        // Aqui simulamos o comportamento interno que você implementou no stop()
-        service.stop(); 
+        service.stop();
 
-        // Verifica se o challengeService foi chamado (o cálculo de minutos depende do tempo decorrido)
-        // Se o tempo decorrido for >= 60s, ele deve chamar.
         verify(challengeService, atMostOnce()).addFocusMinutesToActiveChallenges(anyLong(), anyInt());
     }
 
     @Test
     @DisplayName("Deve notificar ChallengeService ao dar SKIP em uma sessão de FOCO")
     void shouldNotifyChallengesWhenSkippingFocusSession() {
-        // O skip() em uma sessão de foco deve computar os minutos totais daquela sessão
-        service.skip(); 
+        service.skip();
 
-        // O perfil tem 25min, então deve chamar o service com 25
         verify(challengeService).addFocusMinutesToActiveChallenges(eq(1L), eq(25));
     }
 
@@ -113,7 +110,6 @@ class PomodoroServiceTest {
         service.skip(); // 4º Foco concluído
 
         assertEquals(SessionType.LONG_BREAK, service.getCurrentSessionType());
-        // Verifica se os minutos foram enviados ao ChallengeService 4 vezes (nos 4 focos)
         verify(challengeService, times(4)).addFocusMinutesToActiveChallenges(eq(1L), anyInt());
     }
 
@@ -122,16 +118,16 @@ class PomodoroServiceTest {
     void shouldNotAddMinutesWhenSkippingBreak() {
         service.skip(); // Sai do foco (adiciona minutos)
         reset(challengeService); // Limpa o contador do mock
-        
+
         service.skip(); // Sai da pausa (NÃO deve adicionar minutos)
-        
+
         verify(challengeService, never()).addFocusMinutesToActiveChallenges(anyLong(), anyInt());
     }
 
     @Test
     @DisplayName("Deve resetar o ciclo de pips ao dar STOP")
     void deveResetarPipsAoPararTimer() {
-        service.skip(); 
+        service.skip();
         service.stop();
 
         assertEquals(0, service.getSessionsInCycle());
