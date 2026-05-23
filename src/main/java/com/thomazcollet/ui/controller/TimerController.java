@@ -1,7 +1,6 @@
 package com.thomazcollet.ui.controller;
 
 import java.io.IOException;
-
 import com.thomazcollet.domain.model.SessionType;
 import com.thomazcollet.domain.model.TimerState;
 import com.thomazcollet.service.PomodoroService;
@@ -15,7 +14,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.Circle;
@@ -53,8 +51,10 @@ public class TimerController implements TimerChangeListener {
         updateDisplay(service.getRemainingSeconds());
         updateSessionPips();
         initArcCentering();
-        updatePlayPauseButtonIcon();
-        updateMuteButtonVisual(); // Sincroniza o estado inicial do mute
+
+        // Configuração do estado inicial da UI baseado no Service
+        updatePlayPauseButtonVisual(service.getTimerState());
+        updateMuteButtonVisual(service.isAudioMuted());
     }
 
     private void initArcCentering() {
@@ -94,7 +94,6 @@ public class TimerController implements TimerChangeListener {
                 pomodoroService.start();
             }
             updateUIState();
-            updatePlayPauseButtonIcon();
         } catch (Exception e) {
             System.err.println("Erro ao alternar o estado do timer: " + e.getMessage());
         }
@@ -116,10 +115,9 @@ public class TimerController implements TimerChangeListener {
 
         if (confirmed) {
             pomodoroService.stop();
-            updateUIState(); // REFACTOR: Usa o estado atual do service (Foco)
+            updateUIState();
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
-            updatePlayPauseButtonIcon();
         } else if (wasRunning) {
             pomodoroService.start();
         }
@@ -142,7 +140,6 @@ public class TimerController implements TimerChangeListener {
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
             updateSessionPips();
-            updatePlayPauseButtonIcon();
         } else if (wasRunning) {
             pomodoroService.start();
         }
@@ -153,45 +150,45 @@ public class TimerController implements TimerChangeListener {
         if (pomodoroService == null)
             return;
         pomodoroService.toggleAudioMute();
-        updateMuteButtonVisual();
     }
 
-    /**
-     * REFACTOR: Atualiza os elementos visuais do mute com base no Service.
-     * Isolado para poder ser chamado também ao retornar da mini-janela.
-     */
-    private void updateMuteButtonVisual() {
-        boolean muted = pomodoroService.isAudioMuted();
-        btnMute.setText(muted ? "🔇" : "🔊");
+    // REFACTOR: Centralizado, aceita o estado primitivo e é executado de forma
+    // atômica
+    private void updateMuteButtonVisual(boolean isMuted) {
+        if (btnMute == null)
+            return;
 
+        btnMute.setText(isMuted ? "🔇" : "🔊");
         btnMute.getStyleClass().remove("dock-mute-active");
-        if (muted) {
+
+        if (isMuted) {
             btnMute.getStyleClass().add("dock-mute-active");
         }
     }
 
-    /**
-     * REFACTOR: Cria e exibe a janela flutuante no estilo Picture-in-Picture.
-     */
+    // REFACTOR: Centralizado, atualiza o ícone do Play/Pause de forma isolada
+    private void updatePlayPauseButtonVisual(TimerState state) {
+        if (btnPlayPause == null)
+            return;
+        btnPlayPause.setText(state == TimerState.RUNNING ? "⏸" : "▶");
+    }
+
     @FXML
     private void handleToggleFloatingWindow() {
         try {
             Stage mainStage = (Stage) btnFloat.getScene().getWindow();
 
-            // REGRA 1: Se a mini janela JÁ EXISTE, apenas manipula os estados de
-            // minimizar/restaurar
             if (miniTimerStage != null) {
                 if (miniTimerStage.isIconified()) {
-                    miniTimerStage.setIconified(false); // Restaura se estava minimizada
+                    miniTimerStage.setIconified(false);
                 }
                 miniTimerStage.toFront();
                 miniTimerStage.requestFocus();
 
-                mainStage.setIconified(true); // Minimiza a tela principal
+                mainStage.setIconified(true);
                 return;
             }
 
-            // REGRA 2: Se é a primeira vez clicando, cria a mini tela normalmente
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/mini-timer-view.fxml"));
             Parent miniRoot = loader.load();
 
@@ -211,7 +208,6 @@ public class TimerController implements TimerChangeListener {
             MiniTimerController miniController = loader.getController();
             miniController.init(pomodoroService, miniTimerStage, mainStage);
 
-            // Posicionamento seguro
             double mainX = mainStage.getX();
             double mainY = mainStage.getY();
             double mainWidth = mainStage.getWidth();
@@ -223,14 +219,15 @@ public class TimerController implements TimerChangeListener {
                 miniTimerStage.setY(mainY + 100);
             }
 
-            // Se o usuário fechar a mini tela pelo '✕', limpamos a referência
             miniTimerStage.setOnHiding(event -> {
-                // Remove o listener para evitar vazamento de memória (Memory Leak)
                 pomodoroService.removeChangeListener(miniController);
                 miniTimerStage = null;
+
+                // Garante atualização visual exata ao retornar
+                updatePlayPauseButtonVisual(pomodoroService.getTimerState());
+                updateMuteButtonVisual(pomodoroService.isAudioMuted());
             });
 
-            // Exibe a mini tela e MINIMIZA a principal de forma elegante
             miniTimerStage.show();
             mainStage.setIconified(true);
 
@@ -238,12 +235,6 @@ public class TimerController implements TimerChangeListener {
             System.err.println("Erro ao abrir a janela flutuante: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private void updatePlayPauseButtonIcon() {
-        if (pomodoroService == null || btnPlayPause == null)
-            return;
-        btnPlayPause.setText(pomodoroService.getTimerState() == TimerState.RUNNING ? "⏸" : "▶");
     }
 
     private void playFeedbackSound() {
@@ -257,28 +248,9 @@ public class TimerController implements TimerChangeListener {
     }
 
     private void updateUIState() {
-        lblStatus.setText(pomodoroService.getCurrentSessionType().getDescription().toUpperCase());
-    }
-
-    @Override
-    public void onTick(int secondsRemaining) {
-        Platform.runLater(() -> {
-            updateDisplay(secondsRemaining);
-            updateProgressCircle(secondsRemaining);
-        });
-    }
-
-    @Override
-    public void onFinished() {
-        Platform.runLater(() -> {
-            // REFACTOR: Em vez de fixar texto estático, lê o estado atualizado do Service
-            // (que já realizou o auto-advance em background)
-            updateUIState();
-            updateDisplay(pomodoroService.getRemainingSeconds());
-            arcProgress.setLength(360);
-            updateSessionPips();
-            updatePlayPauseButtonIcon();
-        });
+        if (lblStatus != null && pomodoroService != null) {
+            lblStatus.setText(pomodoroService.getCurrentSessionType().getDescription().toUpperCase());
+        }
     }
 
     private void updateDisplay(int seconds) {
@@ -318,5 +290,35 @@ public class TimerController implements TimerChangeListener {
                 hboxPips.getChildren().add(pip);
             }
         });
+    }
+
+    // --- PROCESSAMENTO DO TICK TOTALMENTE OTIMIZADO (LISO) ---
+    @Override
+    public void onTick(int secondsRemaining) {
+        Platform.runLater(() -> {
+            updateDisplay(secondsRemaining);
+            updateProgressCircle(secondsRemaining);
+        });
+    }
+
+    @Override
+    public void onFinished() {
+        Platform.runLater(() -> {
+            updateUIState();
+            updateDisplay(pomodoroService.getRemainingSeconds());
+            arcProgress.setLength(360);
+            updateSessionPips();
+        });
+    }
+
+    // --- INJEÇÃO DOS NOVOS CALLBACKS ORIENTADOS A EVENTO ---
+    @Override
+    public void onStateChanged(TimerState newState) {
+        Platform.runLater(() -> updatePlayPauseButtonVisual(newState));
+    }
+
+    @Override
+    public void onMuteChanged(boolean isMuted) {
+        Platform.runLater(() -> updateMuteButtonVisual(isMuted));
     }
 }

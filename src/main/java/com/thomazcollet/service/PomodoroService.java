@@ -22,7 +22,6 @@ public class PomodoroService {
     private final ScheduledExecutorService executor;
     private ScheduledFuture<?> task;
 
-    // REFACTOR: Lista thread-safe para suportar múltiplas janelas escutando o tempo
     private final List<TimerChangeListener> listeners = new CopyOnWriteArrayList<>();
 
     private final FocusSessionService focusSessionService;
@@ -38,7 +37,7 @@ public class PomodoroService {
     private volatile TimerState timerState;
 
     public PomodoroService(Profile profile,
-            TimerChangeListener initialListener, // Mantido para não quebrar a injeção atual
+            TimerChangeListener initialListener,
             FocusSessionService focusSessionService,
             ChallengeService challengeService,
             AudioService audioService) {
@@ -61,7 +60,6 @@ public class PomodoroService {
         prepareSession(SessionType.FOCUS);
     }
 
-    // --- Métodos novos para gerenciamento de Listeners ---
     public void addChangeListener(TimerChangeListener listener) {
         if (listener != null && !listeners.contains(listener)) {
             listeners.add(listener);
@@ -97,6 +95,8 @@ public class PomodoroService {
         audioService.playTimerStart();
 
         timerState = TimerState.RUNNING;
+        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
+
         task = executor.scheduleAtFixedRate(() -> {
             if (remainingSeconds <= 0) {
                 handleSessionCompletion();
@@ -104,7 +104,6 @@ public class PomodoroService {
             }
             remainingSeconds--;
 
-            // Notifica todos os listeners ativos (Ex: Main e Mini tela)
             for (TimerChangeListener listener : listeners) {
                 listener.onTick(remainingSeconds);
             }
@@ -114,6 +113,7 @@ public class PomodoroService {
     private void handleSessionCompletion() {
         cancelTask();
         timerState = TimerState.STOPPED;
+        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
 
         audioService.playTimerEnd();
 
@@ -135,7 +135,6 @@ public class PomodoroService {
             nextType = SessionType.FOCUS;
         }
 
-        // Notifica todos os listeners que finalizou
         for (TimerChangeListener listener : listeners) {
             listener.onFinished();
         }
@@ -154,6 +153,7 @@ public class PomodoroService {
     public void skip() {
         cancelTask();
         timerState = TimerState.STOPPED;
+        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
 
         if (currentSessionType == SessionType.FOCUS) {
             int minutesSpent = totalSessionDuration / 60;
@@ -183,6 +183,7 @@ public class PomodoroService {
             return;
         cancelTask();
         timerState = TimerState.PAUSED;
+        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
     }
 
     public void stop() {
@@ -198,6 +199,7 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
         sessionsInCycle = 0;
+        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
         prepareSession(SessionType.FOCUS);
     }
 
@@ -222,6 +224,24 @@ public class PomodoroService {
         logger.info("Perfil atualizado no serviço. Novas durações aplicadas.");
     }
 
+    public void toggleAudioMute() {
+        audioService.toggleMute();
+        notifyMuteChanged(audioService.isMuted()); // NOTIFICA MUDANÇA DE MUTE
+    }
+
+    // --- Métodos Auxiliares de Notificação de Eventos Específicos ---
+    private void notifyStateChanged(TimerState newState) {
+        for (TimerChangeListener listener : listeners) {
+            listener.onStateChanged(newState);
+        }
+    }
+
+    private void notifyMuteChanged(boolean isMuted) {
+        for (TimerChangeListener listener : listeners) {
+            listener.onMuteChanged(isMuted);
+        }
+    }
+
     // --- Getters ---
     public int getSessionsInCycle() {
         return sessionsInCycle;
@@ -241,10 +261,6 @@ public class PomodoroService {
 
     public int getTotalSessionDuration() {
         return totalSessionDuration;
-    }
-
-    public void toggleAudioMute() {
-        audioService.toggleMute();
     }
 
     public boolean isAudioMuted() {

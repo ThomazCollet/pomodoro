@@ -52,8 +52,8 @@ public class MiniTimerController implements TimerChangeListener {
         // Inicializa o estado visual baseado nos valores vigentes do Service
         updateDisplay(service.getRemainingSeconds());
         updateSessionPips();
-        updatePlayPauseButtonIcon();
-        updateMuteButtonIcon();
+        updatePlayPauseButtonIcon(service.getTimerState());
+        updateMuteButtonIcon(service.isAudioMuted());
 
         // Configura o arrastar fluido de forma assíncrona e defensiva
         setupDragAndDrop();
@@ -62,11 +62,6 @@ public class MiniTimerController implements TimerChangeListener {
         miniStage.setOnCloseRequest(e -> cleanup());
     }
 
-    /**
-     * Habilita o recurso de arrastar a janela usando uma estratégia preguiçosa
-     * (Lazy)
-     * para garantir que a Scene já esteja anexada ao Stage.
-     */
     private void setupDragAndDrop() {
         Platform.runLater(() -> {
             if (miniStage != null && miniStage.getScene() != null) {
@@ -96,7 +91,6 @@ public class MiniTimerController implements TimerChangeListener {
             } else {
                 pomodoroService.start();
             }
-            updatePlayPauseButtonIcon();
         } catch (Exception e) {
             logger.error("Erro ao alternar o timer na janela flutuante: {}", e.getMessage());
         }
@@ -107,7 +101,6 @@ public class MiniTimerController implements TimerChangeListener {
         if (pomodoroService == null)
             return;
         pomodoroService.toggleAudioMute();
-        updateMuteButtonIcon();
     }
 
     /**
@@ -117,34 +110,35 @@ public class MiniTimerController implements TimerChangeListener {
     @FXML
     private void handleBackToApp() {
         if (mainStage != null && miniStage != null) {
-            // 1. Restaura a janela principal da barra de tarefas
             mainStage.setIconified(false);
             mainStage.toFront();
             mainStage.requestFocus();
 
-            // 2. Minimiza o mini timer mantendo ele ativo em background
             miniStage.setIconified(true);
             logger.info("Transição executada: Mini timer minimizado, MainController restaurado.");
         }
     }
 
     /**
-     * Finaliza completamente o ciclo de vida da aplicação a partir do widget.
+     * CORREÇÃO: Não fecha mais a aplicação de forma agressiva.
+     * Apenas fecha o Stage flutuante atual e devolve o foco para a aplicação
+     * principal.
      */
     @FXML
     private void handleCloseApp() {
-        logger.info("Fechamento completo solicitado a partir do Mini Timer.");
-        cleanup();
-        if (pomodoroService != null) {
-            pomodoroService.shutdown();
+        logger.info("Fechamento do Mini Timer solicitado. Restaurando janela principal.");
+
+        if (mainStage != null) {
+            mainStage.setIconified(false);
+            mainStage.toFront();
+            mainStage.requestFocus();
         }
-        Platform.exit();
-        System.exit(0);
+
+        if (miniStage != null) {
+            miniStage.close(); // Isso aciona o setOnHiding mapeado no TimerController fazendo o cleanup()
+        }
     }
 
-    /**
-     * Remove o listener para evitar vazamentos de memória (Memory Leaks).
-     */
     private void cleanup() {
         if (pomodoroService != null) {
             pomodoroService.removeChangeListener(this);
@@ -152,21 +146,20 @@ public class MiniTimerController implements TimerChangeListener {
         }
     }
 
-    private void updatePlayPauseButtonIcon() {
-        if (pomodoroService == null || btnPlayPause == null)
+    private void updatePlayPauseButtonIcon(TimerState state) {
+        if (btnPlayPause == null)
             return;
-        btnPlayPause.setText(pomodoroService.getTimerState() == TimerState.RUNNING ? "⏸" : "▶");
+        btnPlayPause.setText(state == TimerState.RUNNING ? "⏸" : "▶");
     }
 
-    private void updateMuteButtonIcon() {
-        if (pomodoroService == null || btnMute == null)
+    private void updateMuteButtonIcon(boolean isMuted) {
+        if (btnMute == null)
             return;
 
-        boolean muted = pomodoroService.isAudioMuted();
-        btnMute.setText(muted ? "🔇" : "🔊");
-
+        btnMute.setText(isMuted ? "🔇" : "🔊");
         btnMute.getStyleClass().remove("mini-mute-active");
-        if (muted) {
+
+        if (isMuted) {
             btnMute.getStyleClass().add("mini-mute-active");
         }
     }
@@ -199,14 +192,11 @@ public class MiniTimerController implements TimerChangeListener {
         });
     }
 
-    // --- Callbacks do Service (Processados de forma segura na UI Thread) ---
+    // --- Callbacks do Service ---
 
     @Override
     public void onTick(int secondsRemaining) {
-        Platform.runLater(() -> {
-            updateDisplay(secondsRemaining);
-            updatePlayPauseButtonIcon();
-        });
+        Platform.runLater(() -> updateDisplay(secondsRemaining));
     }
 
     @Override
@@ -214,7 +204,16 @@ public class MiniTimerController implements TimerChangeListener {
         Platform.runLater(() -> {
             updateDisplay(pomodoroService.getRemainingSeconds());
             updateSessionPips();
-            updatePlayPauseButtonIcon();
         });
+    }
+
+    @Override
+    public void onStateChanged(TimerState newState) {
+        Platform.runLater(() -> updatePlayPauseButtonIcon(newState));
+    }
+
+    @Override
+    public void onMuteChanged(boolean isMuted) {
+        Platform.runLater(() -> updateMuteButtonIcon(isMuted));
     }
 }
