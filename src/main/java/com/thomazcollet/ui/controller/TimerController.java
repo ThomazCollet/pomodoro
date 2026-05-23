@@ -1,5 +1,7 @@
 package com.thomazcollet.ui.controller;
 
+import java.io.IOException;
+
 import com.thomazcollet.domain.model.SessionType;
 import com.thomazcollet.domain.model.TimerState;
 import com.thomazcollet.service.PomodoroService;
@@ -7,12 +9,19 @@ import com.thomazcollet.service.TimerChangeListener;
 import com.thomazcollet.ui.util.DialogHelper;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.Circle;
 import javafx.scene.media.AudioClip;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 /**
  * Controller responsável por gerenciar a visualização do Timer e sincronizar a
@@ -29,8 +38,6 @@ public class TimerController implements TimerChangeListener {
     @FXML
     private Arc arcProgress;
 
-    // CORRIGIDO: Removidos btnStart/btnPause e adicionados os novos controles do
-    // Dock
     @FXML
     private Button btnPlayPause, btnReset, btnSkip, btnFloat;
     @FXML
@@ -39,13 +46,15 @@ public class TimerController implements TimerChangeListener {
     private HBox hboxPips;
 
     private PomodoroService pomodoroService;
+    private Stage miniTimerStage; // Guardará a instância única da mini janela
 
     public void setPomodoroService(PomodoroService service) {
         this.pomodoroService = service;
         updateDisplay(service.getRemainingSeconds());
         updateSessionPips();
         initArcCentering();
-        updatePlayPauseButtonIcon(); // Garante o ícone correto ao iniciar
+        updatePlayPauseButtonIcon();
+        updateMuteButtonVisual(); // Sincroniza o estado inicial do mute
     }
 
     private void initArcCentering() {
@@ -64,7 +73,6 @@ public class TimerController implements TimerChangeListener {
 
     @FXML
     public void initialize() {
-        // CORRIGIDO: Configuração do botão unificado Play/Pause
         if (btnPlayPause != null)
             btnPlayPause.setOnAction(e -> handlePlayPauseToggle());
 
@@ -74,9 +82,6 @@ public class TimerController implements TimerChangeListener {
             btnSkip.setOnAction(e -> handleSkip());
     }
 
-    /**
-     * CORRIGIDO: Gerencia a alternância entre iniciar e pausar no mesmo botão
-     */
     private void handlePlayPauseToggle() {
         if (pomodoroService == null)
             return;
@@ -111,10 +116,10 @@ public class TimerController implements TimerChangeListener {
 
         if (confirmed) {
             pomodoroService.stop();
-            lblStatus.setText("TIMER REINICIADO");
+            updateUIState(); // REFACTOR: Usa o estado atual do service (Foco)
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
-            updatePlayPauseButtonIcon(); // Reseta o ícone para Play (▶)
+            updatePlayPauseButtonIcon();
         } else if (wasRunning) {
             pomodoroService.start();
         }
@@ -137,7 +142,7 @@ public class TimerController implements TimerChangeListener {
             updateDisplay(pomodoroService.getRemainingSeconds());
             arcProgress.setLength(360);
             updateSessionPips();
-            updatePlayPauseButtonIcon(); // Ajusta o ícone se o estado mudar
+            updatePlayPauseButtonIcon();
         } else if (wasRunning) {
             pomodoroService.start();
         }
@@ -148,11 +153,17 @@ public class TimerController implements TimerChangeListener {
         if (pomodoroService == null)
             return;
         pomodoroService.toggleAudioMute();
+        updateMuteButtonVisual();
+    }
+
+    /**
+     * REFACTOR: Atualiza os elementos visuais do mute com base no Service.
+     * Isolado para poder ser chamado também ao retornar da mini-janela.
+     */
+    private void updateMuteButtonVisual() {
         boolean muted = pomodoroService.isAudioMuted();
         btnMute.setText(muted ? "🔇" : "🔊");
 
-        // CORRIGIDO: Limpeza e aplicação das classes novas com base no seu CSS
-        // customizado
         btnMute.getStyleClass().remove("dock-mute-active");
         if (muted) {
             btnMute.getStyleClass().add("dock-mute-active");
@@ -160,28 +171,79 @@ public class TimerController implements TimerChangeListener {
     }
 
     /**
-     * ADICIONADO: Tratamento temporário para o botão de janela flutuante
-     * para evitar que o JavaFX quebre ao carregar o FXML.
+     * REFACTOR: Cria e exibe a janela flutuante no estilo Picture-in-Picture.
      */
     @FXML
     private void handleToggleFloatingWindow() {
-        System.out.println("Feature futura: Abrindo mini janela flutuante...");
-        // Sua lógica de Picture-in-Picture entrará aqui!
+        try {
+            Stage mainStage = (Stage) btnFloat.getScene().getWindow();
+
+            // REGRA 1: Se a mini janela JÁ EXISTE, apenas manipula os estados de
+            // minimizar/restaurar
+            if (miniTimerStage != null) {
+                if (miniTimerStage.isIconified()) {
+                    miniTimerStage.setIconified(false); // Restaura se estava minimizada
+                }
+                miniTimerStage.toFront();
+                miniTimerStage.requestFocus();
+
+                mainStage.setIconified(true); // Minimiza a tela principal
+                return;
+            }
+
+            // REGRA 2: Se é a primeira vez clicando, cria a mini tela normalmente
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/mini-timer-view.fxml"));
+            Parent miniRoot = loader.load();
+
+            miniTimerStage = new Stage();
+            miniTimerStage.initStyle(StageStyle.TRANSPARENT);
+            miniTimerStage.setAlwaysOnTop(true);
+
+            Scene scene = new Scene(miniRoot);
+            scene.setFill(Color.TRANSPARENT);
+
+            var cssUrl = getClass().getResource("/css/style.css");
+            if (cssUrl != null) {
+                scene.getStylesheets().add(cssUrl.toExternalForm());
+            }
+            miniTimerStage.setScene(scene);
+
+            MiniTimerController miniController = loader.getController();
+            miniController.init(pomodoroService, miniTimerStage, mainStage);
+
+            // Posicionamento seguro
+            double mainX = mainStage.getX();
+            double mainY = mainStage.getY();
+            double mainWidth = mainStage.getWidth();
+
+            if (mainX <= 0 || mainY <= 0) {
+                miniTimerStage.centerOnScreen();
+            } else {
+                miniTimerStage.setX(mainX + mainWidth + 15);
+                miniTimerStage.setY(mainY + 100);
+            }
+
+            // Se o usuário fechar a mini tela pelo '✕', limpamos a referência
+            miniTimerStage.setOnHiding(event -> {
+                // Remove o listener para evitar vazamento de memória (Memory Leak)
+                pomodoroService.removeChangeListener(miniController);
+                miniTimerStage = null;
+            });
+
+            // Exibe a mini tela e MINIMIZA a principal de forma elegante
+            miniTimerStage.show();
+            mainStage.setIconified(true);
+
+        } catch (IOException e) {
+            System.err.println("Erro ao abrir a janela flutuante: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    /**
-     * ADICIONADO: Sincroniza visualmente o ícone do botão central com o estado do
-     * Service
-     */
     private void updatePlayPauseButtonIcon() {
         if (pomodoroService == null || btnPlayPause == null)
             return;
-
-        if (pomodoroService.getTimerState() == TimerState.RUNNING) {
-            btnPlayPause.setText("⏸");
-        } else {
-            btnPlayPause.setText("▶");
-        }
+        btnPlayPause.setText(pomodoroService.getTimerState() == TimerState.RUNNING ? "⏸" : "▶");
     }
 
     private void playFeedbackSound() {
@@ -209,11 +271,13 @@ public class TimerController implements TimerChangeListener {
     @Override
     public void onFinished() {
         Platform.runLater(() -> {
-            lblStatus.setText("SESSÃO CONCLUÍDA!");
-            updateDisplay(0);
-            arcProgress.setLength(0);
+            // REFACTOR: Em vez de fixar texto estático, lê o estado atualizado do Service
+            // (que já realizou o auto-advance em background)
+            updateUIState();
+            updateDisplay(pomodoroService.getRemainingSeconds());
+            arcProgress.setLength(360);
             updateSessionPips();
-            updatePlayPauseButtonIcon(); // Garante o retorno para o ícone de Play
+            updatePlayPauseButtonIcon();
         });
     }
 

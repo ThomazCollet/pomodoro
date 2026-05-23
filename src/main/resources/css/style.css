@@ -1123,7 +1123,7 @@
 
 .timer-control-dock {
     /* ... outras propriedades ... */
-    -fx-max-width: 340px; 
+    -fx-max-width: 340px;
 }
 
 /* 🎨 ESTILIZAÇÃO DO HOVER DESCRITIVO (TOOLTIP BUBBLE) */
@@ -1141,10 +1141,87 @@
 
 /* Estado quando o áudio estiver mutado */
 .dock-util-button.dock-mute-active {
-    -fx-background-color: #f38ba8; /* Vermelho/Pastel elegante (Estilo Catppuccin) */
-    -fx-text-fill: #11111b;        /* Ícone escuro para dar leitura perfeita */
+    -fx-background-color: #f38ba8;
+    /* Vermelho/Pastel elegante (Estilo Catppuccin) */
+    -fx-text-fill: #11111b;
+    /* Ícone escuro para dar leitura perfeita */
 }
 
 .dock-util-button.dock-mute-active:hover {
-    -fx-background-color: #eba0b3; /* Tom levemente mais claro no hover */
+    -fx-background-color: #eba0b3;
+    /* Tom levemente mais claro no hover */
+}
+
+/* ==========================================================================
+   🖼️ MINI TIMER WINDOW SYSTEM (PICTURE-IN-PICTURE WIDGET)
+   ========================================================================== */
+
+.mini-content-pane {
+    -fx-background-color: #11111b;
+    /* Fundo escuro puro e profundo */
+    -fx-border-color: #313244;
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    /* Cantos arredondados na janela toda */
+    -fx-background-radius: 16px;
+}
+
+.mini-timer-text {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #cdd6f4;
+    -fx-font-family: "Segoe UI", sans-serif;
+}
+
+/* Micro Botões Superiores (Voltar e Fechar) */
+.mini-top-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #585b70;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-padding: 2px 5px;
+}
+
+.mini-top-button:hover {
+    -fx-text-fill: #89b4fa;
+}
+
+.mini-top-button.mini-close:hover {
+    -fx-text-fill: #f38ba8;
+    /* Alerta vermelho ao passar o mouse no fechar */
+}
+
+/* Mini Dock */
+.mini-control-dock {
+    -fx-background-color: #1e1e2e;
+    -fx-background-radius: 20px;
+    -fx-border-color: #313244;
+    -fx-border-radius: 20px;
+    -fx-border-width: 1px;
+}
+
+.mini-dock-main {
+    -fx-background-color: #89b4fa;
+    -fx-text-fill: #11111b;
+    -fx-font-size: 13px;
+    -fx-min-width: 32px;
+    -fx-max-width: 32px;
+    -fx-min-height: 32px;
+    -fx-max-height: 32px;
+    -fx-background-radius: 16px;
+    -fx-cursor: hand;
+}
+
+.mini-dock-util {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a6adc8;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+/* 🟥 ALERTA DE MUTE ATIVO NO MINI TIMER */
+.mini-dock-util.mini-mute-active {
+    -fx-background-color: #f38ba8;
+    -fx-text-fill: #11111b;
+    -fx-background-radius: 4px;
 }

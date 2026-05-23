@@ -8,11 +8,12 @@ import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.model.SessionType;
 import com.thomazcollet.domain.model.TimerState;
 
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
  * Service responsável pela orquestração do tempo e transição de estados.
- * Integrado ao sistema de desafios para computar tempo de foco.
+ * Suporta múltiplos listeners dinamicamente (Thread-Safe).
  */
 public class PomodoroService {
 
@@ -20,13 +21,15 @@ public class PomodoroService {
 
     private final ScheduledExecutorService executor;
     private ScheduledFuture<?> task;
-    private final TimerChangeListener listener;
+
+    // REFACTOR: Lista thread-safe para suportar múltiplas janelas escutando o tempo
+    private final List<TimerChangeListener> listeners = new CopyOnWriteArrayList<>();
+
     private final FocusSessionService focusSessionService;
     private final ChallengeService challengeService;
-    private final AudioService audioService; // Nova dependência de Áudio
+    private final AudioService audioService;
 
     private int sessionsInCycle = 0;
-
     private Profile currentProfile;
     private SessionType currentSessionType;
 
@@ -35,25 +38,40 @@ public class PomodoroService {
     private volatile TimerState timerState;
 
     public PomodoroService(Profile profile,
-            TimerChangeListener listener,
+            TimerChangeListener initialListener, // Mantido para não quebrar a injeção atual
             FocusSessionService focusSessionService,
             ChallengeService challengeService,
-            AudioService audioService) { // Construtor atualizado com AudioService
+            AudioService audioService) {
 
-        if (profile == null || listener == null || focusSessionService == null || challengeService == null
-                || audioService == null) {
+        if (profile == null || focusSessionService == null || challengeService == null || audioService == null) {
             throw new IllegalArgumentException("Dependências obrigatórias não podem ser nulas.");
         }
 
         this.currentProfile = profile;
-        this.listener = listener;
         this.focusSessionService = focusSessionService;
         this.challengeService = challengeService;
-        this.audioService = audioService; // Inicialização
+        this.audioService = audioService;
         this.executor = Executors.newSingleThreadScheduledExecutor();
         this.timerState = TimerState.STOPPED;
 
+        if (initialListener != null) {
+            this.listeners.add(initialListener);
+        }
+
         prepareSession(SessionType.FOCUS);
+    }
+
+    // --- Métodos novos para gerenciamento de Listeners ---
+    public void addChangeListener(TimerChangeListener listener) {
+        if (listener != null && !listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    public void removeChangeListener(TimerChangeListener listener) {
+        if (listener != null) {
+            listeners.remove(listener);
+        }
     }
 
     private void prepareSession(SessionType type) {
@@ -76,8 +94,6 @@ public class PomodoroService {
             focusSessionService.startSession(currentProfile.getId(), currentSessionType);
         }
 
-        // GATILHO SONORO: Toca o som de início/notificação assim que o foco ou a pausa
-        // começam a rodar
         audioService.playTimerStart();
 
         timerState = TimerState.RUNNING;
@@ -87,7 +103,11 @@ public class PomodoroService {
                 return;
             }
             remainingSeconds--;
-            listener.onTick(remainingSeconds);
+
+            // Notifica todos os listeners ativos (Ex: Main e Mini tela)
+            for (TimerChangeListener listener : listeners) {
+                listener.onTick(remainingSeconds);
+            }
         }, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -95,13 +115,11 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
 
-        // GATILHO SONORO: O timer zerou naturalmente, solta o som de sucesso/conclusão!
         audioService.playTimerEnd();
 
         if (currentSessionType == SessionType.FOCUS) {
             incrementCycle();
 
-            // Notifica os desafios: Converte duração total para minutos
             int minutesSpent = totalSessionDuration / 60;
             if (minutesSpent > 0) {
                 challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), minutesSpent);
@@ -117,7 +135,11 @@ public class PomodoroService {
             nextType = SessionType.FOCUS;
         }
 
-        listener.onFinished();
+        // Notifica todos os listeners que finalizou
+        for (TimerChangeListener listener : listeners) {
+            listener.onFinished();
+        }
+
         prepareSession(nextType);
     }
 
@@ -149,7 +171,10 @@ public class PomodoroService {
         }
 
         prepareSession(nextType);
-        listener.onTick(remainingSeconds);
+
+        for (TimerChangeListener listener : listeners) {
+            listener.onTick(remainingSeconds);
+        }
         logger.info("Sessão pulada. Próxima etapa: {}", nextType);
     }
 
