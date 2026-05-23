@@ -26,6 +26,10 @@ public class MiniTimerController implements TimerChangeListener {
     @FXML
     private VBox rootPane;
     @FXML
+    private HBox topBar;
+    @FXML
+    private HBox controlDock;
+    @FXML
     private Label lblTime;
     @FXML
     private HBox hboxPips;
@@ -120,7 +124,6 @@ public class MiniTimerController implements TimerChangeListener {
     }
 
     /**
-     * CORREÇÃO: Não fecha mais a aplicação de forma agressiva.
      * Apenas fecha o Stage flutuante atual e devolve o foco para a aplicação
      * principal.
      */
@@ -135,7 +138,7 @@ public class MiniTimerController implements TimerChangeListener {
         }
 
         if (miniStage != null) {
-            miniStage.close(); // Isso aciona o setOnHiding mapeado no TimerController fazendo o cleanup()
+            miniStage.close(); // Aciona o setOnHiding mapeado no TimerController fazendo o cleanup()
         }
     }
 
@@ -177,16 +180,30 @@ public class MiniTimerController implements TimerChangeListener {
         Platform.runLater(() -> {
             hboxPips.getChildren().clear();
             int currentSessionInCycle = pomodoroService.getSessionsInCycle();
+            SessionType currentType = pomodoroService.getCurrentSessionType();
+
+            // CORREÇÃO LOGICA DE CONTAGEM: Se a sessão ATUAL é descanso, significa que a
+            // bolinha de foco correspondente já terminou.
+            // Para não adiantar o preenchimento visual, ajustamos o índice alvo.
+            int activeIndex = (currentType != SessionType.FOCUS) ? currentSessionInCycle - 1 : currentSessionInCycle;
 
             for (int i = 0; i < 4; i++) {
                 Circle pip = new Circle(4);
                 pip.getStyleClass().add("pip");
+                pip.getStyleClass().removeAll("pip-active", "pip-focus", "pip-break");
 
-                if (i < currentSessionInCycle) {
+                if (i < activeIndex) {
+                    // Pips de ciclos totalmente finalizados e passados (Verde estático)
                     pip.getStyleClass().add("pip-active");
-                } else if (i == currentSessionInCycle && pomodoroService.getCurrentSessionType() == SessionType.FOCUS) {
-                    pip.getStyleClass().add("pip-current");
+                } else if (i == activeIndex) {
+                    // Pip da sessão atual ativa no exato momento
+                    if (currentType == SessionType.FOCUS) {
+                        pip.getStyleClass().add("pip-focus"); // Azul no Foco
+                    } else {
+                        pip.getStyleClass().add("pip-break"); // Verde Pulsante/Ativo no Descanso
+                    }
                 }
+
                 hboxPips.getChildren().add(pip);
             }
         });
@@ -209,7 +226,13 @@ public class MiniTimerController implements TimerChangeListener {
 
     @Override
     public void onStateChanged(TimerState newState) {
-        Platform.runLater(() -> updatePlayPauseButtonIcon(newState));
+        Platform.runLater(() -> {
+            updatePlayPauseButtonIcon(newState);
+            // 🆕 CORREÇÃO DO SKIP: Força a atualização do display e das bolinhas sempre que
+            // o estado mudar (ex: dar skip)
+            updateDisplay(pomodoroService.getRemainingSeconds());
+            updateSessionPips();
+        });
     }
 
     @Override

@@ -1158,70 +1158,135 @@
 
 .mini-content-pane {
     -fx-background-color: #11111b;
-    /* Fundo escuro puro e profundo */
+    /* Fundo escuro puro e profundo (Catppuccin Mocha) */
     -fx-border-color: #313244;
     -fx-border-width: 1px;
     -fx-border-radius: 16px;
     /* Cantos arredondados na janela toda */
     -fx-background-radius: 16px;
+    -fx-padding: 10px;
 }
 
+/* ─── ESTRUTURA DE HOVER SELETIVO (CORRIGIDO) ─── */
+
+/* Por padrão, esconde visualmente e bloqueia cliques fantasmas mantendo o espaço reservado */
+.mini-content-pane .mini-top-bar,
+.mini-content-pane .mini-control-dock {
+    -fx-opacity: 0.0;
+    -fx-visibility: hidden;
+}
+
+/* Quando o mouse entra na janela, tudo surge de forma limpa e estática no mesmo lugar */
+.mini-content-pane:hover .mini-top-bar,
+.mini-content-pane:hover .mini-control-dock {
+    -fx-opacity: 1.0;
+    -fx-visibility: visible;
+}
+
+/* ─── ELEMENTOS CENTRAIS ─── */
+
 .mini-timer-text {
-    -fx-font-size: 34px;
+    -fx-font-size: 36px;
     -fx-font-weight: bold;
     -fx-text-fill: #cdd6f4;
     -fx-font-family: "Segoe UI", sans-serif;
 }
 
+/* ─── CONTROLES SUPERIORES ─── */
+
 /* Micro Botões Superiores (Voltar e Fechar) */
 .mini-top-button {
     -fx-background-color: transparent;
     -fx-text-fill: #585b70;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-cursor: hand;
-    -fx-padding: 2px 5px;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 4px;
 }
 
 .mini-top-button:hover {
+    -fx-background-color: #252538;
     -fx-text-fill: #89b4fa;
 }
 
 .mini-top-button.mini-close:hover {
-    -fx-text-fill: #f38ba8;
-    /* Alerta vermelho ao passar o mouse no fechar */
+    -fx-background-color: #f38ba8;
+    -fx-text-fill: #11111b;
+    /* Texto escuro no fundo vermelho de alerta */
 }
 
-/* Mini Dock */
+/* ─── DOCK INFERIOR DE CONTROLES ─── */
+
 .mini-control-dock {
     -fx-background-color: #1e1e2e;
-    -fx-background-radius: 20px;
+    -fx-background-radius: 24px;
     -fx-border-color: #313244;
-    -fx-border-radius: 20px;
+    -fx-border-radius: 24px;
     -fx-border-width: 1px;
+    -fx-padding: 4px 8px;
 }
 
 .mini-dock-main {
     -fx-background-color: #89b4fa;
     -fx-text-fill: #11111b;
-    -fx-font-size: 13px;
-    -fx-min-width: 32px;
-    -fx-max-width: 32px;
-    -fx-min-height: 32px;
-    -fx-max-height: 32px;
-    -fx-background-radius: 16px;
+    -fx-font-size: 14px;
+    -fx-min-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 34px;
+    -fx-max-height: 34px;
+    -fx-background-radius: 17px;
     -fx-cursor: hand;
+}
+
+.mini-dock-main:hover {
+    -fx-background-color: #b4befe;
+    /* Feedback sutil de hover no play */
 }
 
 .mini-dock-util {
     -fx-background-color: transparent;
     -fx-text-fill: #a6adc8;
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-cursor: hand;
+    -fx-min-width: 28px;
+    -fx-min-height: 28px;
+    -fx-background-radius: 14px;
+}
+
+.mini-dock-util:hover {
+    -fx-background-color: #252538;
+    -fx-text-fill: #cdd6f4;
 }
 
 /* 🟥 ALERTA DE MUTE ATIVO NO MINI TIMER */
 .mini-dock-util.mini-mute-active {
     -fx-background-color: #f38ba8;
     -fx-text-fill: #11111b;
-    -fx-background-radius: 4px;
+    -fx-background-radius: 14px;
+    /* Arredondado igual ao botão normal */
+}
+
+/* ─── PIPS BASE DO MINI TIMER ─── */
+.pip {
+    -fx-fill: #313244;
+    -fx-stroke: #45475a;
+}
+
+/* Estado: Sessões já concluídas do ciclo (Verde Catppuccin) */
+.pip-active {
+    -fx-fill: #a6e3a1;
+    -fx-stroke: #a6e3a1;
+    /* Adicionado para preencher o contorno também */
+}
+
+/* Estado: Sessão em andamento do tipo FOCO (Azul Catppuccin Blue) */
+.pip-focus {
+    -fx-fill: #89b4fa;
+    -fx-stroke: #89b4fa;
+}
+
+/* Estado: Sessão em andamento do tipo DESCANSO/PAUSA (Verde Catppuccin Green) */
+.pip-break {
+    -fx-fill: #a6e3a1;
+    -fx-stroke: #a6e3a1;
 }
