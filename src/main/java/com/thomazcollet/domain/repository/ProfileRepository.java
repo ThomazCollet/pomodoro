@@ -16,4 +16,10 @@ public interface ProfileRepository {
     void updateStats(Long profileId, int streak, int maxSeconds, int totalSessions);
 
     void updateXp(Long profileId, int newXp);
+
+    /**
+     * 🆕 Atualiza as metas de foco (diária, semanal e mensal) de um perfil
+     * específico.
+     */
+    void updateGoals(Long profileId, int dailySeconds, int weeklySeconds, int monthlySeconds);
 }

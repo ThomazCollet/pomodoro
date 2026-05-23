@@ -26,15 +26,21 @@ public class Profile {
     // ATRIBUTO DE PROGRESSÃO DE RANKING
     private int xp;
 
+    // 🆕 ATRIBUTOS DE METAS DE PRODUTIVIDADE (CONSOLIDAÇÃO E METAS)
+    private int dailyGoalSeconds;
+    private int weeklyGoalSeconds;
+    private int monthlyGoalSeconds;
+
     public Profile() {
     }
 
     /**
      * Construtor completo para reconstrução de objetos vindos da camada de
-     * persistência (Incluindo Marcos e XP).
+     * persistência (Incluindo Marcos, XP e Metas).
      */
     public Profile(Long id, String username, String imagePath, int workDuration, int shortBreak, int longBreak,
-            int maxStreak, int maxFocusDaySeconds, int totalFocusSessions, int xp, LocalDateTime createdAt) {
+            int maxStreak, int maxFocusDaySeconds, int totalFocusSessions, int xp,
+            int dailyGoalSeconds, int weeklyGoalSeconds, int monthlyGoalSeconds, LocalDateTime createdAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.setUsername(username);
@@ -45,11 +51,14 @@ public class Profile {
         this.setMaxStreak(maxStreak);
         this.setMaxFocusDaySeconds(maxFocusDaySeconds);
         this.setTotalFocusSessions(totalFocusSessions);
-        this.setXp(xp); // Adicionado
+        this.setXp(xp);
+        this.setDailyGoalSeconds(dailyGoalSeconds); // 🆕 Adicionado
+        this.setWeeklyGoalSeconds(weeklyGoalSeconds); // 🆕 Adicionado
+        this.setMonthlyGoalSeconds(monthlyGoalSeconds); // 🆕 Adicionado
     }
 
     /**
-     * Construtor para novos perfis criados pela aplicação.
+     * Construtor para novos perfis criados pela aplicação com os defaults do banco.
      */
     public Profile(String username, int workDuration, int shortBreak, int longBreak) {
         this.setUsername(username);
@@ -59,10 +68,13 @@ public class Profile {
         this.maxStreak = 0;
         this.maxFocusDaySeconds = 0;
         this.totalFocusSessions = 0;
-        this.xp = 0; // Adicionado
+        this.xp = 0;
+        this.dailyGoalSeconds = 5400; // 🆕 Default: 1h30m
+        this.weeklyGoalSeconds = 27000; // 🆕 Default: 7h30m (5 dias úteis)
+        this.monthlyGoalSeconds = 108000; // 🆕 Default: 30h00m (20 dias úteis)
     }
 
-    // --- COMORTAMENTO DE DOMÍNIO RICO ---
+    // --- COMPORTAMENTO DE DOMÍNIO RICO ---
 
     /**
      * Retorna o Ranking atual calculado dinamicamente com base no XP em memória.
@@ -192,6 +204,40 @@ public class Profile {
         this.xp = xp;
     }
 
+    // 🆕 GETTERS E SETTERS DAS METAS CUSTOMIZÁVEIS (FAIL-FAST)
+    public int getDailyGoalSeconds() {
+        return dailyGoalSeconds;
+    }
+
+    public void setDailyGoalSeconds(int dailyGoalSeconds) {
+        if (dailyGoalSeconds < 0) {
+            throw new IllegalArgumentException("A meta diária de foco não pode ser negativa.");
+        }
+        this.dailyGoalSeconds = dailyGoalSeconds;
+    }
+
+    public int getWeeklyGoalSeconds() {
+        return weeklyGoalSeconds;
+    }
+
+    public void setWeeklyGoalSeconds(int weeklyGoalSeconds) {
+        if (weeklyGoalSeconds < 0) {
+            throw new IllegalArgumentException("A meta semanal de foco não pode ser negativa.");
+        }
+        this.weeklyGoalSeconds = weeklyGoalSeconds;
+    }
+
+    public int getMonthlyGoalSeconds() {
+        return monthlyGoalSeconds;
+    }
+
+    public void setMonthlyGoalSeconds(int monthlyGoalSeconds) {
+        if (monthlyGoalSeconds < 0) {
+            throw new IllegalArgumentException("A meta mensal de foco não pode ser negativa.");
+        }
+        this.monthlyGoalSeconds = monthlyGoalSeconds;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -207,7 +253,8 @@ public class Profile {
 
     @Override
     public String toString() {
-        return "Profile{id=" + id + ", username='" + username + "', ranking=" + getRanking() + ", xp=" + xp + "}";
+        return "Profile{id=" + id + ", username='" + username + "', ranking=" + getRanking() + ", xp=" + xp +
+                ", dailyGoal=" + dailyGoalSeconds + "s}";
     }
 
     @Override

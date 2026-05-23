@@ -20,6 +20,8 @@ public class DatabaseInitializer {
     public static void initialize() {
         logger.info("Iniciando verificação e configuração do banco de dados...");
 
+        // 1. Script estrutural base (Modificado para incluir as colunas de meta para
+        // novos bancos)
         String setupSql = """
                 CREATE TABLE IF NOT EXISTS profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,6 +34,9 @@ public class DatabaseInitializer {
                     max_focus_day_seconds INTEGER DEFAULT 0,
                     total_focus_sessions INTEGER DEFAULT 0,
                     xp INTEGER DEFAULT 0,
+                    daily_goal_seconds INTEGER NOT NULL DEFAULT 5400,
+                    weekly_goal_seconds INTEGER NOT NULL DEFAULT 27000,
+                    monthly_goal_seconds INTEGER NOT NULL DEFAULT 108000,
                     created_at DATETIME DEFAULT (datetime('now', 'localtime'))
                 );
 
@@ -68,7 +73,6 @@ public class DatabaseInitializer {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
                     achievement_key TEXT NOT NULL, -- Identificador da regra específica
-                    -- AJUSTE: Adicionado 'RANKING' para suportar as insígnias de Rank S, Rank A, etc.
                     category TEXT NOT NULL CHECK(category IN ('STREAK', 'CHALLENGE', 'DAILY_FOCUS', 'ACHIEVEMENTS', 'RANKING')),
                     tier TEXT NOT NULL CHECK(tier IN ('BRONZE', 'SILVER', 'GOLD', 'PLATINUM')),
                     unlocked_at DATETIME DEFAULT (datetime('now', 'localtime')),
@@ -83,16 +87,52 @@ public class DatabaseInitializer {
             // Ativa chaves estrangeiras diretamente na conexão ativa de forma isolada
             stmt.execute("PRAGMA foreign_keys = ON;");
 
+            // Executa a criação das tabelas estruturais base
             for (String sql : setupSql.split(";")) {
                 if (!sql.trim().isEmpty()) {
                     stmt.execute(sql);
                 }
             }
+
+            // 2. MIGRATION SYSTEM DEFENSIVO (Para atualizar bancos de dados já existentes
+            // localmente)
+            applyMigrationsIfNecessary(stmt);
+
             logger.info("Banco de dados verificado com sucesso.");
 
         } catch (SQLException e) {
             logger.error("ERRO CRÍTICO: Falha ao inicializar o banco de dados SQLite.", e);
-            throw new DatabaseInitializationException("Falha ao configurar tabelas iniciais", e);
+            throw new DatabaseInitializationException("Falha ao configure tabelas iniciais", e);
+        }
+    }
+
+    /**
+     * Adiciona de forma incremental as novas colunas caso o banco de dados do
+     * usuário
+     * já possua a tabela 'profiles' antiga criada sem elas.
+     */
+    private static void applyMigrationsIfNecessary(Statement stmt) {
+        // Tenta adicionar a coluna daily_goal_seconds
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN daily_goal_seconds INTEGER NOT NULL DEFAULT 5400;");
+            logger.info("Migração: Coluna 'daily_goal_seconds' adicionada com sucesso.");
+        } catch (SQLException e) {
+            // Se cair aqui, é porque a coluna já existe (o que é o cenário ideal em
+            // execuções futuras)
+        }
+
+        // Tenta adicionar a coluna weekly_goal_seconds
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN weekly_goal_seconds INTEGER NOT NULL DEFAULT 27000;");
+            logger.info("Migração: Coluna 'weekly_goal_seconds' adicionada com sucesso.");
+        } catch (SQLException e) {
+        }
+
+        // Tenta adicionar a coluna monthly_goal_seconds
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN monthly_goal_seconds INTEGER NOT NULL DEFAULT 108000;");
+            logger.info("Migração: Coluna 'monthly_goal_seconds' adicionada com sucesso.");
+        } catch (SQLException e) {
         }
     }
 

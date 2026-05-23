@@ -16,10 +16,13 @@ public class SQLiteProfileRepository implements ProfileRepository {
 
     @Override
     public void save(Profile profile) {
+        // 🆕 Incluído as 3 colunas de metas no INSERT para garantir os valores na
+        // criação do registro
         String sql = """
                 INSERT INTO profiles (username, image_path, work_duration, short_break, long_break,
-                                    max_streak, max_focus_day_seconds, total_focus_sessions, xp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    max_streak, max_focus_day_seconds, total_focus_sessions, xp,
+                                    daily_goal_seconds, weekly_goal_seconds, monthly_goal_seconds)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -33,7 +36,10 @@ public class SQLiteProfileRepository implements ProfileRepository {
             pstmt.setInt(6, profile.getMaxStreak());
             pstmt.setInt(7, profile.getMaxFocusDaySeconds());
             pstmt.setInt(8, profile.getTotalFocusSessions());
-            pstmt.setInt(9, profile.getXp()); // Inclusão do XP na criação do perfil
+            pstmt.setInt(9, profile.getXp());
+            pstmt.setInt(10, profile.getDailyGoalSeconds()); // 🆕 Inclusão da meta diária
+            pstmt.setInt(11, profile.getWeeklyGoalSeconds()); // 🆕 Inclusão da meta semanal
+            pstmt.setInt(12, profile.getMonthlyGoalSeconds()); // 🆕 Inclusão da meta mensal
 
             pstmt.executeUpdate();
 
@@ -73,12 +79,6 @@ public class SQLiteProfileRepository implements ProfileRepository {
         }
     }
 
-    /**
-     * Atualiza cirurgicamente o XP acumulado do usuário no banco.
-     * Certifique-se de adicionar a assinatura correspondente 'void updateXp(Long
-     * profileId, int newXp);'
-     * na sua interface ProfileRepository.
-     */
     @Override
     public void updateXp(Long profileId, int newXp) {
         String sql = "UPDATE profiles SET xp = ? WHERE id = ?";
@@ -94,6 +94,34 @@ public class SQLiteProfileRepository implements ProfileRepository {
         } catch (SQLException e) {
             logger.error("Erro ao atualizar XP do perfil ID: {}", profileId, e);
             throw new RuntimeException("Falha ao atualizar XP no banco", e);
+        }
+    }
+
+    /**
+     * 🆕 Atualiza cirurgicamente as metas de foco personalizadas pelo usuário.
+     * Útil para ser utilizado quando a tela de configurações alterar os objetivos.
+     */
+    @Override
+    public void updateGoals(Long profileId, int daily, int weekly, int monthly) {
+        String sql = """
+                UPDATE profiles
+                SET daily_goal_seconds = ?, weekly_goal_seconds = ?, monthly_goal_seconds = ?
+                WHERE id = ?
+                """;
+
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, daily);
+            pstmt.setInt(2, weekly);
+            pstmt.setInt(3, monthly);
+            pstmt.setLong(4, profileId);
+
+            pstmt.executeUpdate();
+            logger.info("Metas do perfil ID {} atualizadas com sucesso.", profileId);
+        } catch (SQLException e) {
+            logger.error("Erro ao atualizar metas do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao atualizar metas no banco", e);
         }
     }
 
@@ -151,6 +179,8 @@ public class SQLiteProfileRepository implements ProfileRepository {
     }
 
     private Profile mapResultSetToProfile(ResultSet rs) throws SQLException {
+        // 🆕 Atualizado para ler as novas colunas e passar ao construtor completo do
+        // Profile
         return new Profile(
                 rs.getLong("id"),
                 rs.getString("username"),
@@ -161,7 +191,10 @@ public class SQLiteProfileRepository implements ProfileRepository {
                 rs.getInt("max_streak"),
                 rs.getInt("max_focus_day_seconds"),
                 rs.getInt("total_focus_sessions"),
-                rs.getInt("xp"), // Mapeamento da coluna de XP recuperada do banco
+                rs.getInt("xp"),
+                rs.getInt("daily_goal_seconds"), // 🆕 Mapeamento da coluna
+                rs.getInt("weekly_goal_seconds"), // 🆕 Mapeamento da coluna
+                rs.getInt("monthly_goal_seconds"), // 🆕 Mapeamento da coluna
                 rs.getTimestamp("created_at").toLocalDateTime().withNano(0));
     }
 }
