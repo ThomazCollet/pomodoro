@@ -41,9 +41,6 @@ public class StatsController {
     private static final Logger logger = LoggerFactory.getLogger(StatsController.class);
     private static final String GOAL_LINE_STYLE_CLASS = "goal-baseline";
     private static final String PREMIUM_BAR_STYLE_CLASS = "bar-premium";
-
-    // CORREÇÃO: Nome da classe agora bate com o estilo .premium-star no seu
-    // style.css
     private static final String PREMIUM_STAR_STYLE_CLASS = "premium-star";
 
     @FXML
@@ -61,18 +58,11 @@ public class StatsController {
     private GridPane heatmapGrid;
     @FXML
     private ScrollPane heatmapScrollPane;
+
     @FXML
     private BarChart<String, Number> barChartFocus;
     @FXML
     private CategoryAxis xAxis;
-    /**
-     * Container externo que envolve o BarChart no FXML.
-     * As estrelas premium são adicionadas AQUI em vez de no plotPane interno do
-     * chart. Isso evita o ciclo de clipagem: o BarChart re-aplica o seu clip
-     * interno a cada layoutChildren(), sobrescrevendo qualquer setClip(null).
-     * Como este StackPane não pertence à hierarquia interna do chart, ele nunca
-     * é tocado pelo layoutChildren() do BarChart.
-     */
     @FXML
     private StackPane chartWrapper;
 
@@ -105,11 +95,9 @@ public class StatsController {
 
         try {
             this.currentStats = statsService.getUserStatistics(userProfile);
-
             updateSummaryCards();
             renderHeatmap(currentStats.annualHeatmap());
             syncChartWithSelection();
-
         } catch (Exception e) {
             logger.error("Falha ao renderizar estatísticas: ", e);
         }
@@ -193,150 +181,129 @@ public class StatsController {
         yAxis.setUpperBound(Math.ceil(maxScaleValue * 1.30));
         yAxis.setTickUnit(maxScaleValue > 20 ? 10.0 : 1.0);
 
-        Platform.runLater(() -> {
-            barChartFocus.applyCss();
-            barChartFocus.layout();
+        // Delega a renderização visual complexa para a thread do JavaFX
+        Platform.runLater(() -> renderChartOverlays(targetGoalHours, series, yAxis));
+    }
 
-            Region plotBackground = (Region) barChartFocus.lookup(".chart-plot-background");
+    /**
+     * Renderiza elementos sobrepostos ao gráfico (Linha de Meta e Estrelas de
+     * Gamificação)
+     * após a estabilização do layout pelo JavaFX.
+     */
+    private void renderChartOverlays(double targetGoalHours, XYChart.Series<String, Number> series, NumberAxis yAxis) {
+        barChartFocus.applyCss();
+        barChartFocus.layout();
 
-            if (plotBackground != null && plotBackground.getParent() instanceof Pane plotPane) {
+        Region plotBackground = (Region) barChartFocus.lookup(".chart-plot-background");
 
-                // SOLUÇÃO CRUCIAL 1: Remove o efeito de clip do painel interno do gráfico para
-                // as estrelas poderem "vazar" para cima da linha limite
-                plotPane.setClip(null);
+        if (plotBackground != null && plotBackground.getParent() instanceof Pane plotPane) {
 
-                // Limpa linhas de meta antigas do plotPane (continua funcionando lá)
-                plotPane.getChildren()
-                        .removeIf(node -> node instanceof Line && node.getStyleClass().contains(GOAL_LINE_STYLE_CLASS));
+            // Limpa sobreposições antigas
+            plotPane.getChildren()
+                    .removeIf(node -> node instanceof Line && node.getStyleClass().contains(GOAL_LINE_STYLE_CLASS));
+            chartWrapper.getChildren()
+                    .removeIf(node -> node instanceof Label && node.getStyleClass().contains(PREMIUM_STAR_STYLE_CLASS));
 
-                // Limpa estrelas antigas do chartWrapper (não mais do plotPane)
-                chartWrapper.getChildren()
-                        .removeIf(node -> node instanceof Label
-                                && node.getStyleClass().contains(PREMIUM_STAR_STYLE_CLASS));
+            // Desenha a Linha de Meta
+            double plotHeight = plotBackground.getHeight();
+            if (plotHeight > 0) {
+                double yPosInAxisSpace = yAxis.getDisplayPosition(targetGoalHours);
+                double lineY = yAxis.localToParent(0, yPosInAxisSpace).getY();
 
-                double plotHeight = plotBackground.getHeight();
-                if (plotHeight > 0) {
-                    double yPosInAxisSpace = yAxis.getDisplayPosition(targetGoalHours);
-                    double lineY = yAxis.localToParent(0, yPosInAxisSpace).getY();
+                double plotTop = plotBackground.getLayoutY();
+                double plotBottom = plotTop + plotHeight;
 
-                    double plotTop = plotBackground.getLayoutY();
-                    double plotBottom = plotTop + plotHeight;
-
-                    if (lineY >= plotTop && lineY <= plotBottom) {
-                        Line goalLine = new Line();
-                        goalLine.getStyleClass().add(GOAL_LINE_STYLE_CLASS);
-                        goalLine.setMouseTransparent(true);
-
-                        goalLine.startXProperty().bind(plotBackground.layoutXProperty());
-                        goalLine.endXProperty()
-                                .bind(plotBackground.layoutXProperty().add(plotBackground.widthProperty()));
-                        goalLine.setStartY(lineY);
-                        goalLine.setEndY(lineY);
-
-                        plotPane.getChildren().add(goalLine);
-                    }
-                }
-
-                // --- MOTOR DE ESTRELAS (OVERLAY APPROACH) ---
-                //
-                // POR QUE plotPane NÃO FUNCIONAVA:
-                // O BarChart chama layoutChildren() a cada pulse do JavaFX.
-                // Esse método re-aplica um clip retangular ao plotPane (chartContent) que
-                // delimita a área do gráfico. A sequência de desastre era:
-                // 1. applyCss() + layout() → clip é aplicado ao plotPane
-                // 2. plotPane.setClip(null) → clip é removido
-                // 3. starLabel é adicionada ao plotPane → marca o chart como "dirty"
-                // 4. PRÓXIMO PULSE: layoutChildren() roda novamente → clip é RE-APLICADO
-                // → estrelas desaparecem
-                //
-                // setClip(null) é uma solução temporária que o próprio chart sobrescreve
-                // no frame seguinte, tornando qualquer tentativa inútil.
-                //
-                // SOLUÇÃO: chartWrapper é um StackPane que envolve o BarChart no FXML.
-                // Ele não pertence à hierarquia interna do chart, então o layoutChildren()
-                // do BarChart nunca modifica o seu clip. Estrelas adicionadas aqui são
-                // permanentes e ficam visualmente sobre o chart graças ao z-order do
-                // StackPane (filhos adicionados depois ficam na frente).
-                //
-                // CONVERSÃO DE COORDENADAS:
-                // barNode.localToScene() converte do espaço do barNode → cena (passando
-                // por todos os containers intermediários do chart automaticamente).
-                // chartWrapper.sceneToLocal() converte da cena → espaço do chartWrapper.
-                // O resultado é sempre correto, independente da hierarquia interna do chart.
-                for (XYChart.Data<String, Number> nodeData : series.getData()) {
-                    var barNode = nodeData.getNode();
-                    if (barNode == null)
-                        continue;
-
-                    double barValueHours = nodeData.getYValue().doubleValue();
-                    String barLabel = nodeData.getXValue();
-                    long totalSeconds = (long) (barValueHours * 3600);
-
-                    Tooltip tooltip = new Tooltip(barLabel + " • " + formatDuration(totalSeconds));
-                    tooltip.setShowDelay(Duration.millis(150));
-                    Tooltip.install(barNode, tooltip);
-
-                    if (barValueHours >= targetGoalHours) {
-                        barNode.getStyleClass().add(PREMIUM_BAR_STYLE_CLASS);
-
-                        Label starLabel = new Label("⭐");
-                        starLabel.getStyleClass().add(PREMIUM_STAR_STYLE_CLASS);
-                        starLabel.setMouseTransparent(true);
-
-                        // Adiciona ao chartWrapper (fora do chart), não ao plotPane interno
-                        chartWrapper.getChildren().add(starLabel);
-
-                        // Binding X: centro horizontal do barNode em coordenadas do chartWrapper
-                        starLabel.layoutXProperty().bind(Bindings.createDoubleBinding(
-                                () -> {
-                                    if (barNode.getScene() == null)
-                                        return -9999.0;
-                                    Bounds local = barNode.getBoundsInLocal();
-                                    double midLocalX = (local.getMinX() + local.getMaxX()) / 2.0;
-                                    Point2D inWrapper = chartWrapper.sceneToLocal(
-                                            barNode.localToScene(midLocalX, local.getMinY()));
-                                    return inWrapper.getX() - starLabel.getWidth() / 2.0;
-                                },
-                                barNode.boundsInLocalProperty(),
-                                barNode.localToSceneTransformProperty(),
-                                chartWrapper.localToSceneTransformProperty(),
-                                starLabel.widthProperty()));
-
-                        // Binding Y: topo do barNode em coordenadas do chartWrapper,
-                        // recuado de starHeight + 4px de respiro acima da barra
-                        starLabel.layoutYProperty().bind(Bindings.createDoubleBinding(
-                                () -> {
-                                    if (barNode.getScene() == null)
-                                        return -9999.0;
-                                    Bounds local = barNode.getBoundsInLocal();
-                                    Point2D topInWrapper = chartWrapper.sceneToLocal(
-                                            barNode.localToScene(local.getMinX(), local.getMinY()));
-                                    return topInWrapper.getY() - starLabel.getHeight() - 4.0;
-                                },
-                                barNode.boundsInLocalProperty(),
-                                barNode.localToSceneTransformProperty(),
-                                chartWrapper.localToSceneTransformProperty(),
-                                starLabel.heightProperty()));
-                    }
+                if (lineY >= plotTop && lineY <= plotBottom) {
+                    Line goalLine = new Line();
+                    goalLine.getStyleClass().add(GOAL_LINE_STYLE_CLASS);
+                    goalLine.setMouseTransparent(true);
+                    goalLine.startXProperty().bind(plotBackground.layoutXProperty());
+                    goalLine.endXProperty().bind(plotBackground.layoutXProperty().add(plotBackground.widthProperty()));
+                    goalLine.setStartY(lineY);
+                    goalLine.setEndY(lineY);
+                    plotPane.getChildren().add(goalLine);
                 }
             }
-        });
+
+            // Gamificação e Tooltips
+            for (XYChart.Data<String, Number> nodeData : series.getData()) {
+                var barNode = nodeData.getNode();
+                if (barNode == null)
+                    continue;
+
+                double barValueHours = nodeData.getYValue().doubleValue();
+                String barLabel = nodeData.getXValue();
+                long totalSeconds = (long) (barValueHours * 3600);
+
+                Tooltip tooltip = new Tooltip(barLabel + " • " + formatDuration(totalSeconds));
+                tooltip.setShowDelay(Duration.millis(150));
+                Tooltip.install(barNode, tooltip);
+
+                // ...
+                if (barValueHours >= targetGoalHours) {
+                    barNode.getStyleClass().add(PREMIUM_BAR_STYLE_CLASS);
+
+                    Label starLabel = new Label("⭐");
+                    starLabel.getStyleClass().add(PREMIUM_STAR_STYLE_CLASS);
+                    starLabel.setMouseTransparent(true);
+
+                    // 🔥 A MÁGICA AQUI:
+                    // Mantemos managed = true para o JavaFX dar o tamanho certo (16px),
+                    // mas fixamos a origem dele no canto superior esquerdo (0,0) do wrapper.
+                    StackPane.setAlignment(starLabel, javafx.geometry.Pos.TOP_LEFT);
+                    chartWrapper.getChildren().add(starLabel);
+
+                    // USAMOS TRANSLATEX / TRANSLATEY (Movimentação visual) em vez de LayoutX/Y.
+                    // Assim o StackPane não briga com nossos cálculos!
+                    starLabel.translateXProperty().bind(Bindings.createDoubleBinding(
+                            () -> {
+                                if (barNode.getScene() == null)
+                                    return -9999.0;
+                                Bounds local = barNode.getBoundsInLocal();
+                                double midLocalX = (local.getMinX() + local.getMaxX()) / 2.0;
+                                Point2D inWrapper = chartWrapper.sceneToLocal(
+                                        barNode.localToScene(midLocalX, local.getMinY()));
+
+                                // starLabel.getWidth() agora funciona perfeitamente!
+                                return inWrapper.getX() - (starLabel.getWidth() / 2.0);
+                            },
+                            barNode.boundsInLocalProperty(),
+                            barNode.localToSceneTransformProperty(),
+                            chartWrapper.localToSceneTransformProperty(),
+                            starLabel.widthProperty()));
+
+                    starLabel.translateYProperty().bind(Bindings.createDoubleBinding(
+                            () -> {
+                                if (barNode.getScene() == null)
+                                    return -9999.0;
+                                Bounds local = barNode.getBoundsInLocal();
+                                Point2D topInWrapper = chartWrapper.sceneToLocal(
+                                        barNode.localToScene(local.getMinX(), local.getMinY()));
+
+                                // starLabel.getHeight() agora é calculado corretamente!
+                                return topInWrapper.getY() - starLabel.getHeight() - 4.0;
+                            },
+                            barNode.boundsInLocalProperty(),
+                            barNode.localToSceneTransformProperty(),
+                            chartWrapper.localToSceneTransformProperty(),
+                            starLabel.heightProperty()));
+                }
+            }
+        }
     }
 
     private double resolveTargetGoalHours() {
-        if (userProfile == null || periodGroup == null) {
+        if (userProfile == null || periodGroup == null)
             return 1.5;
-        }
 
         ToggleButton selected = (ToggleButton) periodGroup.getSelectedToggle();
 
-        if (selected == btnLast7Days) {
+        if (selected == btnLast7Days)
             return userProfile.getDailyGoalSeconds() / 3600.0;
-        } else if (selected == btnLast30Days) {
+        if (selected == btnLast30Days)
             return userProfile.getWeeklyGoalSeconds() / 3600.0;
-        } else if (selected == btnLastYear) {
+        if (selected == btnLastYear)
             return userProfile.getMonthlyGoalSeconds() / 3600.0;
-        }
 
         return 1.5;
     }
@@ -352,9 +319,9 @@ public class StatsController {
                 if (key != null && value != null) {
                     try {
                         String dateStr = key.toString();
-                        if (dateStr.length() >= 10) {
+                        if (dateStr.length() >= 10)
                             dateStr = dateStr.substring(0, 10);
-                        }
+
                         long secs = (long) Double.parseDouble(value.toString());
                         standardizedData.merge(dateStr, secs, Long::sum);
                     } catch (Exception e) {

@@ -326,17 +326,22 @@
     -fx-cursor: hand;
 }
 
-/* Estrela flutuante estável adaptada para o Overlay do chartWrapper */
+/* Estrela flutuante (Gamificação) adaptada para o Overlay do chartWrapper */
 .premium-star {
-    -fx-font-size: 16px;
-    -fx-text-fill: #f9e2af !important;
-    /* Yellow do Catppuccin Macchiato */
+    /* Tamanho ampliado para dar o peso e destaque ideais de uma "recompensa" */
+    -fx-font-size: 22px;
 
-    /* Garante alinhamento absoluto para os cálculos do Binding */
+    /* Yellow do Catppuccin Macchiato */
+    -fx-text-fill: #f9e2af !important;
+
+    /* Efeito de brilho (Glow/Neon) usando o mesmo amarelo Catppuccin com 60% de opacidade */
+    -fx-effect: dropshadow(three-pass-box, rgba(249, 226, 175, 0.6), 8, 0.4, 0, 0);
+
+    /* Garante alinhamento absoluto interno para o cálculo matemático dos Bindings */
     -fx-alignment: center;
     -fx-text-alignment: center;
 
-    /* Previne que o layout do StackPane altere o tamanho do rótulo da estrela */
+    /* TRAVAS DE SEGURANÇA: Previne que o layout do StackPane zere ou estique o rótulo */
     -fx-min-width: -Infinity;
     -fx-min-height: -Infinity;
     -fx-max-width: -Infinity;
