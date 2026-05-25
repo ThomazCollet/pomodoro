@@ -208,6 +208,20 @@
     -fx-background-radius: 8;
 }
 
+/* Hover no botão padrão (não selecionado) - Efeito Surface1 sutil */
+.toggle-group-container .toggle-button:hover {
+    -fx-background-color: #45475a;
+    -fx-text-fill: #f5e0dc;
+    /* Rosewater */
+}
+
+/* Hover no botão que JÁ está selecionado */
+.toggle-group-container .toggle-button:selected:hover {
+    -fx-background-color: #b4befe;
+    /* Lavender */
+    -fx-text-fill: #11111b;
+}
+
 /* --- Gráficos e Componentes --- */
 .chart-container {
     -fx-background-color: #181825;
@@ -221,14 +235,6 @@
     -fx-text-fill: #bac2de;
     -fx-font-weight: bold;
     -fx-letter-spacing: 1px;
-}
-
-.chart-bar {
-    -fx-bar-fill: #89b4fa;
-}
-
-.axis {
-    -fx-tick-label-fill: #a6adc8;
 }
 
 .axis-label {
@@ -252,7 +258,7 @@
 
 /* --- Melhorias de Polimento para o BarChart --- */
 
-/* 1. Remover as linhas de grade de fundo (essencial para o look clean) */
+/* 1. Remover as linhas de grade de fundo */
 .chart-vertical-grid-lines,
 .chart-horizontal-grid-lines {
     -fx-stroke: transparent;
@@ -268,16 +274,15 @@
     -fx-bar-fill: #89b4fa;
     /* Blue */
     -fx-background-radius: 6 6 0 0;
-    /* Arredonda só o topo */
 }
 
 .chart-bar:hover {
     -fx-bar-fill: #b4befe;
-    /* Um tom de azul mais claro (Lavender) no hover */
+    /* Lavender */
     -fx-cursor: hand;
 }
 
-/* 4. Estilizar as linhas dos eixos para não ficarem "apagadas" */
+/* 4. Estilizar as linhas dos eixos */
 .axis {
     -fx-tick-label-fill: #a6adc8;
     -fx-font-size: 10px;
@@ -286,13 +291,56 @@
 .axis:left {
     -fx-border-color: #313244;
     -fx-border-width: 0 1 0 0;
-    /* Linha vertical sutil separando o eixo Y */
 }
 
 .axis:bottom {
     -fx-border-color: #313244;
     -fx-border-width: 1 0 0 0;
-    /* Linha horizontal sutil separando o eixo X */
+}
+
+/* ==========================================================================
+   🎯 Customização da Target Line e Barras Premium (Gamificação)
+   ========================================================================== */
+
+/* Estilização da Linha de Meta (Target Line) */
+.goal-baseline {
+    -fx-stroke: #eed49f;
+    /* Yellow */
+    -fx-stroke-width: 2px;
+    -fx-stroke-dash-array: 6 5;
+}
+
+/* Estado Premium: Barra que alcançou ou ultrapassou a meta */
+.chart-bar.bar-premium {
+    -fx-bar-fill: #74c7ec;
+    /* Sky Blue */
+    -fx-background-radius: 6 6 0 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(116, 199, 236, 0.25), 10, 0, 0, 0);
+    /* Glow um pouco mais nítido */
+}
+
+/* Hover específico para a barra premiada */
+.chart-bar.bar-premium:hover {
+    -fx-bar-fill: #94e2d5;
+    /* Teal */
+    -fx-cursor: hand;
+}
+
+/* Estrela flutuante estável adaptada para o Overlay do chartWrapper */
+.premium-star {
+    -fx-font-size: 16px;
+    -fx-text-fill: #f9e2af !important;
+    /* Yellow do Catppuccin Macchiato */
+
+    /* Garante alinhamento absoluto para os cálculos do Binding */
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+
+    /* Previne que o layout do StackPane altere o tamanho do rótulo da estrela */
+    -fx-min-width: -Infinity;
+    -fx-min-height: -Infinity;
+    -fx-max-width: -Infinity;
+    -fx-max-height: -Infinity;
 }
 
 /* CORREÇÃO: Efeitos de Hover restaurados nos botões do Timer */

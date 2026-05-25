@@ -34,7 +34,7 @@
             <VBox styleClass="stats-card, card-accent-mauve" HBox.hgrow="ALWAYS">
                 <Label styleClass="stat-card-title" text="ESTA SEMANA" />
                 <Label fx:id="lblFocusWeek" styleClass="stat-card-value" text="28h 45m" />
-                <Label styleClass="stat-card-record" text="Melhor Semana: 32h" />
+                <Label fx:id="lblRecordToday" styleClass="stat-card-record" text="Melhor Semana: 32h" />
             </VBox>
         </HBox>
 
@@ -58,24 +58,34 @@
         </VBox>
 
         <VBox spacing="15.0" styleClass="chart-container">
-            <HBox alignment="CENTER_LEFT" spacing="20.0">
-                <Label styleClass="section-title" text="DISTRIBUIÇÃO DE TEMPO" />
-                <Region HBox.hgrow="ALWAYS" />
-                <HBox styleClass="toggle-group-container">
+            <StackPane>
+                <Label styleClass="section-title" text="DISTRIBUIÇÃO DE TEMPO" StackPane.alignment="CENTER_LEFT" />
+                
+                <HBox styleClass="toggle-group-container" maxWidth="-Infinity" StackPane.alignment="CENTER_RIGHT">
                     <ToggleButton fx:id="btnLast7Days" selected="true" styleClass="toggle-left" text="7 dias" />
                     <ToggleButton fx:id="btnLast30Days" styleClass="toggle-center" text="8 semanas" />
                     <ToggleButton fx:id="btnLastYear" styleClass="toggle-right" text="12 meses" />
                 </HBox>
-            </HBox>
+            </StackPane>
             
-            <BarChart fx:id="barChartFocus" animated="true" legendVisible="false" prefHeight="300.0">
-                <xAxis>
-                    <CategoryAxis side="BOTTOM" fx:id="xAxis" />
-                </xAxis>
-                <yAxis>
-                    <NumberAxis label="Horas" side="LEFT" />
-                </yAxis>
-            </BarChart>
+            <!--
+                chartWrapper: container externo controlado por NÓS, não pelo BarChart.
+                As estrelas premium são adicionadas aqui, fora do ciclo interno de
+                clipagem do chart. O BarChart não consegue remover nem modificar o clip
+                deste StackPane porque ele não pertence à hierarquia interna do chart.
+            -->
+            <StackPane fx:id="chartWrapper" VBox.vgrow="ALWAYS">
+                <BarChart fx:id="barChartFocus" animated="false" legendVisible="false"
+                          prefHeight="300.0" pickOnBounds="false"
+                          maxWidth="Infinity" maxHeight="Infinity">
+                    <xAxis>
+                        <CategoryAxis side="BOTTOM" fx:id="xAxis" />
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="Horas" side="LEFT" />
+                    </yAxis>
+                </BarChart>
+            </StackPane>
         </VBox>
         
         <HBox spacing="20.0">

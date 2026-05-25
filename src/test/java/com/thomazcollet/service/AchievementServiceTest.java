@@ -78,8 +78,6 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve pular a validação se a conquista já foi desbloqueada previamente (Fail-Fast)")
     void shouldSkipValidationWhenAchievementIsAlreadyUnlocked() {
-        // CORRIGIDO: key renomeada de focus_daily_1h_hours → focus_daily_2h_hours
-        // conforme planilha (Bronze = 2 horas, não 1 hora)
         mockRepository.simulateAlreadyUnlocked("focus_daily_2h_hours");
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
 
@@ -92,8 +90,6 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve desbloquear e salvar a conquista de Bronze de foco diário se o critério for atingido")
     void shouldUnlockAndSaveAchievementWhenCriteriaIsMet() {
-        // CORRIGIDO: key e conditionValue atualizados para o novo Bronze de foco diário
-        // (2h/120min)
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
 
         achievementService.checkAndUnlockNewAchievements(profileId);
@@ -111,8 +107,6 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve desbloquear Bronze e Prata de foco diário em cadeia quando ambos os critérios forem atingidos")
     void shouldUnlockMultipleAchievementsInChain() {
-        // CORRIGIDO: keys atualizadas — Bronze=2h(120min), Prata=3h(180min)
-        // As keys antigas focus_daily_1h e focus_daily_2h não existem mais no Service.
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_2h_hours", 120);
         mockDailyFocusEvaluator.setTargetKeyAndValue("focus_daily_3h_hours", 180);
 
@@ -175,7 +169,7 @@ class AchievementServiceTest {
     // ==========================================
 
     @Test
-    @DisplayName("Deve desbloquear conquista de Desafio de Bronze ao completar um desafio de constância de 7 dias")
+    @DisplayName("Deve desbloquear conquista de Desafio de Bronze ao estabelecer um desafio de constância de 7 dias")
     void shouldUnlockChallengeConstancyWhenSevenDaysCompleted() {
         mockChallengeEvaluator.setTargetKeyAndValue("challenge_constancy_days_7", 7);
         mockRepository.simulateAlreadyUnlocked("challenge_perfect_days_5");
@@ -184,6 +178,8 @@ class AchievementServiceTest {
         achievementService.checkAndUnlockNewAchievements(profileId);
 
         List<Achievement> saved = mockRepository.getSavedAchievements();
+
+        // 🛠️ CORREÇÃO: Linha errada removida daqui!
         assertFalse(saved.isEmpty(), "Deveria ter salvo a conquista de desafio pendente");
         assertEquals("challenge_constancy_days_7", saved.get(0).getAchievementKey());
     }
@@ -208,10 +204,9 @@ class AchievementServiceTest {
     // ==========================================
 
     @Test
-    @DisplayName("Deve desbloquear meta-conquista de Bronze ao atingir o total de 5 conquistas normais")
+    @DisplayName("Deve desbloquear meta-conquista de Bronze ao atingir o total de 5 conquests normais")
     void shouldUnlockMetaTotalAchievementsWhenCountHitsFive() {
         mockAchievementsEvaluator.setTargetKeyAndValue("meta_total_5", 5);
-        // CORRIGIDO: key renomeada de meta_first_gold → meta_gold_count_1
         mockRepository.simulateAlreadyUnlocked("meta_gold_count_1");
         mockRepository.simulateAlreadyUnlocked("meta_total_15");
         mockRepository.simulateAlreadyUnlocked("meta_total_30");
@@ -226,8 +221,6 @@ class AchievementServiceTest {
     @Test
     @DisplayName("Deve desbloquear meta-conquista de Bronze da trilha de Ouros ao obter a primeira conquista ouro")
     void shouldUnlockMetaGoldCountBronzeWhenFirstGoldIsObtained() {
-        // Teste novo: cobre a trilha meta_gold_count_X que substituiu
-        // meta_first_gold/platinum
         mockAchievementsEvaluator.setTargetKeyAndValue("meta_gold_count_1", 1);
         mockRepository.simulateAlreadyUnlocked("meta_gold_count_5");
         mockRepository.simulateAlreadyUnlocked("meta_gold_count_10");
@@ -303,17 +296,22 @@ class AchievementServiceTest {
         @Override
         public void updateStats(Long profileId, int maxStreak, int maxFocusDaySeconds, int totalFocusSessions) {
         }
+
+        // 🆕 SOLUÇÃO: Implementação do novo contrato adicionado ao ProfileRepository
+        @Override
+        public void updateGoals(Long profileId, int dailySeconds, int weeklySeconds, int monthlySeconds) {
+            // Comportamento vazio seguro (noop) apenas para satisfazer as regras de
+            // compilação do teste
+        }
     }
 
     private static class MockAchievementRepository implements AchievementRepository {
         private final List<Achievement> savedAchievements = new ArrayList<>();
         private final Set<String> unlockedKeys = new HashSet<>();
+        private final List<Achievement> newlySaved = new ArrayList<>();
 
         public void simulateAlreadyUnlocked(String key) {
             unlockedKeys.add(key);
-            // Simula um objeto Achievement salvo com tier inferido pela chave,
-            // necessário para que countByProfileAndTier e findByProfileId funcionem
-            // corretamente nos evaluators que consultam o repositório em memória.
             Achievement fake = new Achievement();
             fake.setAchievementKey(key);
             if (key.contains("platinum") || key.endsWith("_triple")) {
@@ -329,15 +327,8 @@ class AchievementServiceTest {
         }
 
         public List<Achievement> getSavedAchievements() {
-            // Retorna apenas as conquistas efetivamente salvas durante o teste,
-            // excluindo as pré-populadas por simulateAlreadyUnlocked.
-            // Para isso, rastreamos separadamente o que foi salvo via save().
             return newlySaved;
         }
-
-        // Lista separada para distinguir o que foi "salvo durante o teste"
-        // do que foi "pré-populado como já desbloqueado"
-        private final List<Achievement> newlySaved = new ArrayList<>();
 
         @Override
         public void save(Achievement achievement) {
@@ -368,9 +359,6 @@ class AchievementServiceTest {
                     .count();
         }
 
-        // ADICIONADO: implementação do novo método da interface.
-        // Retorna o mesmo valor que o SQLiteAchievementRepository usa em produção,
-        // garantindo consistência nos testes que validam meta_all_gold.
         @Override
         public int countTotalDefinedByTier(String tier) {
             return switch (tier.toUpperCase()) {
