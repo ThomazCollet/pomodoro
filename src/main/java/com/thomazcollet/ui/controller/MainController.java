@@ -7,6 +7,7 @@ import com.thomazcollet.infra.database.SQLiteChallengeRepository;
 import com.thomazcollet.infra.database.SQLiteFocusSessionRepository;
 import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.infra.database.SQLiteAchievementRepository;
+import com.thomazcollet.infra.database.SQLiteStreakRecordRepository; // Novo Import
 import com.thomazcollet.service.*;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
@@ -64,7 +65,7 @@ public class MainController {
     private StatsService statsService;
     private ChallengeService challengeService;
     private AchievementService achievementService;
-    private AudioService audioService; // Nova dependência de serviço gerenciador de áudio
+    private AudioService audioService;
 
     private AchievementRepository achievementRepository;
 
@@ -79,8 +80,6 @@ public class MainController {
         initServices();
         setupAvatar();
         setupNavigation();
-
-        // Carregamento inicial
         loadTimerView();
     }
 
@@ -89,17 +88,21 @@ public class MainController {
             var sessionRepository = new SQLiteFocusSessionRepository();
             var profileRepository = new SQLiteProfileRepository();
             var challengeRepository = new SQLiteChallengeRepository();
+            var streakRepository = new SQLiteStreakRecordRepository(); // 1. Nova Instanciação
             this.achievementRepository = new SQLiteAchievementRepository();
 
             this.focusSessionService = new FocusSessionService(sessionRepository, profileRepository);
             this.profileService = new ProfileService(profileRepository);
-            this.statsService = new StatsService(sessionRepository, profileRepository);
+
+            // 2. Construtor Atualizado com o novo repositório de streaks
+            this.statsService = new StatsService(sessionRepository, profileRepository, streakRepository);
+
             this.challengeService = new ChallengeService(challengeRepository, profileRepository);
             this.achievementService = new AchievementService(achievementRepository, profileRepository, List.of());
-            this.audioService = new AudioService(); // Inicialização limpa e única do serviço de áudio
+            this.audioService = new AudioService();
 
             profileService.ensureProfileExists();
-            logger.info("Serviços de infraestrutura e áudio inicializados com sucesso.");
+            logger.info("Serviços de infraestrutura, streaks e áudio inicializados com sucesso.");
         } catch (Exception e) {
             logger.error("Erro crítico ao inicializar serviços core: ", e);
         }
@@ -119,7 +122,6 @@ public class MainController {
         avatarCircle.setFill(Paint.valueOf(hexColor));
         initialLabel.setText(profileService.getProfileInitial());
 
-        // Constrói o hex badge da sidebar e injeta no avatarContainer
         Profile activeProfile = profileService.getActiveProfile();
         RankingType currentRank = RankingType.fromXp(activeProfile.getXp());
 
@@ -140,8 +142,6 @@ public class MainController {
 
                 if (pomodoroService == null) {
                     Profile activeProfile = profileService.getActiveProfile();
-
-                    // Instanciação atualizada com a passagem obrigatória do audioService
                     this.pomodoroService = new PomodoroService(
                             activeProfile,
                             timerController,
@@ -177,7 +177,6 @@ public class MainController {
     private void loadChallengesView() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ChallengeView.fxml"));
-
             loader.setControllerFactory(param -> {
                 if (param == ChallengeController.class) {
                     return new ChallengeController(challengeService);
@@ -217,7 +216,6 @@ public class MainController {
         btnStats.getStyleClass().remove("nav-button-active");
         btnChallenges.getStyleClass().remove("nav-button-active");
         btnAchievements.getStyleClass().remove("nav-button-active");
-
         activeBtn.getStyleClass().add("nav-button-active");
     }
 
@@ -230,7 +228,6 @@ public class MainController {
             profilePopup.hide();
             return;
         }
-
         if (System.currentTimeMillis() - lastPopupCloseTime < 150)
             return;
         showProfilePopover();
@@ -262,6 +259,14 @@ public class MainController {
         Profile profile = profileService.getActiveProfile();
         RankingType currentRank = RankingType.fromXp(profile.getXp());
 
+        // 3. Busca as estatísticas em tempo real para extrair a streak atual sem bugs
+        int currentStreak = 0;
+        try {
+            currentStreak = statsService.getUserStatistics(profile).currentStreak();
+        } catch (Exception e) {
+            logger.error("Erro ao carregar a streak atual para o popover", e);
+        }
+
         StackPane headerAvatar = new StackPane();
         Circle bigCircle = new Circle(40, avatarCircle.getFill());
         Label bigInitial = new Label(profileService.getProfileInitial());
@@ -271,7 +276,6 @@ public class MainController {
         Label lblName = new Label(profile.getUsername());
         lblName.getStyleClass().add("popover-name");
 
-        // Badge hexagonal de rank para o popup
         VBox rankBadgeContainer = new VBox(6);
         rankBadgeContainer.setAlignment(Pos.CENTER);
 
@@ -288,8 +292,10 @@ public class MainController {
         grid.setHgap(20);
         grid.setVgap(12);
 
-        addStat(grid, "Streak", "🔥 " + profile.getMaxStreak() + "d", 0, 0);
-        addStat(grid, "Recorde streak 🔥", profile.getMaxStreak() + "d", 1, 0);
+        // 4. Exibição corrigida e diferenciada de Streak Ativa vs Recorde Histórico
+        // Geral
+        addStat(grid, "Streak Atual", "🔥 " + currentStreak + "d", 0, 0);
+        addStat(grid, "Recorde Máximo", "🏆 " + profile.getMaxStreak() + "d", 1, 0);
         addStat(grid, "Foco Total", profile.getTotalFocusSessions() + " ses.", 0, 1);
         addStat(grid, "Experiência", profile.getXp() + " XP", 1, 1);
 
@@ -375,9 +381,9 @@ public class MainController {
         }
 
         Label lblRank = new Label(rank.name());
-        lblRank.setStyle(String.format(
-                "-fx-font-size: %.0fpx; -fx-font-weight: bold; -fx-text-fill: %s; -fx-padding: 0;",
-                fontSize, letterColor));
+        lblRank.setStyle(
+                String.format("-fx-font-size: %.0fpx; -fx-font-weight: bold; -fx-text-fill: %s; -fx-padding: 0;",
+                        fontSize, letterColor));
         lblRank.setMouseTransparent(true);
 
         StackPane container = new StackPane(hex, lblRank);
@@ -394,14 +400,12 @@ public class MainController {
             if (accent != null) {
                 Label lblAccent = new Label(accent);
                 String accentColor = rank == RankingType.SS ? "#94a3b8" : "#fbbf24";
-                lblAccent.setStyle(String.format(
-                        "-fx-font-size: 13px; -fx-text-fill: %s; -fx-padding: 0 0 %dpx 0;",
+                lblAccent.setStyle(String.format("-fx-font-size: 13px; -fx-text-fill: %s; -fx-padding: 0 0 %dpx 0;",
                         accentColor, (int) (radius * 1.75)));
                 lblAccent.setMouseTransparent(true);
                 container.getChildren().add(lblAccent);
             }
         }
-
         return container;
     }
 
@@ -414,12 +418,6 @@ public class MainController {
         lblVal.getStyleClass().add("stat-value");
         box.getChildren().addAll(lblTitle, lblVal);
         grid.add(box, col, row);
-    }
-
-    private String formatTime(int totalSeconds) {
-        int hours = totalSeconds / 3600;
-        int minutes = (totalSeconds % 3600) / 60;
-        return String.format("%02dh %02dm", hours, minutes);
     }
 
     private void playEntranceAnimation(VBox node) {

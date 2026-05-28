@@ -5,6 +5,7 @@ import com.thomazcollet.domain.exception.StatisticsComputationException;
 import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.repository.FocusSessionRepository;
 import com.thomazcollet.domain.repository.ProfileRepository;
+import com.thomazcollet.domain.repository.StreakRecordRepository; // Novo Import
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,12 +31,17 @@ class StatsServiceTest {
         @Mock
         private ProfileRepository profileRepository;
 
+        @Mock
+        private StreakRecordRepository streakRepository; // 1. Novo Mock adicionado
+
         private Profile testProfile;
 
         @BeforeEach
         void setUp() {
                 MockitoAnnotations.openMocks(this);
-                statsService = new StatsService(sessionRepository, profileRepository);
+
+                // 2. Construtor atualizado com a nova dependência de streaks
+                statsService = new StatsService(sessionRepository, profileRepository, streakRepository);
 
                 testProfile = new Profile();
                 testProfile.setId(1L);
@@ -43,18 +49,21 @@ class StatsServiceTest {
                 testProfile.setMaxStreak(5);
                 testProfile.setMaxFocusDaySeconds(7200); // 2h
 
-                // Configuração segura padrão para evitar NullPointerException com os novos
-                // métodos de pódio
+                // Configuração segura padrão para evitar NullPointerException com os
+                // repositórios
                 when(sessionRepository.getTop3DailyFocusRecords(anyLong())).thenReturn(Collections.emptyList());
                 when(sessionRepository.getTop3MonthlyFocusRecords(anyLong())).thenReturn(Collections.emptyList());
+
+                // 3. Comportamento seguro padrão para o repositório de streaks nos testes
+                // existentes
+                when(streakRepository.countRecords(anyLong())).thenReturn(0);
+                when(streakRepository.getTopStreaks(anyLong(), anyInt())).thenReturn(Collections.emptyList());
         }
 
         @Test
         @DisplayName("Deve gerar distribuição semanal com intervalo de datas profissional")
         void shouldGenerateWeeklyDistributionWithDateIntervals() {
                 // GIVEN
-                // Isolamos o comportamento usando leniency ou respostas controladas para o
-                // método específico
                 when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
                                 .thenReturn(3600L, 3600L, 3600L, 3600L, 0L);
 
@@ -89,7 +98,7 @@ class StatsServiceTest {
         }
 
         @Test
-        @DisplayName("Deve calcular estatísticas corretamente e formatar durações")
+        @DisplayName("Deve calcular estatísticas correctamente e formatar durações")
         void shouldCalculateStatisticsAndFormatDurations() {
                 // GIVEN
                 when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
@@ -173,8 +182,10 @@ class StatsServiceTest {
                 // THEN
                 assertNotNull(stats.dailyPodium());
                 assertEquals(2, stats.dailyPodium().size());
-                assertEquals("03h 00m — 27/Mai", stats.dailyPodium().get(0)); // Corrigido para .get(0)
-                assertEquals("02h 02m — 14/Mai", stats.dailyPodium().get(1));
+
+                // AJUSTADO: Agora espera o ano que o serviço de fato adiciona
+                assertEquals("03h 00m — 27/Mai/2026", stats.dailyPodium().get(0));
+                assertEquals("02h 02m — 14/Mai/2026", stats.dailyPodium().get(1));
         }
 
         @Test
@@ -191,7 +202,7 @@ class StatsServiceTest {
                 FocusStatistics stats = statsService.getUserStatistics(testProfile);
 
                 // THEN
-                assertNotNull(stats.monthlyPodium());
+                assertNotNull(stats.monthlyDistribution());
                 assertEquals(1, stats.monthlyPodium().size());
                 assertEquals("25h 00m — MAI/2026", stats.monthlyPodium().get(0));
         }
