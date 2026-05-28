@@ -11,134 +11,188 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.mockito.AdditionalMatchers.gt;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 class StatsServiceTest {
 
-    private StatsService statsService;
+        private StatsService statsService;
 
-    @Mock
-    private FocusSessionRepository sessionRepository;
+        @Mock
+        private FocusSessionRepository sessionRepository;
 
-    @Mock
-    private ProfileRepository profileRepository;
+        @Mock
+        private ProfileRepository profileRepository;
 
-    private Profile testProfile;
+        private Profile testProfile;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        statsService = new StatsService(sessionRepository, profileRepository);
+        @BeforeEach
+        void setUp() {
+                MockitoAnnotations.openMocks(this);
+                statsService = new StatsService(sessionRepository, profileRepository);
 
-        testProfile = new Profile();
-        testProfile.setId(1L);
-        testProfile.setUsername("Thomaz");
-        testProfile.setMaxStreak(5);
-        testProfile.setMaxFocusDaySeconds(7200); // 2h
-    }
+                testProfile = new Profile();
+                testProfile.setId(1L);
+                testProfile.setUsername("Thomaz");
+                testProfile.setMaxStreak(5);
+                testProfile.setMaxFocusDaySeconds(7200); // 2h
 
-    @Test
-    @DisplayName("Deve gerar distribuição semanal com intervalo de datas profissional")
-    void shouldGenerateWeeklyDistributionWithDateIntervals() {
-        // GIVEN
-        // Retorna 3600L para as primeiras chamadas (hoje, semana e distribuições)
-        // E retorna 0L logo em seguida para quebrar o loop do streak e evitar o loop
-        // infinito
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(3600L, 3600L, 3600L, 3600L, 0L);
+                // Configuração segura padrão para evitar NullPointerException com os novos
+                // métodos de pódio
+                when(sessionRepository.getTop3DailyFocusRecords(anyLong())).thenReturn(Collections.emptyList());
+                when(sessionRepository.getTop3MonthlyFocusRecords(anyLong())).thenReturn(Collections.emptyList());
+        }
 
-        // WHEN
-        Map<String, Double> weekly = statsService.getUserStatistics(testProfile).weeklyDistribution();
+        @Test
+        @DisplayName("Deve gerar distribuição semanal com intervalo de datas profissional")
+        void shouldGenerateWeeklyDistributionWithDateIntervals() {
+                // GIVEN
+                // Isolamos o comportamento usando leniency ou respostas controladas para o
+                // método específico
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenReturn(3600L, 3600L, 3600L, 3600L, 0L);
 
-        // THEN
-        assertNotNull(weekly);
-        assertEquals(8, weekly.size());
+                // WHEN
+                Map<String, Double> weekly = statsService.getUserStatistics(testProfile).weeklyDistribution();
 
-        String firstLabel = weekly.keySet().iterator().next();
-        assertTrue(firstLabel.matches("\\d{2}/\\d{2} - \\d{2}/\\d{2}"),
-                "A label semanal deve ser um intervalo de datas profissional: " + firstLabel);
-    }
+                // THEN
+                assertNotNull(weekly);
+                assertEquals(8, weekly.size());
 
-    @Test
-    @DisplayName("Deve gerar distribuição anual fixa começando em JANEIRO")
-    void shouldGenerateAnnualDistributionWithTwelveMonths() {
-        // GIVEN
-        // O stubbing precisa cobrir as chamadas dos cards + as distribuições
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(0L);
+                String firstLabel = weekly.keySet().iterator().next();
+                assertTrue(firstLabel.matches("\\d{2}/\\d{2} - \\d{2}/\\d{2}"),
+                                "A label semanal deve ser um intervalo de datas profissional: " + firstLabel);
+        }
 
-        // WHEN
-        Map<String, Double> monthly = statsService.getUserStatistics(testProfile).monthlyDistribution();
+        @Test
+        @DisplayName("Deve gerar distribuição anual fixa começando em JANEIRO")
+        void shouldGenerateAnnualDistributionWithTwelveMonths() {
+                // GIVEN
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenReturn(0L);
 
-        // THEN
-        assertEquals(12, monthly.size(), "Deve conter exatamente 12 meses");
+                // WHEN
+                Map<String, Double> monthly = statsService.getUserStatistics(testProfile).monthlyDistribution();
 
-        // VERIFICAÇÃO DE CICLO FIXO:
-        String firstMonth = monthly.keySet().iterator().next();
-        assertEquals("JAN", firstMonth, "O gráfico anual fixo deve obrigatoriamente começar em JAN");
+                // THEN
+                assertEquals(12, monthly.size(), "Deve conter exatamente 12 meses");
 
-        // Verifica o padrão visual (ex: MAI)
-        assertTrue(firstMonth.matches("[A-Z]{3}"), "A label deve ser MAIÚSCULA e sem ponto: " + firstMonth);
-    }
+                String firstMonth = monthly.keySet().iterator().next();
+                assertEquals("JAN", firstMonth, "O gráfico anual fixo deve obrigatoriamente começar em JAN");
+                assertTrue(firstMonth.matches("[A-Z]{3}"), "A label deve ser MAIÚSCULA e sem ponto: " + firstMonth);
+        }
 
-    @Test
-    @DisplayName("Deve calcular estatísticas corretamente e formatar durações")
-    void shouldCalculateStatisticsAndFormatDurations() {
-        // Ajustado para garantir que o Mockito tenha respostas suficientes para todos
-        // os métodos internos
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(3600L) // Hoje
-                .thenReturn(18000L) // Semana
-                .thenReturn(0L); // Quebra streak inicial
+        @Test
+        @DisplayName("Deve calcular estatísticas corretamente e formatar durações")
+        void shouldCalculateStatisticsAndFormatDurations() {
+                // GIVEN
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenReturn(3600L) // Hoje
+                                .thenReturn(18000L) // Semana
+                                .thenReturn(0L); // Quebra streak inicial
 
-        FocusStatistics stats = statsService.getUserStatistics(testProfile);
+                // WHEN
+                FocusStatistics stats = statsService.getUserStatistics(testProfile);
 
-        assertAll(
-                () -> assertEquals("01h 00m", stats.timeToday()),
-                () -> assertEquals("05h 00m", stats.timeThisWeek()),
-                () -> assertNotNull(stats.monthlyDistribution()),
-                () -> assertEquals(12, stats.monthlyDistribution().size()));
-    }
+                // THEN
+                assertAll(
+                                () -> assertEquals("01h 00m", stats.timeToday()),
+                                () -> assertEquals("05h 00m", stats.timeThisWeek()),
+                                () -> assertNotNull(stats.monthlyDistribution()),
+                                () -> assertEquals(12, stats.monthlyDistribution().size()));
+        }
 
-    @Test
-    @DisplayName("Deve atualizar recorde de foco diário quando o tempo de hoje for superior")
-    void shouldUpdateMaxFocusDayWhenTodayIsHigher() {
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenReturn(10800L) // Hoje (3h) - Maior que o recorde de 2h
-                .thenReturn(10800L) // Semana
-                .thenReturn(0L); // Quebra streak
+        @Test
+        @DisplayName("Deve atualizar recorde de foco diário quando o tempo de hoje for superior")
+        void shouldUpdateMaxFocusDayWhenTodayIsHigher() {
+                // GIVEN
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenReturn(10800L) // Hoje (3h) - Maior que o recorde de 2h
+                                .thenReturn(10800L) // Semana
+                                .thenReturn(0L); // Quebra streak
 
-        statsService.getUserStatistics(testProfile);
+                // WHEN
+                statsService.getUserStatistics(testProfile);
 
-        verify(profileRepository).updateStats(
-                eq(testProfile.getId()),
-                anyInt(),
-                eq(10800), // Novo recorde diário
-                anyInt());
-    }
+                // THEN
+                verify(profileRepository).updateStats(
+                                eq(testProfile.getId()),
+                                anyInt(),
+                                eq(10800), // Novo recorde diário
+                                anyInt());
+        }
 
-    @Test
-    @DisplayName("Deve lançar StatisticsComputationException em caso de falha no repositório")
-    void shouldThrowExceptionWhenRepositoryFails() {
-        when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                .thenThrow(new RuntimeException("DB Offline"));
+        @Test
+        @DisplayName("Deve lançar StatisticsComputationException em caso de falha no repositório")
+        void shouldThrowExceptionWhenRepositoryFails() {
+                // GIVEN
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenThrow(new RuntimeException("DB Offline"));
 
-        assertThrows(StatisticsComputationException.class, () -> statsService.getUserStatistics(testProfile));
-    }
+                // WHEN & THEN
+                assertThrows(StatisticsComputationException.class, () -> statsService.getUserStatistics(testProfile));
+        }
 
-    @Test
-    @DisplayName("Deve garantir que labels diárias não possuem pontos decorrentes da formatação")
-    void shouldEnsureCleanDailyLabels() {
-        Map<String, Double> daily = statsService.getUserStatistics(testProfile).dailyDistribution();
+        @Test
+        @DisplayName("Deve garantir que labels diárias não possuem pontos decorrentes da formatação")
+        void shouldEnsureCleanDailyLabels() {
+                // GIVEN
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenReturn(0L);
 
-        daily.keySet().forEach(label -> assertFalse(label.contains("."),
-                "A label '" + label + "' não deve conter pontos (ex: seg. -> seg)"));
-    }
+                // WHEN
+                Map<String, Double> daily = statsService.getUserStatistics(testProfile).dailyDistribution();
+
+                // THEN
+                daily.keySet().forEach(label -> assertFalse(label.contains("."),
+                                "A label '" + label + "' não deve conter pontos (ex: seg. -> seg)"));
+        }
+
+        // --- NOVOS TESTES PARA GARANTIR A MÁGICA DOS PÓDIOS ---
+
+        @Test
+        @DisplayName("Deve processar e formatar corretamente os dados do pódio diário")
+        void shouldProcessAndFormatDailyPodiumCorrectly() {
+                // GIVEN
+                List<FocusSessionRepository.DailyPodiumEntry> mockEntries = List.of(
+                                new FocusSessionRepository.DailyPodiumEntry("2026-05-27", 10800L), // 03h 00m
+                                new FocusSessionRepository.DailyPodiumEntry("2026-05-14", 7320L) // 02h 02m
+                );
+                when(sessionRepository.getTop3DailyFocusRecords(testProfile.getId())).thenReturn(mockEntries);
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any())).thenReturn(0L);
+
+                // WHEN
+                FocusStatistics stats = statsService.getUserStatistics(testProfile);
+
+                // THEN
+                assertNotNull(stats.dailyPodium());
+                assertEquals(2, stats.dailyPodium().size());
+                assertEquals("03h 00m — 27/Mai", stats.dailyPodium().get(0)); // Corrigido para .get(0)
+                assertEquals("02h 02m — 14/Mai", stats.dailyPodium().get(1));
+        }
+
+        @Test
+        @DisplayName("Deve processar e formatar corretamente os dados do pódio mensal")
+        void shouldProcessAndFormatMonthlyPodiumCorrectly() {
+                // GIVEN
+                List<FocusSessionRepository.MonthlyPodiumEntry> mockEntries = List.of(
+                                new FocusSessionRepository.MonthlyPodiumEntry("2026-05", 90000L) // 25h 00m
+                );
+                when(sessionRepository.getTop3MonthlyFocusRecords(testProfile.getId())).thenReturn(mockEntries);
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any())).thenReturn(0L);
+
+                // WHEN
+                FocusStatistics stats = statsService.getUserStatistics(testProfile);
+
+                // THEN
+                assertNotNull(stats.monthlyPodium());
+                assertEquals(1, stats.monthlyPodium().size());
+                assertEquals("25h 00m — MAI/2026", stats.monthlyPodium().get(0));
+        }
 }

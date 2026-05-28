@@ -8,6 +8,29 @@ import java.util.List;
 import java.util.Map;
 
 public interface FocusSessionRepository {
+
+    // --- Records para Transporte de Dados dos Pódios ---
+
+    /**
+     * Transporta uma linha do pódio diário histórico.
+     * * @param date Data formatada (ex: "2026-05-27")
+     * 
+     * @param durationSeconds Total de segundos focados nesse dia
+     */
+    record DailyPodiumEntry(String date, long durationSeconds) {
+    }
+
+    /**
+     * Transporta uma linha do pódio mensal histórico.
+     * * @param monthYear Ano e Mês formatados (ex: "2026-05")
+     * 
+     * @param durationSeconds Total de segundos focados nesse mês
+     */
+    record MonthlyPodiumEntry(String monthYear, long durationSeconds) {
+    }
+
+    // --- Métodos Originais ---
+
     /**
      * Salva uma nova sessão ou atualiza uma existente (se tiver ID).
      */
@@ -64,4 +87,16 @@ public interface FocusSessionRepository {
     int findCurrentStreakDaysByProfileId(Long profileId);
 
     int countTimesStreakTargetWasReached(Long profileId, int streakTarget);
+
+    // --- Novos Métodos para o Sistema de Pódios ---
+
+    /**
+     * Busca as 3 datas com maior tempo de foco acumulado na história do perfil.
+     */
+    List<DailyPodiumEntry> getTop3DailyFocusRecords(Long profileId);
+
+    /**
+     * Busca os 3 meses com maior tempo de foco acumulado na história do perfil.
+     */
+    List<MonthlyPodiumEntry> getTop3MonthlyFocusRecords(Long profileId);
 }
