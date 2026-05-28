@@ -189,6 +189,7 @@ public class StatsController {
         if (currentStats == null)
             return;
 
+        // 1. Pódio Diário
         listDailyPodium.getItems().clear();
         List<String> dailyData = currentStats.dailyPodium();
         if (dailyData == null || dailyData.isEmpty()) {
@@ -197,6 +198,7 @@ public class StatsController {
             listDailyPodium.getItems().addAll(dailyData);
         }
 
+        // 2. Pódio Mensal
         listMonthlyPodium.getItems().clear();
         List<String> monthlyData = currentStats.monthlyPodium();
         if (monthlyData == null || monthlyData.isEmpty()) {
@@ -205,11 +207,19 @@ public class StatsController {
             listMonthlyPodium.getItems().addAll(monthlyData);
         }
 
-        // Placeholder seguro para o 3º Pódio (Será substituído quando fizermos o
-        // backend)
+        // 3. Pódio de Streaks (REFATORADO)
         if (listStreakPodium != null) {
             listStreakPodium.getItems().clear();
-            listStreakPodium.getItems().add("Aguardando backend...");
+
+            // Supondo que o nome do método no seu FocusStatistics Record seja
+            // streakPodium()
+            List<String> streakData = currentStats.streakPodium();
+
+            if (streakData == null || streakData.isEmpty()) {
+                listStreakPodium.getItems().add("Nenhuma sequência registrada ainda.");
+            } else {
+                listStreakPodium.getItems().addAll(streakData);
+            }
         }
     }
 
