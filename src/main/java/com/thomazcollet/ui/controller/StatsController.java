@@ -216,11 +216,22 @@ public class StatsController {
                 if (lineY >= plotTop && lineY <= plotBottom) {
                     Line goalLine = new Line();
                     goalLine.getStyleClass().add(GOAL_LINE_STYLE_CLASS);
-                    goalLine.setMouseTransparent(true);
+
+                    // IMPORTANTE: Permitir que a linha receba eventos do mouse para disparar o
+                    // Hover do CSS e o Tooltip
+                    goalLine.setMouseTransparent(false);
+
                     goalLine.startXProperty().bind(plotBackground.layoutXProperty());
                     goalLine.endXProperty().bind(plotBackground.layoutXProperty().add(plotBackground.widthProperty()));
                     goalLine.setStartY(lineY);
                     goalLine.setEndY(lineY);
+
+                    // Criação e vinculação do Tooltip interativo da linha de meta
+                    Tooltip targetTooltip = createTargetLineTooltip();
+                    if (targetTooltip != null) {
+                        Tooltip.install(goalLine, targetTooltip);
+                    }
+
                     plotPane.getChildren().add(goalLine);
                 }
             }
@@ -239,7 +250,6 @@ public class StatsController {
                 tooltip.setShowDelay(Duration.millis(150));
                 Tooltip.install(barNode, tooltip);
 
-                // ...
                 if (barValueHours >= targetGoalHours) {
                     barNode.getStyleClass().add(PREMIUM_BAR_STYLE_CLASS);
 
@@ -247,8 +257,7 @@ public class StatsController {
                     starLabel.getStyleClass().add(PREMIUM_STAR_STYLE_CLASS);
                     starLabel.setMouseTransparent(true);
 
-                    // 🔥 A MÁGICA AQUI:
-                    // Mantemos managed = true para o JavaFX dar o tamanho certo (16px),
+                    // Mantemos managed = true para o JavaFX dar o tamanho certo,
                     // mas fixamos a origem dele no canto superior esquerdo (0,0) do wrapper.
                     StackPane.setAlignment(starLabel, javafx.geometry.Pos.TOP_LEFT);
                     chartWrapper.getChildren().add(starLabel);
@@ -264,7 +273,6 @@ public class StatsController {
                                 Point2D inWrapper = chartWrapper.sceneToLocal(
                                         barNode.localToScene(midLocalX, local.getMinY()));
 
-                                // starLabel.getWidth() agora funciona perfeitamente!
                                 return inWrapper.getX() - (starLabel.getWidth() / 2.0);
                             },
                             barNode.boundsInLocalProperty(),
@@ -280,7 +288,6 @@ public class StatsController {
                                 Point2D topInWrapper = chartWrapper.sceneToLocal(
                                         barNode.localToScene(local.getMinX(), local.getMinY()));
 
-                                // starLabel.getHeight() agora é calculado corretamente!
                                 return topInWrapper.getY() - starLabel.getHeight() - 4.0;
                             },
                             barNode.boundsInLocalProperty(),
@@ -290,6 +297,48 @@ public class StatsController {
                 }
             }
         }
+    }
+
+    /**
+     * Auxiliar responsável por gerar o Tooltip customizado da linha de meta baseado
+     * na aba selecionada.
+     */
+    private Tooltip createTargetLineTooltip() {
+        if (userProfile == null || periodGroup == null)
+            return null;
+
+        ToggleButton selected = (ToggleButton) periodGroup.getSelectedToggle();
+        String tooltipText = "";
+
+        if (selected == btnLast7Days) {
+            long seconds = userProfile.getDailyGoalSeconds();
+            if (seconds < 3600) {
+                tooltipText = "Meta diária: " + (seconds / 60) + " minutos";
+            } else {
+                double hours = seconds / 3600.0;
+                tooltipText = String.format("Meta diária: %.1fh", hours).replace(".0", "");
+            }
+        } else if (selected == btnLast30Days) {
+            double hours = userProfile.getWeeklyGoalSeconds() / 3600.0;
+            tooltipText = String.format("Meta semanal: %.1f horas", hours).replace(".0", "");
+        } else if (selected == btnLastYear) {
+            double hours = userProfile.getMonthlyGoalSeconds() / 3600.0;
+            tooltipText = String.format("Meta mensal: %.1f horas", hours).replace(".0", "");
+        }
+
+        Tooltip tooltip = new Tooltip(tooltipText);
+        tooltip.setShowDelay(Duration.ZERO); // Exibe instantaneamente ao passar o mouse
+
+        // Estilização combinando com o tema Catppuccin Macchiato do App
+        tooltip.setStyle(
+                "-fx-background-color: #363a4f; " + // Surface0 do Catppuccin
+                        "-fx-text-fill: #f9e2af; " + // Yellow do Catppuccin
+                        "-fx-font-size: 12px; " +
+                        "-fx-font-family: 'Segoe UI', sans-serif; " +
+                        "-fx-padding: 6px 10px; " +
+                        "-fx-background-radius: 4px;");
+
+        return tooltip;
     }
 
     private double resolveTargetGoalHours() {

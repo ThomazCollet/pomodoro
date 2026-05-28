@@ -310,6 +310,14 @@
     -fx-stroke-dash-array: 6 5;
 }
 
+/* Efeito quando o usuário passa o mouse na linha */
+.chart-target-line:hover {
+    -fx-stroke-width: 2.5;
+    /* Engrossa levemente para dar feedback */
+    -fx-cursor: hand;
+    /* Muda o cursor para a mãozinha */
+}
+
 /* Estado Premium: Barra que alcançou ou ultrapassou a meta */
 .chart-bar.bar-premium {
     -fx-bar-fill: #74c7ec;
