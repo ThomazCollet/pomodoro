@@ -27,14 +27,15 @@ import org.slf4j.LoggerFactory;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Controller responsável pela gestão da View de Estatísticas.
  * Implementa renderização dinâmica de metas (Target Line), Tooltips
  * informativos,
- * elementos flutuantes de gamificação (Estrelas) e tratamento estético do
- * gráfico.
+ * elementos flutuantes de gamificação (Estrelas), tratamento estético do
+ * gráfico e pódios.
  */
 public class StatsController {
 
@@ -73,6 +74,14 @@ public class StatsController {
     @FXML
     private ToggleButton btnLastYear;
 
+    // Componentes injetados para o sistema de pódios (Agora com 3 colunas)
+    @FXML
+    private ListView<String> listDailyPodium;
+    @FXML
+    private ListView<String> listMonthlyPodium;
+    @FXML
+    private ListView<String> listStreakPodium;
+
     private ToggleGroup periodGroup;
     private StatsService statsService;
     private Profile userProfile;
@@ -81,6 +90,7 @@ public class StatsController {
     @FXML
     public void initialize() {
         setupToggleGroup();
+        setupPodiumCellFactories();
     }
 
     public void initData(StatsService statsService, Profile profile) {
@@ -98,6 +108,7 @@ public class StatsController {
             updateSummaryCards();
             renderHeatmap(currentStats.annualHeatmap());
             syncChartWithSelection();
+            renderPodiums();
         } catch (Exception e) {
             logger.error("Falha ao renderizar estatísticas: ", e);
         }
@@ -129,6 +140,77 @@ public class StatsController {
             if (newVal != null)
                 syncChartWithSelection();
         });
+    }
+
+    private void setupPodiumCellFactories() {
+        var cellFactory = new javafx.util.Callback<ListView<String>, ListCell<String>>() {
+            @Override
+            public ListCell<String> call(ListView<String> param) {
+                return new ListCell<>() {
+                    @Override
+                    protected void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                            setGraphic(null);
+                            setStyle("-fx-background-color: transparent;"); // Garante fundo limpo
+                        } else {
+                            String medal = switch (getIndex()) {
+                                case 0 -> "🥇 ";
+                                case 1 -> "🥈 ";
+                                case 2 -> "🥉 ";
+                                default -> "✨ ";
+                            };
+                            setText(medal + item);
+
+                            // Base Style (Fonte maior e centralizada verticalmente)
+                            String style = "-fx-font-size: 14px; -fx-text-fill: #cdd6f4; -fx-padding: 8px 10px; -fx-background-color: transparent;";
+
+                            // Ouro recebe destaque especial (Bold + Amarelo do tema)
+                            if (getIndex() == 0 && !item.contains("Aguardando")) {
+                                style += " -fx-font-weight: bold; -fx-text-fill: #f9e2af;";
+                            }
+
+                            setStyle(style);
+                        }
+                    }
+                };
+            }
+        };
+
+        listDailyPodium.setCellFactory(cellFactory);
+        listMonthlyPodium.setCellFactory(cellFactory);
+        if (listStreakPodium != null) {
+            listStreakPodium.setCellFactory(cellFactory);
+        }
+    }
+
+    private void renderPodiums() {
+        if (currentStats == null)
+            return;
+
+        listDailyPodium.getItems().clear();
+        List<String> dailyData = currentStats.dailyPodium();
+        if (dailyData == null || dailyData.isEmpty()) {
+            listDailyPodium.getItems().add("Nenhum recorde registrado ainda.");
+        } else {
+            listDailyPodium.getItems().addAll(dailyData);
+        }
+
+        listMonthlyPodium.getItems().clear();
+        List<String> monthlyData = currentStats.monthlyPodium();
+        if (monthlyData == null || monthlyData.isEmpty()) {
+            listMonthlyPodium.getItems().add("Nenhum recorde registrado ainda.");
+        } else {
+            listMonthlyPodium.getItems().addAll(monthlyData);
+        }
+
+        // Placeholder seguro para o 3º Pódio (Será substituído quando fizermos o
+        // backend)
+        if (listStreakPodium != null) {
+            listStreakPodium.getItems().clear();
+            listStreakPodium.getItems().add("Aguardando backend...");
+        }
     }
 
     private void syncChartWithSelection() {
@@ -176,20 +258,13 @@ public class StatsController {
         yAxis.setAutoRanging(false);
         yAxis.setLowerBound(0.0);
 
-        // Respiro de 30% no topo para os emojis não serem cortados pelo teto
         double maxScaleValue = Math.max(targetGoalHours, maxBarValue);
         yAxis.setUpperBound(Math.ceil(maxScaleValue * 1.30));
         yAxis.setTickUnit(maxScaleValue > 20 ? 10.0 : 1.0);
 
-        // Delega a renderização visual complexa para a thread do JavaFX
         Platform.runLater(() -> renderChartOverlays(targetGoalHours, series, yAxis));
     }
 
-    /**
-     * Renderiza elementos sobrepostos ao gráfico (Linha de Meta e Estrelas de
-     * Gamificação)
-     * após a estabilização do layout pelo JavaFX.
-     */
     private void renderChartOverlays(double targetGoalHours, XYChart.Series<String, Number> series, NumberAxis yAxis) {
         barChartFocus.applyCss();
         barChartFocus.layout();
@@ -198,13 +273,11 @@ public class StatsController {
 
         if (plotBackground != null && plotBackground.getParent() instanceof Pane plotPane) {
 
-            // Limpa sobreposições antigas
             plotPane.getChildren()
                     .removeIf(node -> node instanceof Line && node.getStyleClass().contains(GOAL_LINE_STYLE_CLASS));
             chartWrapper.getChildren()
                     .removeIf(node -> node instanceof Label && node.getStyleClass().contains(PREMIUM_STAR_STYLE_CLASS));
 
-            // Desenha a Linha de Meta
             double plotHeight = plotBackground.getHeight();
             if (plotHeight > 0) {
                 double yPosInAxisSpace = yAxis.getDisplayPosition(targetGoalHours);
@@ -216,9 +289,6 @@ public class StatsController {
                 if (lineY >= plotTop && lineY <= plotBottom) {
                     Line goalLine = new Line();
                     goalLine.getStyleClass().add(GOAL_LINE_STYLE_CLASS);
-
-                    // IMPORTANTE: Permitir que a linha receba eventos do mouse para disparar o
-                    // Hover do CSS e o Tooltip
                     goalLine.setMouseTransparent(false);
 
                     goalLine.startXProperty().bind(plotBackground.layoutXProperty());
@@ -226,7 +296,6 @@ public class StatsController {
                     goalLine.setStartY(lineY);
                     goalLine.setEndY(lineY);
 
-                    // Criação e vinculação do Tooltip interativo da linha de meta
                     Tooltip targetTooltip = createTargetLineTooltip();
                     if (targetTooltip != null) {
                         Tooltip.install(goalLine, targetTooltip);
@@ -236,7 +305,6 @@ public class StatsController {
                 }
             }
 
-            // Gamificação e Tooltips
             for (XYChart.Data<String, Number> nodeData : series.getData()) {
                 var barNode = nodeData.getNode();
                 if (barNode == null)
@@ -257,13 +325,9 @@ public class StatsController {
                     starLabel.getStyleClass().add(PREMIUM_STAR_STYLE_CLASS);
                     starLabel.setMouseTransparent(true);
 
-                    // Mantemos managed = true para o JavaFX dar o tamanho certo,
-                    // mas fixamos a origem dele no canto superior esquerdo (0,0) do wrapper.
                     StackPane.setAlignment(starLabel, javafx.geometry.Pos.TOP_LEFT);
                     chartWrapper.getChildren().add(starLabel);
 
-                    // USAMOS TRANSLATEX / TRANSLATEY (Movimentação visual) em vez de LayoutX/Y.
-                    // Assim o StackPane não briga com nossos cálculos!
                     starLabel.translateXProperty().bind(Bindings.createDoubleBinding(
                             () -> {
                                 if (barNode.getScene() == null)
@@ -299,10 +363,6 @@ public class StatsController {
         }
     }
 
-    /**
-     * Auxiliar responsável por gerar o Tooltip customizado da linha de meta baseado
-     * na aba selecionada.
-     */
     private Tooltip createTargetLineTooltip() {
         if (userProfile == null || periodGroup == null)
             return null;
@@ -327,12 +387,11 @@ public class StatsController {
         }
 
         Tooltip tooltip = new Tooltip(tooltipText);
-        tooltip.setShowDelay(Duration.ZERO); // Exibe instantaneamente ao passar o mouse
+        tooltip.setShowDelay(Duration.ZERO);
 
-        // Estilização combinando com o tema Catppuccin Macchiato do App
         tooltip.setStyle(
-                "-fx-background-color: #363a4f; " + // Surface0 do Catppuccin
-                        "-fx-text-fill: #f9e2af; " + // Yellow do Catppuccin
+                "-fx-background-color: #363a4f; " +
+                        "-fx-text-fill: #f9e2af; " +
                         "-fx-font-size: 12px; " +
                         "-fx-font-family: 'Segoe UI', sans-serif; " +
                         "-fx-padding: 6px 10px; " +

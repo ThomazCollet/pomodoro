@@ -81,18 +81,20 @@
             </StackPane>
         </VBox>
         
-        <HBox spacing="20.0">
-            <VBox fx:id="insightArea" spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
-                <Label styleClass="section-title" text="INSIGHTS DE PRODUTIVIDADE" />
-                <Label styleClass="insight-text" text="🚀 Você é 20% mais produtivo nas terças-feiras." />
-                <Label styleClass="insight-text" text="🌙 Seu foco costuma cair após as 21:00." />
+        <HBox spacing="15.0" VBox.vgrow="NEVER">
+            <VBox spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
+                <Label styleClass="section-title" text="🏆 DIAS RECORDISTAS" />
+                <ListView fx:id="listDailyPodium" prefHeight="160.0" styleClass="podium-list-view" />
             </VBox>
             
             <VBox spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
-                <Label styleClass="section-title" text="CATEGORIAS (EM BREVE)" />
-                <StackPane prefHeight="100.0">
-                   <Label styleClass="stat-card-record" text="Adicione tags aos seus pomodoros para ver a distribuição." wrapText="true" alignment="CENTER"/>
-                </StackPane>
+                <Label styleClass="section-title" text="📅 MESES RECORDISTAS" />
+                <ListView fx:id="listMonthlyPodium" prefHeight="160.0" styleClass="podium-list-view" />
+            </VBox>
+
+            <VBox spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
+                <Label styleClass="section-title" text="🔥 MAIORES STREAKS" />
+                <ListView fx:id="listStreakPodium" prefHeight="160.0" styleClass="podium-list-view" />
             </VBox>
         </HBox>
 

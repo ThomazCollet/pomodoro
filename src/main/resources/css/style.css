@@ -356,6 +356,54 @@
     -fx-max-height: -Infinity;
 }
 
+/* ==========================================================================
+   Seção de Pódios (Recordes Diários, Mensais e Streaks)
+   ========================================================================== */
+
+/* Remove o fundo branco nativo e bordas da estrutura da ListView */
+.podium-list-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+/* Força os containers internos de renderização a ficarem transparentes */
+.podium-list-view .virtual-flow,
+.podium-list-view .indexed-cell {
+    -fx-background-color: transparent;
+}
+
+/* Customização das Células: Alinhamento, Cores e Espaçamento */
+.podium-list-view .list-cell {
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: transparent;
+    -fx-text-fill: #cdd6f4;
+    /* Texto principal do tema Catppuccin */
+    -fx-padding: 8px 10px;
+    /* Leve ganho de respiro lateral */
+    -fx-border-color: rgba(255, 255, 255, 0.04);
+    /* Linha divisória sutil entre itens */
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Efeito Hover: Feedback visual elegante ao passar o mouse pelos recordes */
+.podium-list-view .list-cell:filled:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-cursor: hand;
+}
+
+/* Estado Selecionado: Destaque sutil sem a cor azul padrão do JavaFX */
+.podium-list-view .list-cell:filled:selected {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Remove completamente a borda/fundo de foco quando a lista recebe o clique */
+.podium-list-view:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
 /* CORREÇÃO: Efeitos de Hover restaurados nos botões do Timer */
 .start-button {
     -fx-background-color: #a6e3a1;
