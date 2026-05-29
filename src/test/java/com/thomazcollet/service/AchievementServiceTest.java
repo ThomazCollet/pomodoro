@@ -294,7 +294,7 @@ class AchievementServiceTest {
         }
 
         @Override
-        public void updateStats(Long profileId, int maxStreak, int maxFocusDaySeconds, int totalFocusSessions) {
+        public void updateStats(Long profileId, int maxFocusDaySeconds, int totalSessions) {
         }
 
         // 🆕 SOLUÇÃO: Implementação do novo contrato adicionado ao ProfileRepository

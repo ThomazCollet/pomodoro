@@ -1,5 +1,6 @@
 package com.thomazcollet.ui.controller;
 
+import com.thomazcollet.domain.dto.FocusStatistics;
 import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.model.RankingType;
 import com.thomazcollet.domain.repository.AchievementRepository;
@@ -259,12 +260,16 @@ public class MainController {
         Profile profile = profileService.getActiveProfile();
         RankingType currentRank = RankingType.fromXp(profile.getXp());
 
-        // 3. Busca as estatísticas em tempo real para extrair a streak atual sem bugs
+        // Busca as estatísticas em tempo real para extrair streak atual e melhor
+        // histórico
         int currentStreak = 0;
+        int bestStreakDays = 0;
         try {
-            currentStreak = statsService.getUserStatistics(profile).currentStreak();
+            FocusStatistics stats = statsService.getUserStatistics(profile);
+            currentStreak = stats.currentStreak();
+            bestStreakDays = stats.bestStreakDays();
         } catch (Exception e) {
-            logger.error("Erro ao carregar a streak atual para o popover", e);
+            logger.error("Erro ao carregar streak para o popover", e);
         }
 
         StackPane headerAvatar = new StackPane();
@@ -292,10 +297,9 @@ public class MainController {
         grid.setHgap(20);
         grid.setVgap(12);
 
-        // 4. Exibição corrigida e diferenciada de Streak Ativa vs Recorde Histórico
-        // Geral
+        // Streak Ativa vs Melhor Histórico vindos do StreakRecordRepository
         addStat(grid, "Streak Atual", "🔥 " + currentStreak + "d", 0, 0);
-        addStat(grid, "Recorde Máximo", "🏆 " + profile.getMaxStreak() + "d", 1, 0);
+        addStat(grid, "Recorde Máximo", "🏆 " + bestStreakDays + "d", 1, 0);
         addStat(grid, "Foco Total", profile.getTotalFocusSessions() + " ses.", 0, 1);
         addStat(grid, "Experiência", profile.getXp() + " XP", 1, 1);
 

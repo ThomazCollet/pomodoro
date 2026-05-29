@@ -123,7 +123,7 @@ public class StatsController {
         lblFocusWeek.setText(currentStats.timeThisWeek());
 
         if (lblMaxStreak != null)
-            lblMaxStreak.setText("Recorde: " + currentStats.maxStreak() + " dias");
+            lblMaxStreak.setText("Recorde: " + currentStats.bestStreakDays() + " dias");
         if (lblRecordToday != null)
             lblRecordToday.setText(currentStats.recordDayTime());
     }

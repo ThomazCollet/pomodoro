@@ -19,7 +19,6 @@ public class Profile {
     private LocalDateTime createdAt;
 
     // --- NOVOS ATRIBUTOS PARA ESTATÍSTICAS (MARCOS) ---
-    private int maxStreak;
     private int maxFocusDaySeconds;
     private int totalFocusSessions;
 
@@ -39,7 +38,7 @@ public class Profile {
      * persistência (Incluindo Marcos, XP e Metas).
      */
     public Profile(Long id, String username, String imagePath, int workDuration, int shortBreak, int longBreak,
-            int maxStreak, int maxFocusDaySeconds, int totalFocusSessions, int xp,
+            int maxFocusDaySeconds, int totalFocusSessions, int xp,
             int dailyGoalSeconds, int weeklyGoalSeconds, int monthlyGoalSeconds, LocalDateTime createdAt) {
         this.id = id;
         this.createdAt = createdAt;
@@ -48,13 +47,12 @@ public class Profile {
         this.setWorkDuration(workDuration);
         this.setShortBreak(shortBreak);
         this.setLongBreak(longBreak);
-        this.setMaxStreak(maxStreak);
         this.setMaxFocusDaySeconds(maxFocusDaySeconds);
         this.setTotalFocusSessions(totalFocusSessions);
         this.setXp(xp);
-        this.setDailyGoalSeconds(dailyGoalSeconds); // 🆕 Adicionado
-        this.setWeeklyGoalSeconds(weeklyGoalSeconds); // 🆕 Adicionado
-        this.setMonthlyGoalSeconds(monthlyGoalSeconds); // 🆕 Adicionado
+        this.setDailyGoalSeconds(dailyGoalSeconds);
+        this.setWeeklyGoalSeconds(weeklyGoalSeconds);
+        this.setMonthlyGoalSeconds(monthlyGoalSeconds);
     }
 
     /**
@@ -65,13 +63,12 @@ public class Profile {
         this.setWorkDuration(workDuration);
         this.setShortBreak(shortBreak);
         this.setLongBreak(longBreak);
-        this.maxStreak = 0;
         this.maxFocusDaySeconds = 0;
         this.totalFocusSessions = 0;
         this.xp = 0;
-        this.dailyGoalSeconds = 5400; // 🆕 Default: 1h30m
-        this.weeklyGoalSeconds = 27000; // 🆕 Default: 7h30m (5 dias úteis)
-        this.monthlyGoalSeconds = 108000; // 🆕 Default: 30h00m (20 dias úteis)
+        this.dailyGoalSeconds = 5400;
+        this.weeklyGoalSeconds = 27000;
+        this.monthlyGoalSeconds = 108000;
     }
 
     // --- COMPORTAMENTO DE DOMÍNIO RICO ---
@@ -161,17 +158,7 @@ public class Profile {
         this.longBreak = longBreak;
     }
 
-    // --- SETTERS E GETTERS DOS NOVOS MARCOS ---
-
-    public int getMaxStreak() {
-        return maxStreak;
-    }
-
-    public void setMaxStreak(int maxStreak) {
-        if (maxStreak < 0)
-            throw new IllegalArgumentException("Streak não pode ser negativo.");
-        this.maxStreak = maxStreak;
-    }
+    // --- SETTERS E GETTERS DOS MARCOS ---
 
     public int getMaxFocusDaySeconds() {
         return maxFocusDaySeconds;

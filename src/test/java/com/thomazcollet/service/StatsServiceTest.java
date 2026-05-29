@@ -46,7 +46,6 @@ class StatsServiceTest {
                 testProfile = new Profile();
                 testProfile.setId(1L);
                 testProfile.setUsername("Thomaz");
-                testProfile.setMaxStreak(5);
                 testProfile.setMaxFocusDaySeconds(7200); // 2h
 
                 // Configuração segura padrão para evitar NullPointerException com os
@@ -132,7 +131,6 @@ class StatsServiceTest {
                 // THEN
                 verify(profileRepository).updateStats(
                                 eq(testProfile.getId()),
-                                anyInt(),
                                 eq(10800), // Novo recorde diário
                                 anyInt());
         }

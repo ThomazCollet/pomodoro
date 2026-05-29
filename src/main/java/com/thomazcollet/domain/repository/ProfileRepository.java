@@ -13,7 +13,7 @@ public interface ProfileRepository {
 
     void delete(Long id);
 
-    void updateStats(Long profileId, int streak, int maxSeconds, int totalSessions);
+    void updateStats(Long profileId, int maxFocusDaySeconds, int totalSessions);
 
     void updateXp(Long profileId, int newXp);
 

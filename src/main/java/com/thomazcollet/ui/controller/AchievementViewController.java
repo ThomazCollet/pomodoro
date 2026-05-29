@@ -242,14 +242,21 @@ public class AchievementViewController {
     }
 
     /**
-     * Extrai de forma segura o valor numérico atual do perfil do usuário com base
-     * na categoria.
+     * Retorna o valor numérico atual do perfil para exibição nas barras de
+     * progresso.
+     *
+     * Nota: conquistas da categoria STREAK têm seu progresso real calculado
+     * pelo StreakEvaluator via FocusSessionRepository
+     * (findCurrentStreakDaysByProfileId
+     * e countTimesStreakTargetWasReached). O Profile não armazena mais esse dado,
+     * portanto retornamos 0 aqui — o estado visual correto
+     * (ACTIVE/COMPLETED/LOCKED)
+     * já é suficiente para transmitir o progresso ao usuário.
      */
     private int getCurrentProfileValue(Profile profile, AchievementCategory category) {
         if (profile == null)
             return 0;
         return switch (category) {
-            case STREAK -> profile.getMaxStreak();
             case DAILY_FOCUS -> profile.getTotalFocusSessions();
             default -> 0;
         };

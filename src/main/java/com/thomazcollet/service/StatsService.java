@@ -59,16 +59,22 @@ public class StatsService {
             long secondsThisWeek = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(profile.getId(),
                     startOfWeek, endOfDay);
 
-            // O cálculo agora também cuida de salvar a streak no banco!
             int currentStreak = calculateAndProcessCurrentStreak(profile.getId());
-            checkAndUpdateRecords(profile, (int) secondsToday, currentStreak);
+            checkAndUpdateRecords(profile, (int) secondsToday);
+
+            // Melhor streak histórica: topo do pódio de streak_records
+            int bestStreakDays = streakRepository.getTopStreaks(profile.getId(), 1)
+                    .stream()
+                    .mapToInt(r -> r.durationDays())
+                    .findFirst()
+                    .orElse(currentStreak);
 
             LocalDateTime oneYearAgo = now.minusYears(1).with(LocalTime.MIN);
             Map<LocalDate, Long> heatmapData = sessionRepository.getDailyFocusTime(profile.getId(), oneYearAgo);
 
             return new FocusStatistics(
                     currentStreak,
-                    profile.getMaxStreak(),
+                    bestStreakDays,
                     formatDuration(secondsToday),
                     "Recorde: " + formatDuration(profile.getMaxFocusDaySeconds()),
                     formatDuration(secondsThisWeek),
@@ -78,8 +84,7 @@ public class StatsService {
                     calculateFixedAnnualDistribution(profile.getId()),
                     buildDailyPodium(profile.getId()),
                     buildMonthlyPodium(profile.getId()),
-                    buildStreakPodium(profile.getId()) // Novo Pódio Adicionado
-            );
+                    buildStreakPodium(profile.getId()));
 
         } catch (Exception e) {
             logger.error("Erro ao processar métricas de foco para o perfil: {}", profile.getId(), e);
@@ -201,21 +206,10 @@ public class StatsService {
                 profileId, date.atStartOfDay(), date.atTime(LocalTime.MAX)) > 0;
     }
 
-    private void checkAndUpdateRecords(Profile profile, int secondsToday, int currentStreak) {
-        boolean updated = false;
-
+    private void checkAndUpdateRecords(Profile profile, int secondsToday) {
         if (secondsToday > profile.getMaxFocusDaySeconds()) {
             profile.setMaxFocusDaySeconds(secondsToday);
-            updated = true;
-        }
-
-        if (currentStreak > profile.getMaxStreak()) {
-            profile.setMaxStreak(currentStreak);
-            updated = true;
-        }
-
-        if (updated) {
-            profileRepository.updateStats(profile.getId(), profile.getMaxStreak(),
+            profileRepository.updateStats(profile.getId(),
                     profile.getMaxFocusDaySeconds(), profile.getTotalFocusSessions());
         }
     }

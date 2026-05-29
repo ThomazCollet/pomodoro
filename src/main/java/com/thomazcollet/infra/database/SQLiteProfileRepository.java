@@ -16,13 +16,11 @@ public class SQLiteProfileRepository implements ProfileRepository {
 
     @Override
     public void save(Profile profile) {
-        // 🆕 Incluído as 3 colunas de metas no INSERT para garantir os valores na
-        // criação do registro
         String sql = """
                 INSERT INTO profiles (username, image_path, work_duration, short_break, long_break,
-                                    max_streak, max_focus_day_seconds, total_focus_sessions, xp,
+                                    max_focus_day_seconds, total_focus_sessions, xp,
                                     daily_goal_seconds, weekly_goal_seconds, monthly_goal_seconds)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -33,13 +31,12 @@ public class SQLiteProfileRepository implements ProfileRepository {
             pstmt.setInt(3, profile.getWorkDuration());
             pstmt.setInt(4, profile.getShortBreak());
             pstmt.setInt(5, profile.getLongBreak());
-            pstmt.setInt(6, profile.getMaxStreak());
-            pstmt.setInt(7, profile.getMaxFocusDaySeconds());
-            pstmt.setInt(8, profile.getTotalFocusSessions());
-            pstmt.setInt(9, profile.getXp());
-            pstmt.setInt(10, profile.getDailyGoalSeconds()); // 🆕 Inclusão da meta diária
-            pstmt.setInt(11, profile.getWeeklyGoalSeconds()); // 🆕 Inclusão da meta semanal
-            pstmt.setInt(12, profile.getMonthlyGoalSeconds()); // 🆕 Inclusão da meta mensal
+            pstmt.setInt(6, profile.getMaxFocusDaySeconds());
+            pstmt.setInt(7, profile.getTotalFocusSessions());
+            pstmt.setInt(8, profile.getXp());
+            pstmt.setInt(9, profile.getDailyGoalSeconds());
+            pstmt.setInt(10, profile.getWeeklyGoalSeconds());
+            pstmt.setInt(11, profile.getMonthlyGoalSeconds());
 
             pstmt.executeUpdate();
 
@@ -56,23 +53,22 @@ public class SQLiteProfileRepository implements ProfileRepository {
     }
 
     @Override
-    public void updateStats(Long profileId, int streak, int maxSeconds, int totalSessions) {
+    public void updateStats(Long profileId, int maxFocusDaySeconds, int totalSessions) {
         String sql = """
                 UPDATE profiles
-                SET max_streak = ?, max_focus_day_seconds = ?, total_focus_sessions = ?
+                SET max_focus_day_seconds = ?, total_focus_sessions = ?
                 WHERE id = ?
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setInt(1, streak);
-            pstmt.setInt(2, maxSeconds);
-            pstmt.setInt(3, totalSessions);
-            pstmt.setLong(4, profileId);
+            pstmt.setInt(1, maxFocusDaySeconds);
+            pstmt.setInt(2, totalSessions);
+            pstmt.setLong(3, profileId);
 
             pstmt.executeUpdate();
-            logger.debug("Marcos do perfil ID {} atualizados: Streak: {}, Recorde: {}s", profileId, streak, maxSeconds);
+            logger.debug("Marcos do perfil ID {} atualizados: Recorde: {}s", profileId, maxFocusDaySeconds);
         } catch (SQLException e) {
             logger.error("Erro ao atualizar marcos do perfil ID: {}", profileId, e);
             throw new RuntimeException("Falha ao atualizar estatísticas no banco", e);
@@ -179,8 +175,6 @@ public class SQLiteProfileRepository implements ProfileRepository {
     }
 
     private Profile mapResultSetToProfile(ResultSet rs) throws SQLException {
-        // 🆕 Atualizado para ler as novas colunas e passar ao construtor completo do
-        // Profile
         return new Profile(
                 rs.getLong("id"),
                 rs.getString("username"),
@@ -188,13 +182,12 @@ public class SQLiteProfileRepository implements ProfileRepository {
                 rs.getInt("work_duration"),
                 rs.getInt("short_break"),
                 rs.getInt("long_break"),
-                rs.getInt("max_streak"),
                 rs.getInt("max_focus_day_seconds"),
                 rs.getInt("total_focus_sessions"),
                 rs.getInt("xp"),
-                rs.getInt("daily_goal_seconds"), // 🆕 Mapeamento da coluna
-                rs.getInt("weekly_goal_seconds"), // 🆕 Mapeamento da coluna
-                rs.getInt("monthly_goal_seconds"), // 🆕 Mapeamento da coluna
+                rs.getInt("daily_goal_seconds"),
+                rs.getInt("weekly_goal_seconds"),
+                rs.getInt("monthly_goal_seconds"),
                 rs.getTimestamp("created_at").toLocalDateTime().withNano(0));
     }
 }

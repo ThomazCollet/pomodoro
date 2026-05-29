@@ -30,7 +30,6 @@ public class DatabaseInitializer {
                                     work_duration INTEGER NOT NULL DEFAULT 25,
                                     short_break INTEGER NOT NULL DEFAULT 5,
                                     long_break INTEGER NOT NULL DEFAULT 15,
-                                    max_streak INTEGER DEFAULT 0,
                                     max_focus_day_seconds INTEGER DEFAULT 0,
                                     total_focus_sessions INTEGER DEFAULT 0,
                                     xp INTEGER DEFAULT 0,
@@ -121,27 +120,77 @@ public class DatabaseInitializer {
      * já possua a tabela 'profiles' antiga criada sem elas.
      */
     private static void applyMigrationsIfNecessary(Statement stmt) {
-        // Tenta adicionar a coluna daily_goal_seconds
+        // Adiciona colunas novas caso o banco já exista sem elas
         try {
             stmt.execute("ALTER TABLE profiles ADD COLUMN daily_goal_seconds INTEGER NOT NULL DEFAULT 5400;");
             logger.info("Migração: Coluna 'daily_goal_seconds' adicionada com sucesso.");
         } catch (SQLException e) {
-            // Se cair aqui, é porque a coluna já existe (o que é o cenário ideal em
-            // execuções futuras)
+            // Coluna já existe — comportamento esperado em execuções posteriores
         }
 
-        // Tenta adicionar a coluna weekly_goal_seconds
         try {
             stmt.execute("ALTER TABLE profiles ADD COLUMN weekly_goal_seconds INTEGER NOT NULL DEFAULT 27000;");
             logger.info("Migração: Coluna 'weekly_goal_seconds' adicionada com sucesso.");
         } catch (SQLException e) {
         }
 
-        // Tenta adicionar a coluna monthly_goal_seconds
         try {
             stmt.execute("ALTER TABLE profiles ADD COLUMN monthly_goal_seconds INTEGER NOT NULL DEFAULT 108000;");
             logger.info("Migração: Coluna 'monthly_goal_seconds' adicionada com sucesso.");
         } catch (SQLException e) {
+        }
+
+        // Remove a coluna max_streak que migrou para a tabela streak_records.
+        // SQLite não suporta DROP COLUMN diretamente em versões antigas (< 3.35).
+        // A estratégia defensiva: recriamos a tabela sem a coluna apenas se ela
+        // ainda existir. Como SQLite não tem IF EXISTS para DROP COLUMN,
+        // verificamos via PRAGMA antes de executar a recriação.
+        try {
+            boolean hasMaxStreak = false;
+            try (var rs = stmt.executeQuery("PRAGMA table_info(profiles)")) {
+                while (rs.next()) {
+                    if ("max_streak".equals(rs.getString("name"))) {
+                        hasMaxStreak = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasMaxStreak) {
+                stmt.execute("""
+                        CREATE TABLE IF NOT EXISTS profiles_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            username TEXT NOT NULL,
+                            image_path TEXT,
+                            work_duration INTEGER NOT NULL DEFAULT 25,
+                            short_break INTEGER NOT NULL DEFAULT 5,
+                            long_break INTEGER NOT NULL DEFAULT 15,
+                            max_focus_day_seconds INTEGER DEFAULT 0,
+                            total_focus_sessions INTEGER DEFAULT 0,
+                            xp INTEGER DEFAULT 0,
+                            daily_goal_seconds INTEGER NOT NULL DEFAULT 5400,
+                            weekly_goal_seconds INTEGER NOT NULL DEFAULT 27000,
+                            monthly_goal_seconds INTEGER NOT NULL DEFAULT 108000,
+                            created_at DATETIME DEFAULT (datetime('now', 'localtime'))
+                        )
+                        """);
+                stmt.execute("""
+                        INSERT INTO profiles_new
+                            (id, username, image_path, work_duration, short_break, long_break,
+                             max_focus_day_seconds, total_focus_sessions, xp,
+                             daily_goal_seconds, weekly_goal_seconds, monthly_goal_seconds, created_at)
+                        SELECT id, username, image_path, work_duration, short_break, long_break,
+                               max_focus_day_seconds, total_focus_sessions, xp,
+                               daily_goal_seconds, weekly_goal_seconds, monthly_goal_seconds, created_at
+                        FROM profiles
+                        """);
+                stmt.execute("DROP TABLE profiles");
+                stmt.execute("ALTER TABLE profiles_new RENAME TO profiles");
+                logger.info("Migração: Coluna 'max_streak' removida da tabela 'profiles' com sucesso.");
+            }
+        } catch (SQLException e) {
+            logger.warn("Migração de remoção de 'max_streak' falhou (pode ser ignorado se já removida): {}",
+                    e.getMessage());
         }
     }
 
