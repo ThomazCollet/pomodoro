@@ -1,6 +1,7 @@
 package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Challenge;
+import com.thomazcollet.domain.model.ChallengeStatus;
 import com.thomazcollet.domain.model.ChallengeType;
 import com.thomazcollet.service.ChallengeService;
 import com.thomazcollet.ui.util.DialogHelper;
@@ -10,7 +11,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox; // Adicionado
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,11 +22,11 @@ public class ChallengeCardController {
     private static final Logger logger = LoggerFactory.getLogger(ChallengeCardController.class);
 
     @FXML
-    private HBox cardContainer; // Certifique-se de adicionar este fx:id no VBox raiz do seu FXML
+    private HBox cardContainer;
     @FXML
     private Label lblTitle;
     @FXML
-    private Label lblDailyGoal;
+    private Label lblDailyGoal; // canto superior direito — status / meta diária
     @FXML
     private ProgressBar progressChallenge;
     @FXML
@@ -47,21 +47,44 @@ public class ChallengeCardController {
         renderCard();
     }
 
+    // -----------------------------------------------------------------------
+    // RENDERIZAÇÃO PRINCIPAL — roteia pelo status do desafio
+    // -----------------------------------------------------------------------
+
     private void renderCard() {
         lblTitle.setText(challenge.getTitle());
 
-        // Limpa as classes de moldura antes de aplicar a nova (evita bugs visual ao
-        // atualizar)
-        cardContainer.getStyleClass().removeAll("card-streak", "card-milestone");
+        // Limpa estilos de moldura antes de aplicar
+        cardContainer.getStyleClass().removeAll(
+                "card-streak", "card-milestone",
+                "card-completed", "card-failed");
 
-        if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
-            cardContainer.getStyleClass().add("card-milestone");
-            renderMilestoneLayout();
+        if (challenge.getStatus() == ChallengeStatus.COMPLETED) {
+            renderCompletedLayout();
+        } else if (challenge.getStatus() == ChallengeStatus.FAILED) {
+            renderFailedLayout();
         } else {
-            cardContainer.getStyleClass().add("card-streak");
-            renderStreakLayout();
+            // ACTIVE — comportamento original
+            if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
+                cardContainer.getStyleClass().add("card-milestone");
+                renderMilestoneLayout();
+            } else {
+                cardContainer.getStyleClass().add("card-streak");
+                renderStreakLayout();
+            }
+        }
+
+        // O botão de excluir só aparece em desafios ATIVOS
+        if (btnDelete != null) {
+            boolean isActive = challenge.getStatus() == ChallengeStatus.ACTIVE;
+            btnDelete.setVisible(isActive);
+            btnDelete.setManaged(isActive);
         }
     }
+
+    // -----------------------------------------------------------------------
+    // ESTADOS ATIVOS (inalterados)
+    // -----------------------------------------------------------------------
 
     private void renderStreakLayout() {
         livesContainer.setVisible(true);
@@ -82,11 +105,7 @@ public class ChallengeCardController {
             lblDailyGoal.setStyle("-fx-text-fill: rgba(255, 255, 255, 0.5);");
         }
 
-        progressChallenge.getStyleClass().remove("milestone-progress");
-        if (!progressChallenge.getStyleClass().contains("streak-progress")) {
-            progressChallenge.getStyleClass().add("streak-progress");
-        }
-
+        applyProgressBarStyle("streak-progress", "milestone-progress");
         renderLives();
     }
 
@@ -106,30 +125,114 @@ public class ChallengeCardController {
 
         LocalDate endDate = challenge.getStartDate().plusDays(challenge.getDurationDays());
         long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), endDate);
-
         long urgencyThreshold = Math.max(2, (long) (challenge.getDurationDays() * 0.1));
         boolean isUrgent = daysRemaining <= urgencyThreshold;
 
         if (accMin >= targetTotalMin) {
             lblDailyGoal.setText("CONCLUÍDO! 🏆");
             lblDailyGoal.setStyle("-fx-text-fill: #f9e2af; -fx-font-weight: bold;");
+        } else if (daysRemaining <= 0) {
+            lblDailyGoal.setText("ÚLTIMO DIA! ⚠️");
+            lblDailyGoal.setStyle("-fx-text-fill: #f38ba8; -fx-font-weight: bold;");
         } else {
-            if (daysRemaining <= 0) {
-                lblDailyGoal.setText("ÚLTIMO DIA! ⚠️");
-            } else {
-                lblDailyGoal.setText(String.format("Faltam %d dias", daysRemaining));
-            }
-
-            if (isUrgent || daysRemaining <= 0) {
-                lblDailyGoal.setStyle("-fx-text-fill: #f38ba8; -fx-font-weight: bold;");
-            } else {
-                lblDailyGoal.setStyle("-fx-text-fill: #89b4fa;");
-            }
+            lblDailyGoal.setText(String.format("Faltam %d dias", daysRemaining));
+            lblDailyGoal.setStyle(isUrgent
+                    ? "-fx-text-fill: #f38ba8; -fx-font-weight: bold;"
+                    : "-fx-text-fill: #89b4fa;");
         }
 
-        progressChallenge.getStyleClass().remove("streak-progress");
-        if (!progressChallenge.getStyleClass().contains("milestone-progress")) {
-            progressChallenge.getStyleClass().add("milestone-progress");
+        applyProgressBarStyle("milestone-progress", "streak-progress");
+    }
+
+    // -----------------------------------------------------------------------
+    // ESTADOS FINAIS
+    // -----------------------------------------------------------------------
+
+    /**
+     * Layout para desafios CONCLUÍDOS com sucesso.
+     * Card levemente escurecido com selo verde "✓ CONCLUÍDO" no canto superior
+     * direito — exatamente onde o usuário já olha para ver o status.
+     */
+    private void renderCompletedLayout() {
+        cardContainer.getStyleClass().add(
+                challenge.getType() == ChallengeType.MILESTONE_CHALLENGE
+                        ? "card-milestone"
+                        : "card-streak");
+        cardContainer.getStyleClass().add("card-completed");
+
+        // Barra de progresso cheia
+        progressChallenge.setProgress(1.0);
+
+        if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
+            livesContainer.setVisible(true);
+            livesContainer.setManaged(true);
+            renderLives();
+            lblProgressText.setText(challenge.getDurationDays() + "/" + challenge.getDurationDays() + " dias");
+            applyProgressBarStyle("streak-progress", "milestone-progress");
+        } else {
+            livesContainer.setVisible(false);
+            livesContainer.setManaged(false);
+            int targetH = challenge.getTargetTotalMinutes() / 60;
+            lblProgressText.setText(String.format("%dh / %dh — completo", targetH, targetH));
+            applyProgressBarStyle("milestone-progress", "streak-progress");
+        }
+
+        // Selo de status no canto superior direito
+        lblDailyGoal.setText("✓  CONCLUÍDO");
+        lblDailyGoal.setStyle(
+                "-fx-text-fill: #a6e3a1; " + // verde Catppuccin
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 12px;");
+    }
+
+    /**
+     * Layout para desafios que FALHARAM.
+     * Tom avermelhado suave — informativo sem punir excessivamente o usuário.
+     */
+    private void renderFailedLayout() {
+        cardContainer.getStyleClass().add(
+                challenge.getType() == ChallengeType.MILESTONE_CHALLENGE
+                        ? "card-milestone"
+                        : "card-streak");
+        cardContainer.getStyleClass().add("card-failed");
+
+        // Mostra progresso real até o momento da falha
+        double progress = challenge.getType() == ChallengeType.MILESTONE_CHALLENGE
+                ? (double) challenge.getAccumulatedMinutes() / Math.max(1, challenge.getTargetTotalMinutes())
+                : (double) challenge.getProgressDays() / Math.max(1, challenge.getDurationDays());
+        progressChallenge.setProgress(Math.min(progress, 1.0));
+
+        if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
+            livesContainer.setVisible(true);
+            livesContainer.setManaged(true);
+            renderLives(); // corações todos perdidos = apagados
+            lblProgressText.setText(challenge.getProgressDays() + "/" + challenge.getDurationDays() + " dias");
+            applyProgressBarStyle("streak-progress-failed", "milestone-progress");
+        } else {
+            livesContainer.setVisible(false);
+            livesContainer.setManaged(false);
+            int accH = challenge.getAccumulatedMinutes() / 60;
+            int targetH = challenge.getTargetTotalMinutes() / 60;
+            lblProgressText.setText(String.format("%dh / %dh alcançado", accH, targetH));
+            applyProgressBarStyle("milestone-progress-failed", "streak-progress");
+        }
+
+        // Selo de status no canto superior direito — vermelho suave, não agressivo
+        lblDailyGoal.setText("✕  não concluído");
+        lblDailyGoal.setStyle(
+                "-fx-text-fill: #e07090; " + // vermelho/rosa suave
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 12px;");
+    }
+
+    // -----------------------------------------------------------------------
+    // HELPERS
+    // -----------------------------------------------------------------------
+
+    private void applyProgressBarStyle(String add, String remove) {
+        progressChallenge.getStyleClass().remove(remove);
+        if (!progressChallenge.getStyleClass().contains(add)) {
+            progressChallenge.getStyleClass().add(add);
         }
     }
 
@@ -146,9 +249,17 @@ public class ChallengeCardController {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // EXCLUSÃO — somente para desafios ativos
+    // -----------------------------------------------------------------------
+
     @FXML
     private void onDelete() {
-        String message = String.format("O progresso do desafio '%s' será perdido permanentemente. Deseja continuar?",
+        if (challenge.getStatus() != ChallengeStatus.ACTIVE)
+            return;
+
+        String message = String.format(
+                "O progresso do desafio '%s' será perdido permanentemente. Deseja continuar?",
                 challenge.getTitle());
         String cssPath = getClass().getResource("/css/style.css").toExternalForm();
 

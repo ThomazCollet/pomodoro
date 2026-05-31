@@ -19,6 +19,40 @@ public class ChallengeService {
     private final ChallengeRepository repository;
     private final ProfileRepository profileRepository;
 
+    // -----------------------------------------------------------------------
+    // Record imutável que transporta o resumo de histórico para a UI.
+    // Usado pela seção colapsável de "Desafios Concluídos".
+    // -----------------------------------------------------------------------
+    public record CompletedSummary(int totalCompleted, int totalFailed,
+            int milestoneCompleted, int streakCompleted) {
+
+        /** Texto amigável exibido na barra de resumo da seção de histórico. */
+        public String toDisplayText() {
+            if (totalCompleted == 0 && totalFailed == 0) {
+                return "Nenhum desafio finalizado ainda. Complete seu primeiro para entrar para o histórico!";
+            }
+            StringBuilder sb = new StringBuilder("🏆 ");
+            if (milestoneCompleted > 0) {
+                sb.append(milestoneCompleted)
+                        .append(milestoneCompleted == 1 ? " meta de intensidade" : " metas de intensidade");
+            }
+            if (milestoneCompleted > 0 && streakCompleted > 0) {
+                sb.append(" e ");
+            }
+            if (streakCompleted > 0) {
+                sb.append(streakCompleted)
+                        .append(streakCompleted == 1 ? " constância mantida" : " constâncias mantidas");
+            }
+            sb.append(" — você chegou lá!");
+            if (totalFailed > 0) {
+                sb.append("  •  ").append(totalFailed)
+                        .append(totalFailed == 1 ? " desafio não concluído" : " desafios não concluídos")
+                        .append(" (cada tentativa conta 💪)");
+            }
+            return sb.toString();
+        }
+    }
+
     public ChallengeService(ChallengeRepository repository, ProfileRepository profileRepository) {
         this.repository = repository;
         this.profileRepository = Objects.requireNonNull(profileRepository, "ProfileRepository não pode ser nulo");
@@ -63,7 +97,7 @@ public class ChallengeService {
 
             if (newStatus == ChallengeStatus.COMPLETED) {
                 logger.info("MILESTONE CONCLUÍDO EM TEMPO REAL: {}", challenge.getTitle());
-                awardChallengeXp(challenge); // Distribui XP imediatamente
+                awardChallengeXp(challenge);
             }
         }
     }
@@ -77,7 +111,6 @@ public class ChallengeService {
 
         for (Challenge challenge : activeChallenges) {
             try {
-                // Fail-Fast estruturado
                 if (challenge.getStatus() != ChallengeStatus.ACTIVE) {
                     continue;
                 }
@@ -88,7 +121,6 @@ public class ChallengeService {
                     processMilestoneLogic(challenge, challenge.getTodayFocusMinutes());
                 }
 
-                // Limpa o foco diário para o novo dia de forma segura
                 repository.updateDailyFocus(challenge.getId(), 0);
 
             } catch (Exception e) {
@@ -118,15 +150,12 @@ public class ChallengeService {
 
         repository.updateProgress(challenge.getId(), currentProgress, currentLives, currentStatus.name());
 
-        // Se mudou para concluído na virada do dia, entrega a recompensa
         if (currentStatus == ChallengeStatus.COMPLETED) {
             awardChallengeXp(challenge);
         }
     }
 
     private void processMilestoneLogic(Challenge challenge, int focusMinutesToday) {
-        // Proteção: se o Milestone já bateu a meta e foi completado em tempo real,
-        // ignora
         if (challenge.getStatus() == ChallengeStatus.COMPLETED) {
             return;
         }
@@ -146,23 +175,17 @@ public class ChallengeService {
         }
     }
 
-    /**
-     * Calcula e concede o XP dinamicamente de acordo com a nova Matriz de
-     * Distribuição.
-     */
     private void awardChallengeXp(Challenge challenge) {
         int xpGained = 0;
 
         if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
-            // Nova Regra: Duração em dias x 10 XP
             xpGained = challenge.getDurationDays() * 10;
         } else if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
-            // Nova Regra: Meta de minutos / 10 XP
             xpGained = challenge.getTargetTotalMinutes() / 10;
         }
 
         if (xpGained <= 0) {
-            xpGained = 1; // Proteção mínima caso criem metas ínfimas
+            xpGained = 1;
         }
 
         final int finalXp = xpGained;
@@ -178,6 +201,37 @@ public class ChallengeService {
         return repository.findAllByProfile(profileId).stream()
                 .filter(c -> c.getStatus() == status)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Retorna todos os desafios finalizados (COMPLETED ou FAILED) de um perfil,
+     * ordenados do mais recente para o mais antigo (por data de início desc).
+     */
+    public List<Challenge> getFinishedChallenges(Long profileId) {
+        return repository.findAllByProfile(profileId).stream()
+                .filter(c -> c.getStatus() == ChallengeStatus.COMPLETED
+                        || c.getStatus() == ChallengeStatus.FAILED)
+                .collect(Collectors.toList()); // findAllByProfile já retorna ORDER BY start_date DESC
+    }
+
+    /**
+     * Constrói o resumo de histórico para exibição na barra da seção colapsável.
+     */
+    public CompletedSummary getCompletedSummary(Long profileId) {
+        List<Challenge> finished = getFinishedChallenges(profileId);
+
+        int totalCompleted = (int) finished.stream().filter(c -> c.getStatus() == ChallengeStatus.COMPLETED).count();
+        int totalFailed = (int) finished.stream().filter(c -> c.getStatus() == ChallengeStatus.FAILED).count();
+        int milestoneCompleted = (int) finished.stream()
+                .filter(c -> c.getStatus() == ChallengeStatus.COMPLETED
+                        && c.getType() == ChallengeType.MILESTONE_CHALLENGE)
+                .count();
+        int streakCompleted = (int) finished.stream()
+                .filter(c -> c.getStatus() == ChallengeStatus.COMPLETED
+                        && c.getType() == ChallengeType.STREAK_CHALLENGE)
+                .count();
+
+        return new CompletedSummary(totalCompleted, totalFailed, milestoneCompleted, streakCompleted);
     }
 
     public void deleteChallenge(Long id) {

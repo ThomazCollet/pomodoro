@@ -15,6 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,12 +44,10 @@ class ChallengeServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Mock do Perfil do Usuário
         fakeProfile = new Profile();
         fakeProfile.setId(10L);
         fakeProfile.setXp(100);
 
-        // Mock de um desafio de Streak (Consistência) - 5 dias
         streakChallenge = new Challenge();
         streakChallenge.setId(1L);
         streakChallenge.setProfileId(10L);
@@ -57,8 +56,8 @@ class ChallengeServiceTest {
         streakChallenge.setDurationDays(5);
         streakChallenge.setMinFocusMinutesPerDay(30);
         streakChallenge.setLivesTotal(2);
+        streakChallenge.setStartDate(LocalDate.now().minusDays(3));
 
-        // Mock de um desafio de Milestone (Acumulado) - 120 minutos
         milestoneChallenge = new Challenge();
         milestoneChallenge.setId(2L);
         milestoneChallenge.setProfileId(10L);
@@ -66,6 +65,7 @@ class ChallengeServiceTest {
         milestoneChallenge.setTitle("Maratona Java");
         milestoneChallenge.setTargetTotalMinutes(120);
         milestoneChallenge.setDurationDays(30);
+        milestoneChallenge.setStartDate(LocalDate.now().minusDays(10));
     }
 
     // --- TESTES DE CRIAÇÃO E VALIDAÇÃO ---
@@ -102,13 +102,10 @@ class ChallengeServiceTest {
         milestoneChallenge.setStatus(ChallengeStatus.ACTIVE);
         milestoneChallenge.setAccumulatedMinutes(100);
 
-        // Faltam 20 para 120. Adicionamos 25. Meta batida!
         service.addFocusMinutes(2L, 25);
 
         verify(repository).updateMilestoneProgress(2L, 125, "COMPLETED");
-
-        // MATRIZ NOVA: Meta de 120 minutos / 10 = 12 XP.
-        // 100 XP (Antigo) + 12 XP (Novo) = 112 XP
+        // 100 XP antigos + 12 XP (120/10) = 112
         verify(profileRepository).updateXp(10L, 112);
     }
 
@@ -161,9 +158,7 @@ class ChallengeServiceTest {
         service.processDailyProgress(10L, 0);
 
         verify(repository).updateProgress(1L, 5, 2, "COMPLETED");
-
-        // MATRIZ NOVA: 5 dias de duração x 10 XP = 50 XP.
-        // 100 XP (Antigo) + 50 XP (Novo) = 150 XP
+        // 100 XP antigos + 50 XP (5 dias * 10) = 150
         verify(profileRepository).updateXp(10L, 150);
     }
 
@@ -181,9 +176,87 @@ class ChallengeServiceTest {
 
         verify(repository).updateMilestoneProgress(2L, 120, "COMPLETED");
         verify(repository).updateDailyFocus(2L, 0);
-
-        // MATRIZ NOVA: Meta de 120 minutos / 10 = 12 XP.
-        // 100 XP (Antigo) + 12 XP (Novo) = 112 XP
+        // 100 XP antigos + 12 XP (120/10) = 112
         verify(profileRepository).updateXp(10L, 112);
+    }
+
+    // --- TESTES DO HISTÓRICO (NOVOS) ---
+
+    @Test
+    @DisplayName("getFinishedChallenges deve retornar apenas COMPLETED e FAILED, ignorando ACTIVE")
+    void shouldReturnOnlyFinishedChallenges() {
+        Challenge completed = buildChallenge(3L, ChallengeType.STREAK_CHALLENGE, ChallengeStatus.COMPLETED);
+        Challenge failed = buildChallenge(4L, ChallengeType.MILESTONE_CHALLENGE, ChallengeStatus.FAILED);
+        Challenge active = buildChallenge(5L, ChallengeType.STREAK_CHALLENGE, ChallengeStatus.ACTIVE);
+
+        when(repository.findAllByProfile(10L)).thenReturn(List.of(completed, failed, active));
+
+        List<Challenge> result = service.getFinishedChallenges(10L);
+
+        assertEquals(2, result.size(), "Deve retornar apenas os 2 desafios finalizados");
+        assertTrue(result.stream().noneMatch(c -> c.getStatus() == ChallengeStatus.ACTIVE));
+    }
+
+    @Test
+    @DisplayName("getCompletedSummary deve contabilizar corretamente por tipo e status")
+    void shouldComputeSummaryCorrectly() {
+        Challenge completedStreak = buildChallenge(3L, ChallengeType.STREAK_CHALLENGE, ChallengeStatus.COMPLETED);
+        Challenge completedMilestone = buildChallenge(4L, ChallengeType.MILESTONE_CHALLENGE, ChallengeStatus.COMPLETED);
+        Challenge failedStreak = buildChallenge(5L, ChallengeType.STREAK_CHALLENGE, ChallengeStatus.FAILED);
+        Challenge active = buildChallenge(6L, ChallengeType.STREAK_CHALLENGE, ChallengeStatus.ACTIVE);
+
+        when(repository.findAllByProfile(10L))
+                .thenReturn(List.of(completedStreak, completedMilestone, failedStreak, active));
+
+        ChallengeService.CompletedSummary summary = service.getCompletedSummary(10L);
+
+        assertAll(
+                () -> assertEquals(2, summary.totalCompleted(), "2 completados"),
+                () -> assertEquals(1, summary.totalFailed(), "1 falhou"),
+                () -> assertEquals(1, summary.milestoneCompleted(), "1 intensidade concluída"),
+                () -> assertEquals(1, summary.streakCompleted(), "1 constância concluída"));
+    }
+
+    @Test
+    @DisplayName("getCompletedSummary com histórico vazio deve retornar zeros e mensagem inicial")
+    void shouldReturnZeroSummaryWhenNoHistory() {
+        when(repository.findAllByProfile(10L)).thenReturn(List.of());
+
+        ChallengeService.CompletedSummary summary = service.getCompletedSummary(10L);
+
+        assertAll(
+                () -> assertEquals(0, summary.totalCompleted()),
+                () -> assertEquals(0, summary.totalFailed()),
+                () -> assertTrue(summary.toDisplayText().contains("Nenhum desafio finalizado")));
+    }
+
+    @Test
+    @DisplayName("toDisplayText deve montar frase correta com streak e milestone")
+    void shouldFormatDisplayTextCorrectly() {
+        ChallengeService.CompletedSummary summary = new ChallengeService.CompletedSummary(3, 1, 2, 1);
+
+        String text = summary.toDisplayText();
+
+        assertTrue(text.contains("🏆"), "Deve ter troféu");
+        assertTrue(text.contains("2 metas de intensidade"), "Deve citar 2 metas");
+        assertTrue(text.contains("1 constância mantida"), "Deve citar 1 constância");
+        assertTrue(text.contains("1 desafio não concluído"), "Deve mencionar os falhos");
+    }
+
+    // ── helper ──────────────────────────────────────────────────────────────
+    private Challenge buildChallenge(Long id, ChallengeType type, ChallengeStatus status) {
+        Challenge c = new Challenge();
+        c.setId(id);
+        c.setProfileId(10L);
+        c.setType(type);
+        c.setStatus(status);
+        c.setTitle("Challenge " + id);
+        c.setDurationDays(7);
+        c.setMinFocusMinutesPerDay(30);
+        c.setLivesTotal(2);
+        c.setLivesRemaining(status == ChallengeStatus.FAILED ? 0 : 2);
+        c.setTargetTotalMinutes(type == ChallengeType.MILESTONE_CHALLENGE ? 300 : 0);
+        c.setStartDate(LocalDate.now().minusDays(10));
+        return c;
     }
 }

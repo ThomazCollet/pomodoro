@@ -42,3 +42,45 @@ VALUES
 (1, 'FOCUS', '2026-05-20 16:00:00', '2026-05-20 17:00:00', 3600, 1);
 
 SELECT 'Banco de dados preenchido com sucesso!' AS status;
+
+-- =========================================================
+-- TESTE DE HISTÓRICO DE DESAFIOS (UI)
+-- =========================================================
+
+-- Limpa desafios de teste (ajuste o profile_id conforme necessário)
+DELETE FROM challenges WHERE profile_id = 1;
+
+-- 1. Desafio de Intensidade CONCLUÍDO (Barra cheia, verde)
+INSERT INTO challenges (
+    profile_id, title, type, duration_days, min_focus_minutes_per_day, 
+    target_total_minutes, accumulated_minutes, lives_total, lives_remaining, 
+    status, start_date, progress_days
+) VALUES (
+    1, 'Maratona de Java', 'MILESTONE_CHALLENGE', 30, 0, 
+    600, 600, 0, 0, 
+    'COMPLETED', '2026-04-01', 30
+);
+
+-- 2. Desafio de Constância FALHOU (Barra parcial, vermelho)
+INSERT INTO challenges (
+    profile_id, title, type, duration_days, min_focus_minutes_per_day, 
+    target_total_minutes, accumulated_minutes, lives_total, lives_remaining, 
+    status, start_date, progress_days
+) VALUES (
+    1, 'Acordar às 06h', 'STREAK_CHALLENGE', 14, 0, 
+    0, 0, 3, -1, 
+    'FAILED', '2026-05-10', 5
+);
+
+-- 3. Desafio de Constância EM ANDAMENTO (Para manter o contraste)
+INSERT INTO challenges (
+    profile_id, title, type, duration_days, min_focus_minutes_per_day, 
+    target_total_minutes, accumulated_minutes, lives_total, lives_remaining, 
+    status, start_date, progress_days
+) VALUES (
+    1, 'Leitura Diária', 'STREAK_CHALLENGE', 20, 30, 
+    0, 0, 3, 2, 
+    'ACTIVE', '2026-05-25', 5
+);
+
+SELECT 'Desafios de teste (concluído, falho e ativo) injetados com sucesso!' AS status;

@@ -1061,6 +1061,93 @@
 }
 
 /* ==========================================================================
+   SEÇÃO DE HISTÓRICO — Header Colapsável
+   ========================================================================== */
+
+.history-section-header:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 8;
+}
+
+.history-toggle-icon {
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 10px;
+    -fx-min-width: 14px;
+}
+
+.history-summary-label {
+    -fx-text-fill: #7f849c;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+}
+
+/* ==========================================================================
+   CARD CONCLUÍDO — sobreposição verde escurecida, não-intrusiva
+   ========================================================================== */
+
+/* Escurece e dessatura levemente o card de constância concluído */
+.card-streak.card-completed {
+    -fx-border-color: #3d6b4f;
+    /* verde escuro — sucesso sutil */
+    -fx-background-color: rgba(166, 227, 161, 0.05);
+    -fx-opacity: 0.88;
+}
+
+/* Escurece o card de intensidade concluído */
+.card-milestone.card-completed {
+    -fx-border-color: #2e5070;
+    /* azul escuro — feito */
+    -fx-background-color: rgba(137, 180, 250, 0.04);
+    -fx-opacity: 0.88;
+}
+
+/* Barra de progresso verde para cards concluídos */
+.card-completed .progress-bar .bar,
+.card-completed .streak-progress .bar,
+.card-completed .milestone-progress .bar {
+    -fx-background-color: #4a8c5c;
+    /* verde suave, não gritante */
+}
+
+/* ==========================================================================
+   CARD FALHOU — tom avermelhado suave, sem punição visual excessiva
+   ========================================================================== */
+
+.card-streak.card-failed {
+    -fx-border-color: #6b3040;
+    /* vermelho escuro discreto */
+    -fx-background-color: rgba(243, 139, 168, 0.04);
+    -fx-opacity: 0.80;
+}
+
+.card-milestone.card-failed {
+    -fx-border-color: #5a3050;
+    -fx-background-color: rgba(203, 166, 247, 0.03);
+    -fx-opacity: 0.80;
+}
+
+/* Barra de progresso acinzentada para desafios falhos */
+.streak-progress-failed .bar,
+.milestone-progress-failed .bar {
+    -fx-background-color: #585b70;
+    /* cinza neutro */
+    -fx-background-insets: 0;
+}
+
+/* Hover nos cards finalizados — resposta visual discreta */
+.card-streak.card-completed:hover,
+.card-milestone.card-completed:hover {
+    -fx-opacity: 1.0;
+    -fx-effect: dropshadow(three-pass-box, rgba(166, 227, 161, 0.2), 8, 0, 0, 0);
+}
+
+.card-streak.card-failed:hover,
+.card-milestone.card-failed:hover {
+    -fx-opacity: 0.92;
+    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.15), 8, 0, 0, 0);
+}
+
+/* ==========================================================================
    CORREÇÃO CIRÚRGICA DOS CONTADORES APAGADOS DO TOPO
    ========================================================================== */
 .medal-summary-card .summary-medal-tier {
