@@ -368,10 +368,23 @@
     -fx-border-color: transparent;
 }
 
-/* Força os containers internos de renderização a ficarem transparentes */
+/* Força os containers internos de renderização a ficarem transparentes
+   e suprime scroll horizontal causado pelo VirtualFlow calculando prefWidth
+   pelo conteúdo ao invés de respeitar o espaço disponível do pai */
 .podium-list-view .virtual-flow,
 .podium-list-view .indexed-cell {
     -fx-background-color: transparent;
+}
+
+.podium-list-view .scroll-bar:horizontal,
+.podium-list-view .scroll-bar:horizontal .track,
+.podium-list-view .scroll-bar:horizontal .thumb,
+.podium-list-view .scroll-bar:horizontal .increment-button,
+.podium-list-view .scroll-bar:horizontal .decrement-button {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+    -fx-padding: 0;
 }
 
 /* Customização das Células: Alinhamento, Cores e Espaçamento */

@@ -1,0 +1,44 @@
+/* INSTRUÇÕES DE USO:
+   1. Certifique-se de que a aplicação Java rodou pelo menos uma vez para criar as tabelas.
+   2. No terminal, com o pomodoro.db na pasta:
+      .\sqlite3.exe pomodoro.db
+      .read seed.sql
+*/
+
+DELETE FROM focus_sessions;
+
+WITH RECURSIVE dates(date_val) AS (
+    SELECT date('2026-04-15')
+    UNION ALL
+    SELECT date(date_val, '+1 day')
+    FROM dates
+    LIMIT 45
+),
+generated_data AS (
+    SELECT 
+        1 as profile_id, 
+        'FOCUS' as type,
+        date_val || ' 09:00:00' as start_timestamp,
+        date_val || ' 09:00:00' as end_timestamp,
+        CASE 
+            WHEN (ABS(RANDOM()) % 10) = 0 THEN 0
+            WHEN (ABS(RANDOM()) % 5) = 1 THEN 600
+            WHEN (ABS(RANDOM()) % 5) = 2 THEN 3600
+            WHEN (ABS(RANDOM()) % 5) = 3 THEN 5400
+            ELSE 9000
+        END as calculated_duration,
+        1 as completed
+    FROM dates
+)
+INSERT INTO focus_sessions (profile_id, type, start_timestamp, end_timestamp, duration_seconds, completed)
+SELECT profile_id, type, start_timestamp, end_timestamp, calculated_duration, completed
+FROM generated_data
+WHERE calculated_duration > 0;
+
+-- Adiciona sessões extras para teste
+INSERT INTO focus_sessions (profile_id, type, start_timestamp, end_timestamp, duration_seconds, completed)
+VALUES 
+(1, 'FOCUS', '2026-05-20 14:00:00', '2026-05-20 15:00:00', 3600, 1),
+(1, 'FOCUS', '2026-05-20 16:00:00', '2026-05-20 17:00:00', 3600, 1);
+
+SELECT 'Banco de dados preenchido com sucesso!' AS status;

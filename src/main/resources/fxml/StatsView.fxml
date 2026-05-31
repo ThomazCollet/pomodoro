@@ -84,17 +84,17 @@
         <HBox spacing="15.0" VBox.vgrow="NEVER">
             <VBox spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
                 <Label styleClass="section-title" text="🏆 DIAS RECORDISTAS" />
-                <ListView fx:id="listDailyPodium" prefHeight="160.0" styleClass="podium-list-view" />
+                <ListView fx:id="listDailyPodium" prefHeight="160.0" prefWidth="-1" maxWidth="Infinity" styleClass="podium-list-view" VBox.vgrow="ALWAYS" />
             </VBox>
             
             <VBox spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
                 <Label styleClass="section-title" text="📅 MESES RECORDISTAS" />
-                <ListView fx:id="listMonthlyPodium" prefHeight="160.0" styleClass="podium-list-view" />
+                <ListView fx:id="listMonthlyPodium" prefHeight="160.0" prefWidth="-1" maxWidth="Infinity" styleClass="podium-list-view" VBox.vgrow="ALWAYS" />
             </VBox>
 
             <VBox spacing="10.0" styleClass="chart-container" HBox.hgrow="ALWAYS">
                 <Label styleClass="section-title" text="🔥 MAIORES STREAKS" />
-                <ListView fx:id="listStreakPodium" prefHeight="160.0" styleClass="podium-list-view" />
+                <ListView fx:id="listStreakPodium" prefHeight="160.0" prefWidth="-1" maxWidth="Infinity" styleClass="podium-list-view" VBox.vgrow="ALWAYS" />
             </VBox>
         </HBox>
 

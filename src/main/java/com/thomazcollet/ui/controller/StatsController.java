@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -426,34 +425,28 @@ public class StatsController {
         return 1.5;
     }
 
+    // Paleta do heatmap — Catppuccin Mocha, rampa verde + Sky para dias supremos.
+    // Índices: 0=vazio  1=rastro(<30m)  2=leve(30m–2h)  3=bom(2–4h)  4=ótimo(4–6h)  5=supremo(≥6h)
+    private static final String[] HEATMAP_COLORS = {
+        "#1e2030", // 0 — vazio      (funde com o fundo #1e1e2e)
+        "#2d4a3e", // 1 — rastro     (verde bem escuro)
+        "#40724f", // 2 — leve       (verde médio-escuro)
+        "#5a9e64", // 3 — bom        (verde médio)
+        "#a6e3a1", // 4 — ótimo      (Catppuccin Green claro)
+        "#89dceb"  // 5 — supremo    (Catppuccin Sky — destaque especial ≥ 6h)
+    };
+
     private void renderHeatmap(Map<LocalDate, Long> dailyData) {
         heatmapGrid.getChildren().clear();
-        String[] colors = { "#313244", "#45475a", "#585b70", "#a6e3a1", "#94e2d5" };
 
-        Map<String, Long> standardizedData = new HashMap<>();
-
-        if (dailyData != null) {
-            ((Map<?, ?>) dailyData).forEach((key, value) -> {
-                if (key != null && value != null) {
-                    try {
-                        String dateStr = key.toString();
-                        if (dateStr.length() >= 10)
-                            dateStr = dateStr.substring(0, 10);
-
-                        long secs = (long) Double.parseDouble(value.toString());
-                        standardizedData.merge(dateStr, secs, Long::sum);
-                    } catch (Exception e) {
-                        logger.warn("Dado ignorado no parser do heatmap: {}={}", key, value);
-                    }
-                }
-            });
-        }
+        // O repositório já entrega Map<LocalDate, Long> — acesso direto, sem conversão.
+        Map<LocalDate, Long> data = (dailyData != null) ? dailyData : Map.of();
 
         LocalDate dateIter = LocalDate.now().minusWeeks(52).with(DayOfWeek.SUNDAY);
 
         for (int col = 0; col < 53; col++) {
             for (int row = 0; row < 7; row++) {
-                Rectangle rect = createHeatmapRect(dateIter, standardizedData, colors);
+                Rectangle rect = createHeatmapRect(dateIter, data);
                 heatmapGrid.add(rect, col, row);
                 dateIter = dateIter.plusDays(1);
             }
@@ -464,13 +457,13 @@ public class StatsController {
         }
     }
 
-    private Rectangle createHeatmapRect(LocalDate date, Map<String, Long> standardizedData, String[] colors) {
+    private Rectangle createHeatmapRect(LocalDate date, Map<LocalDate, Long> data) {
         Rectangle rect = new Rectangle(12, 12);
         rect.setArcWidth(3);
         rect.setArcHeight(3);
 
-        Long seconds = standardizedData.getOrDefault(date.toString(), 0L);
-        rect.setFill(Color.web(getColorForSeconds(seconds, colors)));
+        long seconds = data.getOrDefault(date, 0L);
+        rect.setFill(Color.web(getColorForSeconds(seconds)));
 
         Tooltip tooltip = new Tooltip(date + " • " + formatDuration(seconds));
         tooltip.setShowDelay(Duration.millis(200));
@@ -479,16 +472,23 @@ public class StatsController {
         return rect;
     }
 
-    private String getColorForSeconds(long seconds, String[] colors) {
-        if (seconds == 0)
-            return colors[0];
-        if (seconds < 3600)
-            return colors[1];
-        if (seconds < 10800)
-            return colors[2];
-        if (seconds < 18000)
-            return colors[3];
-        return colors[4];
+    /**
+     * Mapeia segundos de foco para um dos 6 níveis da paleta do heatmap.
+     *
+     *  0 — vazio    :  = 0 s
+     *  1 — rastro   :  1 s  –  1 799 s   (< 30 min)
+     *  2 — leve     :  1 800 s – 7 199 s  (30 min – 2 h)
+     *  3 — bom      :  7 200 s – 14 399 s (2 h – 4 h)
+     *  4 — ótimo    : 14 400 s – 21 599 s (4 h – 6 h)
+     *  5 — supremo  : ≥ 21 600 s          (6 h ou mais)
+     */
+    private String getColorForSeconds(long seconds) {
+        if (seconds == 0)      return HEATMAP_COLORS[0];
+        if (seconds < 1800)    return HEATMAP_COLORS[1];
+        if (seconds < 7200)    return HEATMAP_COLORS[2];
+        if (seconds < 14400)   return HEATMAP_COLORS[3];
+        if (seconds < 21600)   return HEATMAP_COLORS[4];
+        return                        HEATMAP_COLORS[5];
     }
 
     private String formatDuration(long totalSeconds) {
