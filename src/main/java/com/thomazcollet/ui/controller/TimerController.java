@@ -44,15 +44,13 @@ public class TimerController implements TimerChangeListener {
     private HBox hboxPips;
 
     private PomodoroService pomodoroService;
-    private Stage miniTimerStage; // Guardará a instância única da mini janela
+    private Stage miniTimerStage;
 
     public void setPomodoroService(PomodoroService service) {
         this.pomodoroService = service;
         updateDisplay(service.getRemainingSeconds());
         updateSessionPips();
         initArcCentering();
-
-        // Configuração do estado inicial da UI baseado no Service
         updatePlayPauseButtonVisual(service.getTimerState());
         updateMuteButtonVisual(service.isAudioMuted());
     }
@@ -75,7 +73,6 @@ public class TimerController implements TimerChangeListener {
     public void initialize() {
         if (btnPlayPause != null)
             btnPlayPause.setOnAction(e -> handlePlayPauseToggle());
-
         if (btnReset != null)
             btnReset.setOnAction(e -> handleReset());
         if (btnSkip != null)
@@ -85,7 +82,6 @@ public class TimerController implements TimerChangeListener {
     private void handlePlayPauseToggle() {
         if (pomodoroService == null)
             return;
-
         try {
             if (pomodoroService.getTimerState() == TimerState.RUNNING) {
                 pomodoroService.pause();
@@ -152,21 +148,16 @@ public class TimerController implements TimerChangeListener {
         pomodoroService.toggleAudioMute();
     }
 
-    // REFACTOR: Centralizado, aceita o estado primitivo e é executado de forma
-    // atômica
     private void updateMuteButtonVisual(boolean isMuted) {
         if (btnMute == null)
             return;
-
         btnMute.setText(isMuted ? "🔇" : "🔊");
         btnMute.getStyleClass().remove("dock-mute-active");
-
         if (isMuted) {
             btnMute.getStyleClass().add("dock-mute-active");
         }
     }
 
-    // REFACTOR: Centralizado, atualiza o ícone do Play/Pause de forma isolada
     private void updatePlayPauseButtonVisual(TimerState state) {
         if (btnPlayPause == null)
             return;
@@ -184,7 +175,6 @@ public class TimerController implements TimerChangeListener {
                 }
                 miniTimerStage.toFront();
                 miniTimerStage.requestFocus();
-
                 mainStage.setIconified(true);
                 return;
             }
@@ -222,8 +212,6 @@ public class TimerController implements TimerChangeListener {
             miniTimerStage.setOnHiding(event -> {
                 pomodoroService.removeChangeListener(miniController);
                 miniTimerStage = null;
-
-                // Garante atualização visual exata ao retornar
                 updatePlayPauseButtonVisual(pomodoroService.getTimerState());
                 updateMuteButtonVisual(pomodoroService.isAudioMuted());
             });
@@ -262,37 +250,67 @@ public class TimerController implements TimerChangeListener {
     private void updateProgressCircle(int seconds) {
         double totalSeconds = pomodoroService.getTotalSessionDuration();
         double percentage = (double) seconds / totalSeconds;
-        double angle = percentage * 360;
-        arcProgress.setLength(angle);
+        arcProgress.setLength(percentage * 360);
 
-        String color = (pomodoroService.getCurrentSessionType() == SessionType.FOCUS) ? "#89b4fa" : "#a6e3a1";
+        String color = (pomodoroService.getCurrentSessionType() == SessionType.FOCUS)
+                ? "#89b4fa"
+                : "#a6e3a1";
         arcProgress.setStyle("-fx-stroke: " + color + ";");
     }
 
+    /**
+     * Renderiza os 4 pips do ciclo Pomodoro com a mesma lógica do
+     * MiniTimerController:
+     *
+     * - pips anteriores ao atual → .pip-active (verde estático — ciclos já feitos)
+     * - pip da sessão atual → .pip-focus (azul) se FOCUS
+     * .pip-break (verde) se SHORT_BREAK / LONG_BREAK
+     * - pips ainda não chegados → .pip (cinza base)
+     *
+     * O ajuste de activeIndex garante que, durante um descanso, a bolinha do foco
+     * já concluído não "avance" prematuramente para o próximo slot vazio.
+     */
     public void updateSessionPips() {
         if (hboxPips == null)
             return;
 
         Platform.runLater(() -> {
             hboxPips.getChildren().clear();
+
             int currentSessionInCycle = pomodoroService.getSessionsInCycle();
+            SessionType currentType = pomodoroService.getCurrentSessionType();
+
+            // Durante descanso o índice "recua" para não adiantar o preenchimento visual
+            int activeIndex = (currentType != SessionType.FOCUS)
+                    ? currentSessionInCycle - 1
+                    : currentSessionInCycle;
 
             for (int i = 0; i < 4; i++) {
-                Circle pip = new Circle(6);
+                Circle pip = new Circle(6); // raio 6 igual ao original do TimerView
                 pip.getStyleClass().add("pip");
 
-                if (i < currentSessionInCycle) {
+                if (i < activeIndex) {
+                    // Ciclos passados — verde estático
                     pip.getStyleClass().add("pip-active");
-                } else if (i == currentSessionInCycle && pomodoroService.getCurrentSessionType() == SessionType.FOCUS) {
-                    pip.getStyleClass().add("pip-current");
+                } else if (i == activeIndex) {
+                    // Sessão corrente — azul (foco) ou verde (descanso)
+                    if (currentType == SessionType.FOCUS) {
+                        pip.getStyleClass().add("pip-focus");
+                    } else {
+                        pip.getStyleClass().add("pip-break");
+                    }
                 }
+                // else: pip cinza base — futuro, sem classe extra
 
                 hboxPips.getChildren().add(pip);
             }
         });
     }
 
-    // --- PROCESSAMENTO DO TICK TOTALMENTE OTIMIZADO (LISO) ---
+    // -----------------------------------------------------------------------
+    // Callbacks do TimerChangeListener
+    // -----------------------------------------------------------------------
+
     @Override
     public void onTick(int secondsRemaining) {
         Platform.runLater(() -> {
@@ -311,10 +329,20 @@ public class TimerController implements TimerChangeListener {
         });
     }
 
-    // --- INJEÇÃO DOS NOVOS CALLBACKS ORIENTADOS A EVENTO ---
+    /**
+     * FIX PRINCIPAL: onStateChanged agora chama updateSessionPips().
+     *
+     * Antes, ao pressionar Play o service disparava RUNNING via onStateChanged,
+     * mas os pips não eram redesenhados — ficavam no estado cinza inicial sem
+     * nunca receber .pip-focus (azul). O MiniTimerController já fazia isso
+     * corretamente; o TimerController estava faltando a chamada.
+     */
     @Override
     public void onStateChanged(TimerState newState) {
-        Platform.runLater(() -> updatePlayPauseButtonVisual(newState));
+        Platform.runLater(() -> {
+            updatePlayPauseButtonVisual(newState);
+            updateSessionPips(); // ← linha que estava faltando
+        });
     }
 
     @Override

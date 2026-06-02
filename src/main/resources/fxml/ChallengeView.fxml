@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -41,7 +42,7 @@
             <content>
                 <VBox spacing="0.0">
                     <padding>
-                        <Insets bottom="30.0" left="10.0" right="20.0" top="10.0" />
+                        <Insets bottom="30.0" left="10.0" right="10.0" top="10.0" />
                     </padding>
 
                     <!-- ─────────────────────────────────────────── -->
@@ -49,50 +50,62 @@
                     <!-- ─────────────────────────────────────────── -->
                     <VBox spacing="15.0" VBox.vgrow="ALWAYS">
                         <padding><Insets top="30.0" /></padding>
-
                         <Label styleClass="section-title" text="EM ANDAMENTO" />
-
-                        <VBox fx:id="challengesContainer" alignment="CENTER" spacing="15.0" VBox.vgrow="ALWAYS">
-                            <!-- populado pelo controller -->
-                        </VBox>
+                        <VBox fx:id="challengesContainer" alignment="CENTER" spacing="15.0" VBox.vgrow="ALWAYS" />
                     </VBox>
 
                     <!-- ─────────────────────────────────────────── -->
-                    <!-- HISTÓRICO (seção colapsável)                 -->
+                    <!-- HISTÓRICO — seção colapsável                 -->
                     <!-- ─────────────────────────────────────────── -->
-                    <VBox fx:id="historySection" spacing="0.0" style="-fx-padding: 30 0 0 0;">
+                    <VBox fx:id="historySection" spacing="0.0"
+                          style="-fx-padding: 36 0 0 0;">
 
-                        <Separator opacity="0.12" />
+                        <!--
+                            HEADER DA SEÇÃO — bloco clicável com fundo sutil.
+                            onMouseClicked dispara handleToggleHistory() no controller.
+                        -->
+                        <VBox styleClass="history-header-block"
+                              onMouseClicked="#handleToggleHistory">
 
-                        <!-- Header clicável da seção de histórico -->
-                        <HBox alignment="CENTER_LEFT" spacing="12.0"
-                              styleClass="history-section-header"
-                              onMouseClicked="#handleToggleHistory"
-                              style="-fx-cursor: hand; -fx-padding: 14 4 10 4;">
+                            <!-- Linha 1: título + seta -->
+                            <HBox alignment="CENTER_LEFT" spacing="10.0"
+                                  styleClass="history-header-title-row">
 
-                            <Label fx:id="lblHistoryToggleIcon" text="▶"
-                                   styleClass="history-toggle-icon" />
+                                <Label fx:id="lblHistoryToggleIcon"
+                                       text="▶"
+                                       styleClass="history-toggle-icon" />
 
-                            <Label text="CONCLUÍDOS" styleClass="section-title"
-                                   style="-fx-font-size: 11px;" />
+                                <Label text="CONCLUÍDOS"
+                                       styleClass="section-title"
+                                       style="-fx-font-size: 11px;" />
 
-                            <Region HBox.hgrow="ALWAYS" />
+                                <!-- Separador que ocupa o restante da largura -->
+                                <Separator HBox.hgrow="ALWAYS"
+                                           styleClass="history-separator"
+                                           style="-fx-padding: 0 0 0 6;" />
+                            </HBox>
 
-                            <!-- Barra de resumo dinâmica -->
-                            <Label fx:id="lblHistorySummary"
-                                   styleClass="history-summary-label"
-                                   text="Carregando..."
-                                   wrapText="false"
-                                   maxWidth="600.0"
-                                   style="-fx-font-size: 12px;" />
-                        </HBox>
+                            <!-- Linha 2: estatísticas em fonte menor, abaixo do título -->
+                            <HBox alignment="CENTER_LEFT" spacing="0.0"
+                                  style="-fx-padding: 4 0 0 24;">
+                                <Label fx:id="lblHistorySummary"
+                                       styleClass="history-summary-label"
+                                       text=""
+                                       wrapText="true"
+                                       maxWidth="Infinity"
+                                       HBox.hgrow="ALWAYS">
+                                    <tooltip>
+                                        <Tooltip text="Clique para expandir ou recolher o histórico" />
+                                    </tooltip>
+                                </Label>
+                            </HBox>
+
+                        </VBox>
 
                         <!-- Cards colapsáveis — ocultos por padrão -->
                         <VBox fx:id="historyCardsContainer" spacing="12.0"
                               visible="false" managed="false"
-                              style="-fx-padding: 4 0 10 0;">
-                            <!-- populado pelo controller -->
-                        </VBox>
+                              style="-fx-padding: 12 0 10 0;" />
 
                     </VBox>
 
