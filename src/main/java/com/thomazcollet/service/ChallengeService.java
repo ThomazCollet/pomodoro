@@ -16,17 +16,17 @@ import java.util.stream.Collectors;
 public class ChallengeService {
 
     private static final Logger logger = LoggerFactory.getLogger(ChallengeService.class);
+
     private final ChallengeRepository repository;
     private final ProfileRepository profileRepository;
+    private final NotificationService notificationService; // nullable — retrocompatível
 
     // -----------------------------------------------------------------------
     // Record imutável que transporta o resumo de histórico para a UI.
-    // Usado pela seção colapsável de "Desafios Concluídos".
     // -----------------------------------------------------------------------
     public record CompletedSummary(int totalCompleted, int totalFailed,
             int milestoneCompleted, int streakCompleted) {
 
-        /** Texto amigável exibido na barra de resumo da seção de histórico. */
         public String toDisplayText() {
             if (totalCompleted == 0 && totalFailed == 0) {
                 return "Nenhum desafio finalizado ainda. Complete seu primeiro para entrar para o histórico!";
@@ -53,10 +53,26 @@ public class ChallengeService {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // CONSTRUTORES — sem NotificationService para manter compatibilidade com
+    // os testes existentes que usam @InjectMocks.
+    // -----------------------------------------------------------------------
+
     public ChallengeService(ChallengeRepository repository, ProfileRepository profileRepository) {
+        this(repository, profileRepository, null);
+    }
+
+    public ChallengeService(ChallengeRepository repository,
+            ProfileRepository profileRepository,
+            NotificationService notificationService) {
         this.repository = repository;
         this.profileRepository = Objects.requireNonNull(profileRepository, "ProfileRepository não pode ser nulo");
+        this.notificationService = notificationService; // nullable
     }
+
+    // ==========================================================================
+    // CRIAÇÃO
+    // ==========================================================================
 
     public void createChallenge(Challenge challenge) {
         logger.info("Criando novo desafio de {}: {}", challenge.getType(), challenge.getTitle());
@@ -72,9 +88,10 @@ public class ChallengeService {
         repository.save(challenge);
     }
 
-    /**
-     * Atualiza o foco diário em tempo real (ex: ao terminar um Pomodoro).
-     */
+    // ==========================================================================
+    // PROGRESSO EM TEMPO REAL
+    // ==========================================================================
+
     public void addFocusMinutes(Long challengeId, int minutes) {
         Challenge challenge = repository.findById(challengeId)
                 .orElseThrow(() -> new ChallengeNotFoundException("Desafio não encontrado. ID: " + challengeId));
@@ -82,11 +99,9 @@ public class ChallengeService {
         if (challenge.getStatus() != ChallengeStatus.ACTIVE)
             return;
 
-        // 1. Atualiza o foco do dia (UI)
         int newDailyFocus = challenge.getTodayFocusMinutes() + minutes;
         repository.updateDailyFocus(challengeId, newDailyFocus);
 
-        // 2. Se for Milestone, atualiza o acumulado total
         if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE) {
             int newTotal = challenge.getAccumulatedMinutes() + minutes;
             ChallengeStatus newStatus = (newTotal >= challenge.getTargetTotalMinutes())
@@ -98,22 +113,22 @@ public class ChallengeService {
             if (newStatus == ChallengeStatus.COMPLETED) {
                 logger.info("MILESTONE CONCLUÍDO EM TEMPO REAL: {}", challenge.getTitle());
                 awardChallengeXp(challenge);
+                notifyChallengeCompleted(challenge);
             }
         }
     }
 
-    /**
-     * Processamento de fim de dia (chamado geralmente à meia-noite ou ao iniciar o
-     * app).
-     */
+    // ==========================================================================
+    // PROCESSAMENTO DIÁRIO
+    // ==========================================================================
+
     public void processDailyProgress(Long profileId, int focusMinutesToday) {
         List<Challenge> activeChallenges = repository.findActiveByProfile(profileId);
 
         for (Challenge challenge : activeChallenges) {
             try {
-                if (challenge.getStatus() != ChallengeStatus.ACTIVE) {
+                if (challenge.getStatus() != ChallengeStatus.ACTIVE)
                     continue;
-                }
 
                 if (challenge.getType() == ChallengeType.STREAK_CHALLENGE) {
                     processStreakLogic(challenge, challenge.getTodayFocusMinutes());
@@ -127,6 +142,9 @@ public class ChallengeService {
                 logger.error("Erro ao processar desafio ID {}: {}", challenge.getId(), e.getMessage());
             }
         }
+
+        // Verifica se o perfil ficou sem nenhum desafio ativo após o processamento
+        checkAndNotifyNoActiveChallenges(profileId);
     }
 
     private void processStreakLogic(Challenge challenge, int focusMinutesToday) {
@@ -152,13 +170,15 @@ public class ChallengeService {
 
         if (currentStatus == ChallengeStatus.COMPLETED) {
             awardChallengeXp(challenge);
+            notifyChallengeCompleted(challenge);
+        } else if (currentStatus == ChallengeStatus.FAILED) {
+            notifyChallengeFailed(challenge);
         }
     }
 
     private void processMilestoneLogic(Challenge challenge, int focusMinutesToday) {
-        if (challenge.getStatus() == ChallengeStatus.COMPLETED) {
+        if (challenge.getStatus() == ChallengeStatus.COMPLETED)
             return;
-        }
 
         int newTotal = challenge.getAccumulatedMinutes();
 
@@ -172,8 +192,13 @@ public class ChallengeService {
             repository.updateMilestoneProgress(challenge.getId(), newTotal, ChallengeStatus.COMPLETED.name());
             logger.info("MILESTONE CONCLUÍDO NO PROCESSAMENTO DIÁRIO: {}", challenge.getTitle());
             awardChallengeXp(challenge);
+            notifyChallengeCompleted(challenge);
         }
     }
+
+    // ==========================================================================
+    // XP
+    // ==========================================================================
 
     private void awardChallengeXp(Challenge challenge) {
         int xpGained = 0;
@@ -184,9 +209,8 @@ public class ChallengeService {
             xpGained = challenge.getTargetTotalMinutes() / 10;
         }
 
-        if (xpGained <= 0) {
+        if (xpGained <= 0)
             xpGained = 1;
-        }
 
         final int finalXp = xpGained;
         profileRepository.findById(challenge.getProfileId()).ifPresent(profile -> {
@@ -197,26 +221,87 @@ public class ChallengeService {
         });
     }
 
+    // ==========================================================================
+    // NOTIFICAÇÕES
+    // ==========================================================================
+
+    /**
+     * Envia notificação parabenizando o usuário por concluir um desafio.
+     */
+    private void notifyChallengeCompleted(Challenge challenge) {
+        if (notificationService == null)
+            return;
+
+        int profileId = challenge.getProfileId().intValue();
+        String typeLabel = (challenge.getType() == ChallengeType.STREAK_CHALLENGE)
+                ? "constância"
+                : "intensidade";
+
+        String title = "🏆 Desafio Concluído!";
+        String message = "Parabéns! Você finalizou o desafio de " + typeLabel
+                + " \"" + challenge.getTitle() + "\" com sucesso! "
+                + "Continue assim — cada vitória conta. 🎉";
+
+        notificationService.send(profileId, title, message);
+        logger.info("Notificação de desafio concluído enviada para o perfil {}.", profileId);
+    }
+
+    /**
+     * Envia notificação informando que o usuário perdeu um desafio.
+     */
+    private void notifyChallengeFailed(Challenge challenge) {
+        if (notificationService == null)
+            return;
+
+        int profileId = challenge.getProfileId().intValue();
+
+        String title = "💪 Desafio Encerrado";
+        String message = "O desafio \"" + challenge.getTitle()
+                + "\" foi encerrado, mas cada tentativa te deixa mais forte. "
+                + "Que tal criar um novo e ir ainda mais longe dessa vez? 🚀";
+
+        notificationService.send(profileId, title, message);
+        logger.info("Notificação de desafio falho enviada para o perfil {}.", profileId);
+    }
+
+    /**
+     * Verifica se o perfil ficou sem desafios ativos e envia um lembrete
+     * incentivando a criação de um novo. Usa proteção anti-spam via
+     * {@link NotificationService#sendGoalNotification}.
+     */
+    public void checkAndNotifyNoActiveChallenges(Long profileId) {
+        if (notificationService == null)
+            return;
+
+        List<Challenge> actives = repository.findActiveByProfile(profileId);
+        if (!actives.isEmpty())
+            return;
+
+        notificationService.sendGoalNotification(
+                profileId.intValue(),
+                "no_active_challenges",
+                "🎯 Nenhum Desafio Ativo",
+                "Você não tem nenhum desafio em andamento no momento. "
+                        + "Que tal criar um novo para manter o foco e a motivação? 💡");
+    }
+
+    // ==========================================================================
+    // CONSULTAS
+    // ==========================================================================
+
     public List<Challenge> getChallengesByStatus(Long profileId, ChallengeStatus status) {
         return repository.findAllByProfile(profileId).stream()
                 .filter(c -> c.getStatus() == status)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Retorna todos os desafios finalizados (COMPLETED ou FAILED) de um perfil,
-     * ordenados do mais recente para o mais antigo (por data de início desc).
-     */
     public List<Challenge> getFinishedChallenges(Long profileId) {
         return repository.findAllByProfile(profileId).stream()
                 .filter(c -> c.getStatus() == ChallengeStatus.COMPLETED
                         || c.getStatus() == ChallengeStatus.FAILED)
-                .collect(Collectors.toList()); // findAllByProfile já retorna ORDER BY start_date DESC
+                .collect(Collectors.toList());
     }
 
-    /**
-     * Constrói o resumo de histórico para exibição na barra da seção colapsável.
-     */
     public CompletedSummary getCompletedSummary(Long profileId) {
         List<Challenge> finished = getFinishedChallenges(profileId);
 
@@ -241,6 +326,13 @@ public class ChallengeService {
         repository.delete(id);
     }
 
+    public void addFocusMinutesToActiveChallenges(Long profileId, int minutes) {
+        List<Challenge> activeChallenges = repository.findActiveByProfile(profileId);
+        for (Challenge challenge : activeChallenges) {
+            this.addFocusMinutes(challenge.getId(), minutes);
+        }
+    }
+
     private void validateChallengeData(Challenge challenge) {
         if (challenge.getType() == null) {
             throw new IllegalArgumentException("O tipo de desafio deve ser especificado.");
@@ -250,13 +342,6 @@ public class ChallengeService {
         }
         if (challenge.getType() == ChallengeType.MILESTONE_CHALLENGE && challenge.getTargetTotalMinutes() <= 0) {
             throw new IllegalArgumentException("Desafios de Intensidade precisam de uma meta de minutos total.");
-        }
-    }
-
-    public void addFocusMinutesToActiveChallenges(Long profileId, int minutes) {
-        List<Challenge> activeChallenges = repository.findActiveByProfile(profileId);
-        for (Challenge challenge : activeChallenges) {
-            this.addFocusMinutes(challenge.getId(), minutes);
         }
     }
 }

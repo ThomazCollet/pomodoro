@@ -1,4 +1,4 @@
-package com.thomazcollet.service; // ajuste o pacote se necessário
+package com.thomazcollet.service;
 
 import com.thomazcollet.domain.model.Notification;
 import com.thomazcollet.domain.repository.NotificationRepository;
@@ -9,11 +9,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Serviço centralizador que gerencia a lógica de negócios, eventos de interface
  * e efeitos sonoros do sistema de notificações.
+ *
+ * <p>
+ * Responsabilidades:
+ * <ul>
+ * <li>Persistir notificações no banco via {@link NotificationRepository}.</li>
+ * <li>Manter o contador reativo de não lidas para a sidebar.</li>
+ * <li>Reproduzir o som de notificação.</li>
+ * <li>Notificar a UI via callback para exibir toast/snackbar em tempo
+ * real.</li>
+ * <li>Proteger contra spam de metas repetindo a mesma data.</li>
+ * </ul>
  */
 public class NotificationService {
 
@@ -21,20 +36,52 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    // Propriedade reativa do JavaFX que a Sidebar/Sino irá escutar para atualizar o
-    // contador automaticamente
+    // Propriedade reativa do JavaFX que a Sidebar/Sino irá escutar para atualizar
+    // o contador automaticamente
     private final IntegerProperty unreadCountProperty = new SimpleIntegerProperty(0);
 
     private AudioClip notificationSound;
+
+    // -----------------------------------------------------------------------
+    // Callback para a UI exibir toast/snackbar em tempo real.
+    // Configurado pelo MainController após a criação do serviço.
+    // Recebe o objeto Notification completo para que a UI possa formatar
+    // título + mensagem da forma que desejar.
+    // -----------------------------------------------------------------------
+    private Consumer<Notification> toastCallback;
+
+    // -----------------------------------------------------------------------
+    // Proteção anti-spam para metas de período (diária, semanal, mensal).
+    // Armazena a data da última vez que cada tipo de meta foi notificado.
+    // Chaves: "daily_<profileId>", "weekly_<profileId>", "monthly_<profileId>"
+    // Resetado automaticamente quando a data muda (verificação lazy).
+    // -----------------------------------------------------------------------
+    private final Set<String> goalNotifiedToday = new HashSet<>();
+    private LocalDate lastGoalCheckDate = LocalDate.now();
 
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
         initializeSound();
     }
 
+    // ==========================================================================
+    // CONFIGURAÇÃO
+    // ==========================================================================
+
     /**
-     * Carrega o efeito sonoro a partir da pasta de recursos (assets).
+     * Registra o callback que a UI (MainController) usa para exibir o toast.
+     * Deve ser chamado uma única vez durante a inicialização do controller.
+     *
+     * @param callback Consumer que recebe a notificação e exibe o toast na tela.
      */
+    public void setToastCallback(Consumer<Notification> callback) {
+        this.toastCallback = callback;
+    }
+
+    // ==========================================================================
+    // INICIALIZAÇÃO DE SOM
+    // ==========================================================================
+
     private void initializeSound() {
         try {
             URL soundUrl = getClass().getResource("/assets/sounds/start_notification.wav");
@@ -42,47 +89,93 @@ public class NotificationService {
                 this.notificationSound = new AudioClip(soundUrl.toExternalForm());
                 logger.info("Efeito sonoro de notificação carregado com sucesso.");
             } else {
-                logger.warn("AVISO: Arquivo de som '/assets/sounds/start_notification.wav' não foi encontrado.");
+                logger.warn("AVISO: Arquivo de som '/assets/sounds/start_notification.wav' não encontrado.");
             }
         } catch (Exception e) {
             logger.error("Erro ao carregar o arquivo de áudio da notificação.", e);
         }
     }
 
-    /**
-     * Inicializa ou atualiza o contador de mensagens não lidas com base no banco de
-     * dados.
-     * Deve ser chamado assim que o perfil do usuário for carregado na inicialização
-     * do app.
-     */
-    public void loadUnreadCount(int profileId) {
-        int unreadCount = notificationRepository.findUnreadByProfileId(profileId).size();
-        unreadCountProperty.set(unreadCount);
-        logger.debug("Contador de notificações não lidas atualizado para o perfil ID {}: {}", profileId, unreadCount);
-    }
+    // ==========================================================================
+    // ENVIO DE NOTIFICAÇÕES
+    // ==========================================================================
 
     /**
-     * Envia uma nova notificação: salva no banco, atualiza a UI e reproduz o som.
+     * Envia uma nova notificação: persiste no banco, incrementa o contador
+     * reativo, dispara o toast na UI e toca o som.
+     *
+     * @param profileId ID do perfil que receberá a notificação.
+     * @param title     Título curto (ex: "🏆 Conquista desbloqueada!").
+     * @param message   Mensagem amigável com detalhes.
      */
     public void send(int profileId, String title, String message) {
-        // 1. Instancia e salva no banco de dados
         Notification notification = new Notification(profileId, title, message);
         notificationRepository.save(notification);
 
-        // 2. Incrementa o contador reativo da interface
         unreadCountProperty.set(unreadCountProperty.get() + 1);
 
-        // 3. Reproduz o som em segundo plano (sem travar a aplicação)
-        if (notificationSound != null) {
-            notificationSound.play();
-        }
+        playSound();
+        fireToast(notification);
 
-        logger.info("Notificação enviada com sucesso: [{}] - {}", title, message);
+        logger.info("Notificação enviada: [{}] — {}", title, message);
     }
 
     /**
-     * Busca o histórico de todas as notificações do usuário (para preencher o popup
-     * do sino).
+     * Versão protegida contra spam para notificações de metas de período.
+     * Garante que a mesma meta (diária/semanal/mensal) só seja notificada
+     * uma vez por dia por perfil.
+     *
+     * @param profileId ID do perfil.
+     * @param goalType  Identificador do tipo de meta: "daily", "weekly" ou
+     *                  "monthly".
+     * @param title     Título da notificação.
+     * @param message   Mensagem da notificação.
+     * @return {@code true} se a notificação foi enviada; {@code false} se já foi
+     *         enviada hoje para este tipo de meta.
+     */
+    public boolean sendGoalNotification(int profileId, String goalType, String title, String message) {
+        refreshGoalGuardIfNeeded();
+
+        String guardKey = goalType + "_" + profileId;
+        if (goalNotifiedToday.contains(guardKey)) {
+            logger.debug("Meta '{}' do perfil {} já foi notificada hoje — ignorando.", goalType, profileId);
+            return false;
+        }
+
+        goalNotifiedToday.add(guardKey);
+        send(profileId, title, message);
+        return true;
+    }
+
+    /**
+     * Reseta o conjunto de metas notificadas quando a data do dia muda.
+     * Chamado de forma lazy antes de qualquer verificação de meta.
+     */
+    private void refreshGoalGuardIfNeeded() {
+        LocalDate today = LocalDate.now();
+        if (!today.equals(lastGoalCheckDate)) {
+            goalNotifiedToday.clear();
+            lastGoalCheckDate = today;
+            logger.debug("Guard de metas diárias resetado para o novo dia: {}", today);
+        }
+    }
+
+    // ==========================================================================
+    // CARREGAMENTO E GERENCIAMENTO
+    // ==========================================================================
+
+    /**
+     * Inicializa o contador de não lidas com base no banco de dados.
+     * Deve ser chamado assim que o perfil for carregado na inicialização do app.
+     */
+    public void loadUnreadCount(int profileId) {
+        int count = notificationRepository.findUnreadByProfileId(profileId).size();
+        unreadCountProperty.set(count);
+        logger.debug("Contador de não lidas carregado: {} para o perfil ID {}.", count, profileId);
+    }
+
+    /**
+     * Busca o histórico completo de notificações do usuário (para o popup do sino).
      */
     public List<Notification> getHistory(int profileId) {
         return notificationRepository.findByProfileId(profileId);
@@ -94,14 +187,30 @@ public class NotificationService {
     public void markAllAsRead(int profileId) {
         notificationRepository.markAllAsRead(profileId);
         unreadCountProperty.set(0);
-        logger.debug("Todas as notificações do perfil ID {} foram marcadas como lidas.", profileId);
+        logger.debug("Todas as notificações do perfil {} marcadas como lidas.", profileId);
     }
 
     /**
-     * Executa a limpeza de mensagens antigas para evitar acúmulo no SQLite.
+     * Remove notificações antigas para evitar acúmulo no SQLite.
      */
     public void clearOldNotifications(int days) {
         notificationRepository.deleteOlderThanDays(days);
+    }
+
+    // ==========================================================================
+    // INTERNOS
+    // ==========================================================================
+
+    private void playSound() {
+        if (notificationSound != null) {
+            notificationSound.play();
+        }
+    }
+
+    private void fireToast(Notification notification) {
+        if (toastCallback != null) {
+            toastCallback.accept(notification);
+        }
     }
 
     // ==========================================================================

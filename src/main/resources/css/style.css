@@ -1520,3 +1520,255 @@
     -fx-fill: #a6e3a1;
     -fx-stroke: #a6e3a1;
 }
+
+/* ==========================================================================
+   TOP BAR — barra global de utilitários (44px, sobre sidebar + conteúdo)
+   ========================================================================== */
+
+.top-bar {
+    -fx-background-color: #12121c;
+    -fx-border-color: rgba(49, 50, 68, 0.8);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0 0 0 0;
+}
+
+/* ==========================================================================
+   BOTÃO SINO — estado padrão
+   ========================================================================== */
+
+.bell-container {
+    -fx-cursor: hand;
+}
+
+.bell-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 17px;
+    -fx-min-width: 36px;
+    -fx-max-width: 36px;
+    -fx-min-height: 36px;
+    -fx-max-height: 36px;
+    -fx-background-radius: 10;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-radius: 10;
+    -fx-border-width: 1.5;
+}
+
+.bell-button:hover {
+    -fx-background-color: #252538;
+    -fx-text-fill: #cdd6f4;
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.15), 8, 0, 0, 0);
+}
+
+/* ==========================================================================
+   BOTÃO SINO — estado ativo (há notificações não lidas)
+   Borda vermelha suave + leve glow rosewater — discreta mas inequívoca
+   ========================================================================== */
+
+.bell-button-active {
+    -fx-background-color: rgba(243, 139, 168, 0.08);
+    -fx-text-fill: #f38ba8;
+    -fx-border-color: rgba(243, 139, 168, 0.55);
+    -fx-border-radius: 10;
+    -fx-border-width: 1.5;
+    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.25), 8, 0, 0, 0);
+}
+
+.bell-button-active:hover {
+    -fx-background-color: rgba(243, 139, 168, 0.16);
+    -fx-text-fill: #f38ba8;
+    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.40), 10, 0, 0, 0);
+}
+
+/* ==========================================================================
+   BADGE DE CONTAGEM — círculo vermelho com número sobre o sino
+   Posicionado no canto superior direito do StackPane via FXML/código
+   ========================================================================== */
+
+.bell-badge {
+    /* Círculo vermelho */
+    -fx-background-color: #f38ba8;
+    -fx-background-radius: 9;
+    -fx-min-width: 18px;
+    -fx-min-height: 18px;
+    -fx-max-width: 18px;
+    -fx-max-height: 18px;
+    /* Texto */
+    -fx-text-fill: #11111b;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+    /* Posição no StackPane */
+    -fx-translate-x: 10;
+    -fx-translate-y: -10;
+    /* Sombra para destacar do fundo */
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 4, 0, 0, 1);
+}
+
+/* ==========================================================================
+   POPOVER DE NOTIFICAÇÕES
+   ========================================================================== */
+
+.notif-popover {
+    -fx-background-color: #1e2030;
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(49, 50, 68, 0.9);
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.55), 28, 0, 0, 12);
+}
+
+/* Cabeçalho do popover */
+.notif-header {
+    -fx-padding: 14 16 12 16;
+    -fx-background-color: transparent;
+}
+
+.notif-header-title {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+/* Botão "Marcar lidas" no cabeçalho */
+.notif-mark-read-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-padding: 4 8;
+    -fx-background-radius: 6;
+    -fx-border-color: #313244;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+}
+
+.notif-mark-read-btn:hover {
+    -fx-background-color: #313244;
+    -fx-text-fill: #a6adc8;
+}
+
+/* Linha divisória fina entre header, itens, etc. */
+.notif-divider {
+    -fx-background-color: rgba(49, 50, 68, 0.8);
+}
+
+/* ScrollPane interno */
+.notif-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+.notif-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.notif-scroll .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+}
+
+.notif-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #313244;
+    -fx-background-radius: 4;
+}
+
+/* Estado vazio */
+.notif-empty-text {
+    -fx-text-fill: #585b70;
+    -fx-font-size: 13px;
+}
+
+/* ==========================================================================
+   ITEM DE NOTIFICAÇÃO
+   ========================================================================== */
+
+/* Item padrão (lido) */
+.notif-item {
+    -fx-background-color: transparent;
+    -fx-padding: 12 16 12 16;
+    -fx-cursor: hand;
+}
+
+.notif-item:hover {
+    -fx-background-color: rgba(49, 50, 68, 0.5);
+}
+
+/* Item não lido — fundo levemente iluminado */
+.notif-item-unread {
+    -fx-background-color: rgba(137, 180, 250, 0.05);
+}
+
+.notif-item-unread:hover {
+    -fx-background-color: rgba(137, 180, 250, 0.10);
+}
+
+/* Ponto indicador de status */
+.notif-dot-unread {
+    -fx-fill: #89b4fa;
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.5), 4, 0, 0, 0);
+}
+
+.notif-dot-read {
+    -fx-fill: transparent;
+}
+
+/* Textos do item */
+.notif-item-title {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+/* Item lido: título um pouco mais apagado */
+.notif-item .notif-item-title {
+    -fx-text-fill: #a6adc8;
+    -fx-font-weight: normal;
+}
+
+/* Item não lido: título mais brilhante */
+.notif-item-unread .notif-item-title {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-weight: bold;
+}
+
+.notif-item-message {
+    -fx-text-fill: #7f849c;
+    -fx-font-size: 12px;
+}
+
+.notif-item-time {
+    -fx-text-fill: #45475a;
+    -fx-font-size: 10px;
+    -fx-padding: 2 0 0 0;
+}
+
+/* ==========================================================================
+   TOAST / SNACKBAR — notificação em tempo real (canto superior direito)
+   ========================================================================== */
+
+.toast-notification {
+    -fx-background-color: #24273a;
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(137, 180, 250, 0.20);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 14 16 14 16;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.50), 20, 0, 0, 8);
+    -fx-cursor: hand;
+}
+
+.toast-notification-title {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.toast-notification-message {
+    -fx-text-fill: #7f849c;
+    -fx-font-size: 12px;
+}

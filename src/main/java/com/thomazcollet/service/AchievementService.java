@@ -3,6 +3,8 @@ package com.thomazcollet.service;
 import com.thomazcollet.domain.model.Achievement;
 import com.thomazcollet.domain.model.AchievementCategory;
 import com.thomazcollet.domain.model.AchievementTier;
+import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.domain.model.RankingType;
 import com.thomazcollet.domain.repository.AchievementRepository;
 import com.thomazcollet.domain.repository.ProfileRepository;
 import com.thomazcollet.service.achievement.AchievementEvaluator;
@@ -21,25 +23,37 @@ public class AchievementService {
 
         private final AchievementRepository achievementRepository;
         private final ProfileRepository profileRepository;
+        private final NotificationService notificationService; // nullable — retrocompatível
         private final Map<AchievementCategory, AchievementEvaluator> evaluators = new EnumMap<>(
                         AchievementCategory.class);
 
-        // Cache estático e imutável das definições da planilha para evitar alocações
-        // redundantes de memória
         private static final List<AchievementDefinition> PLANILHA_DEFINITIONS = createPlanilhaDefinitions();
 
         public record AchievementDefinition(String key, AchievementCategory category, AchievementTier tier,
                         int conditionValue) {
         }
 
+        // -----------------------------------------------------------------------
+        // CONSTRUTORES — o sem NotificationService mantém compatibilidade total
+        // com os testes existentes.
+        // -----------------------------------------------------------------------
+
         public AchievementService(AchievementRepository achievementRepository,
                         ProfileRepository profileRepository,
                         List<AchievementEvaluator> evaluatorList) {
-                // Fix Fail-Fast com mensagens esperadas pelas asserções dos testes unitários
+                this(achievementRepository, profileRepository, evaluatorList, null);
+        }
+
+        public AchievementService(AchievementRepository achievementRepository,
+                        ProfileRepository profileRepository,
+                        List<AchievementEvaluator> evaluatorList,
+                        NotificationService notificationService) {
+
                 this.achievementRepository = Objects.requireNonNull(achievementRepository,
                                 "AchievementRepository não pode ser nulo");
                 this.profileRepository = Objects.requireNonNull(profileRepository,
                                 "ProfileRepository não pode ser nulo");
+                this.notificationService = notificationService; // nullable
 
                 if (evaluatorList == null || evaluatorList.isEmpty()) {
                         logger.warn("AchievementService inicializado sem nenhum AchievementEvaluator mapeado!");
@@ -58,8 +72,6 @@ public class AchievementService {
         public void checkAndUnlockNewAchievements(Long profileId) {
                 logger.info("Iniciando verificação de conquistas para o perfil: {}", profileId);
 
-                // Separa as conquistas normais das meta-conquistas usando particionamento por
-                // predicado
                 Map<Boolean, List<AchievementDefinition>> partitioned = PLANILHA_DEFINITIONS.stream()
                                 .collect(Collectors.partitioningBy(
                                                 def -> def.category() == AchievementCategory.ACHIEVEMENTS));
@@ -67,8 +79,6 @@ public class AchievementService {
                 List<AchievementDefinition> normalAchievements = partitioned.get(false);
                 List<AchievementDefinition> metaAchievements = partitioned.get(true);
 
-                // Executa a avaliação garantindo que as Meta-Conquistas rodem por último
-                // (Permite efeito Cascata)
                 normalAchievements.forEach(def -> processEvaluation(profileId, def));
                 metaAchievements.forEach(def -> processEvaluation(profileId, def));
         }
@@ -94,9 +104,16 @@ public class AchievementService {
                         logger.info("🏆 CONQUISTA DESBLOQUEADA: {} [{}]", def.key(), def.tier());
 
                         concedeXpReward(profileId, def.tier());
+
+                        // Notificação de conquista desbloqueada
+                        notifyAchievementUnlocked(profileId, def);
                 }
         }
 
+        /**
+         * Concede XP ao perfil e verifica se houve subida de rank,
+         * disparando notificação específica caso positivo.
+         */
         private void concedeXpReward(Long profileId, AchievementTier tier) {
                 int xpReward = switch (tier) {
                         case BRONZE -> 100;
@@ -106,12 +123,119 @@ public class AchievementService {
                 };
 
                 profileRepository.findById(profileId).ifPresent(profile -> {
+                        RankingType rankBefore = profile.getRanking();
+
                         profile.addXp(xpReward);
                         profileRepository.updateXp(profile.getId(), profile.getXp());
-                        logger.info("✨ {} XP concedido ao perfil ID {} por desbloquear a conquista!", xpReward,
+
+                        RankingType rankAfter = profile.getRanking();
+
+                        logger.info("✨ {} XP concedido ao perfil ID {} por desbloquear conquista!", xpReward,
                                         profileId);
+
+                        // Notificação de rank-up (apenas se efetivamente subiu)
+                        if (rankAfter.ordinal() > rankBefore.ordinal()) {
+                                notifyRankUp(profileId.intValue(), rankBefore, rankAfter);
+                        }
                 });
         }
+
+        // -----------------------------------------------------------------------
+        // NOTIFICAÇÕES
+        // -----------------------------------------------------------------------
+
+        private void notifyAchievementUnlocked(Long profileId, AchievementDefinition def) {
+                if (notificationService == null)
+                        return;
+
+                String tierEmoji = switch (def.tier()) {
+                        case BRONZE -> "🥉";
+                        case SILVER -> "🥈";
+                        case GOLD -> "🥇";
+                        case PLATINUM -> "💎";
+                };
+
+                String title = tierEmoji + " Conquista Desbloqueada!";
+                String friendlyName = buildFriendlyAchievementName(def.key());
+                String message = "Parabéns! Você desbloqueou: \"" + friendlyName + "\". Continue assim! 🎉";
+
+                notificationService.send(profileId.intValue(), title, message);
+        }
+
+        private void notifyRankUp(int profileId, RankingType rankBefore, RankingType rankAfter) {
+                if (notificationService == null)
+                        return;
+
+                String rankEmoji = switch (rankAfter) {
+                        case D -> "🔵";
+                        case C -> "🟢";
+                        case B -> "🟡";
+                        case A -> "🟠";
+                        case S -> "🔴";
+                        case SS -> "🌟";
+                        default -> "⭐";
+                };
+
+                String title = rankEmoji + " Subiu de Rank!";
+                String message = "Incrível! Você subiu do Rank " + rankBefore.name()
+                                + " para o Rank " + rankAfter.name()
+                                + "! Sua dedicação está valendo muito. Continue focado! 🚀";
+
+                notificationService.send(profileId, title, message);
+                logger.info("Notificação de rank-up enviada: {} → {} para o perfil {}.", rankBefore, rankAfter,
+                                profileId);
+        }
+
+        /**
+         * Transforma a chave técnica em um nome amigável para a notificação.
+         * Reutiliza a lógica já existente no AchievementViewController — aqui
+         * fazemos uma versão simplificada focada nas conquistas mais comuns.
+         * Para chaves sem mapeamento explícito, aplica uma formatação automática.
+         */
+        private String buildFriendlyAchievementName(String key) {
+                if (key == null)
+                        return "conquista especial";
+                return switch (key) {
+                        case "focus_daily_2h_hours" -> "Bloco de Foco — 2h em um único dia";
+                        case "focus_daily_3h_hours" -> "Turno Produtivo — 3h em um único dia";
+                        case "focus_daily_4h_hours" -> "Modo Ultra Foco — 4h em um único dia";
+                        case "focus_daily_6h_hours" -> "Dia de Elite — 6h de foco absoluto";
+                        case "focus_cycles_1_bronze" -> "Primeiro Ciclo Pomodoro";
+                        case "focus_cycles_10_silver" -> "Ritmo Estabelecido — 10 ciclos";
+                        case "focus_cycles_25_gold" -> "Veterano dos Ciclos — 25 ciclos";
+                        case "focus_cycles_100_platinum" -> "Centenário do Foco — 100 ciclos";
+                        case "focus_total_days_15_bronze" -> "Primeiros Passos — 15 dias ativos";
+                        case "focus_total_days_30_silver" -> "Um Mês Ativo — 30 dias com foco";
+                        case "focus_total_days_90_gold" -> "Trimestre de Ouro — 90 dias";
+                        case "focus_total_days_365_platinum" -> "Um Ano de Dedicação — 365 dias";
+                        case "focus_accumulated_12h_hours" -> "Primeiras 12 Horas Acumuladas";
+                        case "focus_accumulated_24h_hours" -> "Um Dia Inteiro de Foco Acumulado";
+                        case "focus_accumulated_300h_hours" -> "Mestre do Tempo — 300h acumuladas";
+                        case "focus_accumulated_1000h_hours" -> "As Mil Horas — marco lendário";
+                        case "streak_current_5" -> "5 Dias de Ofensiva Seguidos";
+                        case "streak_current_12" -> "Chama Crescente — 12 dias seguidos";
+                        case "streak_current_15" -> "Máquina de Hábitos — 15 dias";
+                        case "streak_current_30" -> "Lenda da Constância — 30 dias";
+                        case "challenge_constancy_days_7" -> "Semana de Desafio Concluída";
+                        case "challenge_constancy_days_15" -> "Quinzena Cumprida";
+                        case "challenge_constancy_days_30" -> "Mês Completo de Desafio";
+                        case "challenge_perfect_days_5" -> "Perfeccionista — 5 dias perfeitos";
+                        case "challenge_perfect_days_7" -> "Semana Imaculada — 7 perfeitos";
+                        case "meta_total_5" -> "Colecionador Iniciante — 5 conquistas";
+                        case "meta_total_15" -> "Caçador de Medalhas — 15 conquistas";
+                        case "meta_total_30" -> "Grande Colecionador — 30 conquistas";
+                        case "meta_gold_count_1" -> "Primeiro Ouro Conquistado";
+                        case "ranking_tier_c" -> "Primeiro Posto — Rank C";
+                        case "ranking_tier_a" -> "Escalada de Elite — Rank A";
+                        case "ranking_tier_s" -> "Alto Desempenho — Rank S";
+                        case "ranking_tier_ss" -> "Ápice Absoluto — Rank SS";
+                        default -> key.replace("_", " "); // fallback automático legível
+                };
+        }
+
+        // -----------------------------------------------------------------------
+        // DEFINIÇÕES DA PLANILHA (inalteradas)
+        // -----------------------------------------------------------------------
 
         private static List<AchievementDefinition> createPlanilhaDefinitions() {
                 return List.of(

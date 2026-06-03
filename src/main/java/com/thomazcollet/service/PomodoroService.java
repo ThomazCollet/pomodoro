@@ -27,6 +27,7 @@ public class PomodoroService {
     private final FocusSessionService focusSessionService;
     private final ChallengeService challengeService;
     private final AudioService audioService;
+    private final NotificationService notificationService;
 
     private int sessionsInCycle = 0;
     private Profile currentProfile;
@@ -36,11 +37,24 @@ public class PomodoroService {
     private int totalSessionDuration;
     private volatile TimerState timerState;
 
+    // -----------------------------------------------------------------------
+    // CONSTRUTOR ATUALIZADO — aceita NotificationService como dependência
+    // opcional (nullable) para não quebrar testes que não usam notificações.
+    // -----------------------------------------------------------------------
     public PomodoroService(Profile profile,
             TimerChangeListener initialListener,
             FocusSessionService focusSessionService,
             ChallengeService challengeService,
             AudioService audioService) {
+        this(profile, initialListener, focusSessionService, challengeService, audioService, null);
+    }
+
+    public PomodoroService(Profile profile,
+            TimerChangeListener initialListener,
+            FocusSessionService focusSessionService,
+            ChallengeService challengeService,
+            AudioService audioService,
+            NotificationService notificationService) {
 
         if (profile == null || focusSessionService == null || challengeService == null || audioService == null) {
             throw new IllegalArgumentException("Dependências obrigatórias não podem ser nulas.");
@@ -50,6 +64,7 @@ public class PomodoroService {
         this.focusSessionService = focusSessionService;
         this.challengeService = challengeService;
         this.audioService = audioService;
+        this.notificationService = notificationService; // nullable — testes existentes não precisam passar
         this.executor = Executors.newSingleThreadScheduledExecutor();
         this.timerState = TimerState.STOPPED;
 
@@ -95,7 +110,7 @@ public class PomodoroService {
         audioService.playTimerStart();
 
         timerState = TimerState.RUNNING;
-        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
+        notifyStateChanged(timerState);
 
         task = executor.scheduleAtFixedRate(() -> {
             if (remainingSeconds <= 0) {
@@ -113,7 +128,7 @@ public class PomodoroService {
     private void handleSessionCompletion() {
         cancelTask();
         timerState = TimerState.STOPPED;
-        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
+        notifyStateChanged(timerState);
 
         audioService.playTimerEnd();
 
@@ -123,6 +138,11 @@ public class PomodoroService {
             int minutesSpent = totalSessionDuration / 60;
             if (minutesSpent > 0) {
                 challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), minutesSpent);
+            }
+
+            // Notificação: ciclo pomodoro completo (o 4º foco — sessionsInCycle volta a 0)
+            if (sessionsInCycle == 0) {
+                notifyFullCycleCompleted();
             }
         }
 
@@ -142,6 +162,23 @@ public class PomodoroService {
         prepareSession(nextType);
     }
 
+    /**
+     * Envia notificação parabenizando o usuário por completar um ciclo
+     * pomodoro completo (4 sessões de foco seguidas).
+     */
+    private void notifyFullCycleCompleted() {
+        if (notificationService == null)
+            return;
+
+        int profileId = currentProfile.getId().intValue();
+        notificationService.send(
+                profileId,
+                "🍅 Ciclo Pomodoro Completo!",
+                "Incrível! Você concluiu 4 sessões de foco seguidas. "
+                        + "Aproveite o seu descanso estendido — você merece! 💪");
+        logger.info("Notificação de ciclo completo enviada para o perfil {}.", profileId);
+    }
+
     public void incrementCycle() {
         sessionsInCycle++;
         if (sessionsInCycle > 3) {
@@ -153,7 +190,7 @@ public class PomodoroService {
     public void skip() {
         cancelTask();
         timerState = TimerState.STOPPED;
-        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
+        notifyStateChanged(timerState);
 
         if (currentSessionType == SessionType.FOCUS) {
             int minutesSpent = totalSessionDuration / 60;
@@ -183,7 +220,7 @@ public class PomodoroService {
             return;
         cancelTask();
         timerState = TimerState.PAUSED;
-        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
+        notifyStateChanged(timerState);
     }
 
     public void stop() {
@@ -199,7 +236,7 @@ public class PomodoroService {
         cancelTask();
         timerState = TimerState.STOPPED;
         sessionsInCycle = 0;
-        notifyStateChanged(timerState); // NOTIFICA MUDANÇA DE ESTADO
+        notifyStateChanged(timerState);
         prepareSession(SessionType.FOCUS);
     }
 
@@ -226,10 +263,9 @@ public class PomodoroService {
 
     public void toggleAudioMute() {
         audioService.toggleMute();
-        notifyMuteChanged(audioService.isMuted()); // NOTIFICA MUDANÇA DE MUTE
+        notifyMuteChanged(audioService.isMuted());
     }
 
-    // --- Métodos Auxiliares de Notificação de Eventos Específicos ---
     private void notifyStateChanged(TimerState newState) {
         for (TimerChangeListener listener : listeners) {
             listener.onStateChanged(newState);

@@ -32,15 +32,32 @@ public class StatsService {
 
     private final FocusSessionRepository sessionRepository;
     private final ProfileRepository profileRepository;
-    private final StreakRecordRepository streakRepository; // Adicionado
+    private final StreakRecordRepository streakRepository;
+    private final NotificationService notificationService; // nullable — retrocompatível
+
+    // -----------------------------------------------------------------------
+    // CONSTRUTORES
+    // -----------------------------------------------------------------------
 
     public StatsService(FocusSessionRepository sessionRepository,
             ProfileRepository profileRepository,
             StreakRecordRepository streakRepository) {
+        this(sessionRepository, profileRepository, streakRepository, null);
+    }
+
+    public StatsService(FocusSessionRepository sessionRepository,
+            ProfileRepository profileRepository,
+            StreakRecordRepository streakRepository,
+            NotificationService notificationService) {
         this.sessionRepository = sessionRepository;
         this.profileRepository = profileRepository;
         this.streakRepository = streakRepository;
+        this.notificationService = notificationService; // nullable
     }
+
+    // ==========================================================================
+    // CÁLCULO PRINCIPAL
+    // ==========================================================================
 
     public FocusStatistics getUserStatistics(Profile profile) {
         Objects.requireNonNull(profile, "O perfil não pode ser nulo.");
@@ -49,20 +66,26 @@ public class StatsService {
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime startOfDay = now.with(LocalTime.MIN);
             LocalDateTime endOfDay = now.with(LocalTime.MAX);
-
             LocalDateTime startOfWeek = now.toLocalDate()
                     .with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                     .atStartOfDay();
+            LocalDateTime startOfMonth = now.toLocalDate()
+                    .with(TemporalAdjusters.firstDayOfMonth())
+                    .atStartOfDay();
 
-            long secondsToday = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(profile.getId(), startOfDay,
-                    endOfDay);
-            long secondsThisWeek = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(profile.getId(),
-                    startOfWeek, endOfDay);
+            long secondsToday = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
+                    profile.getId(), startOfDay, endOfDay);
+            long secondsThisWeek = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
+                    profile.getId(), startOfWeek, endOfDay);
+            long secondsThisMonth = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
+                    profile.getId(), startOfMonth, endOfDay);
 
             int currentStreak = calculateAndProcessCurrentStreak(profile.getId());
             checkAndUpdateRecords(profile, (int) secondsToday);
 
-            // Melhor streak histórica: topo do pódio de streak_records
+            // Verificação de metas — dispara notificações se alguma for atingida
+            checkAndNotifyGoals(profile, secondsToday, secondsThisWeek, secondsThisMonth);
+
             int bestStreakDays = streakRepository.getTopStreaks(profile.getId(), 1)
                     .stream()
                     .mapToInt(r -> r.durationDays())
@@ -92,7 +115,65 @@ public class StatsService {
         }
     }
 
-    // --- MÉTODOS DOS PÓDIOS ---
+    // ==========================================================================
+    // NOTIFICAÇÕES DE METAS
+    // ==========================================================================
+
+    /**
+     * Verifica se o usuário atingiu a meta diária, semanal ou mensal neste ciclo
+     * de cálculo e dispara notificação via
+     * {@link NotificationService#sendGoalNotification}
+     * (que já possui proteção anti-spam por dia).
+     */
+    private void checkAndNotifyGoals(Profile profile,
+            long secondsToday,
+            long secondsThisWeek,
+            long secondsThisMonth) {
+        if (notificationService == null)
+            return;
+
+        int profileId = profile.getId().intValue();
+
+        // Meta diária
+        if (profile.getDailyGoalSeconds() > 0
+                && secondsToday >= profile.getDailyGoalSeconds()) {
+            notificationService.sendGoalNotification(
+                    profileId,
+                    "daily",
+                    "☀️ Meta Diária Batida!",
+                    "Você atingiu sua meta de foco do dia ("
+                            + formatDuration(profile.getDailyGoalSeconds()) + "). "
+                            + "Dia bem aproveitado! 🎯");
+        }
+
+        // Meta semanal
+        if (profile.getWeeklyGoalSeconds() > 0
+                && secondsThisWeek >= profile.getWeeklyGoalSeconds()) {
+            notificationService.sendGoalNotification(
+                    profileId,
+                    "weekly",
+                    "📅 Meta Semanal Batida!",
+                    "Semana incrível! Você superou sua meta de foco semanal ("
+                            + formatDuration(profile.getWeeklyGoalSeconds()) + "). "
+                            + "Continue nesse ritmo! 💪");
+        }
+
+        // Meta mensal
+        if (profile.getMonthlyGoalSeconds() > 0
+                && secondsThisMonth >= profile.getMonthlyGoalSeconds()) {
+            notificationService.sendGoalNotification(
+                    profileId,
+                    "monthly",
+                    "🗓️ Meta Mensal Batida!",
+                    "Mês extraordinário! Você completou sua meta de foco mensal ("
+                            + formatDuration(profile.getMonthlyGoalSeconds()) + "). "
+                            + "Você é imparável! 🚀");
+        }
+    }
+
+    // ==========================================================================
+    // PÓDIOS
+    // ==========================================================================
 
     private List<String> buildDailyPodium(Long profileId) {
         List<FocusSessionRepository.DailyPodiumEntry> entries = sessionRepository.getTop3DailyFocusRecords(profileId);
@@ -100,12 +181,9 @@ public class StatsService {
 
         for (FocusSessionRepository.DailyPodiumEntry entry : entries) {
             LocalDate date = LocalDate.parse(entry.date());
-
-            // Cria formato "14/Mai/2026"
             String monthName = date.getMonth().getDisplayName(TextStyle.SHORT, PT_BR).replace(".", "");
-            String formattedDate = String.format("%02d/%s/%d", date.getDayOfMonth(), capitalize(monthName),
-                    date.getYear());
-
+            String formattedDate = String.format("%02d/%s/%d",
+                    date.getDayOfMonth(), capitalize(monthName), date.getYear());
             podium.add(formatDuration(entry.durationSeconds()) + " — " + formattedDate);
         }
         return podium;
@@ -125,81 +203,72 @@ public class StatsService {
     }
 
     private List<String> buildStreakPodium(Long profileId) {
-        List<StreakRecord> topStreaks = streakRepository.getTopStreaks(profileId, 3); // Top 3 para UI
+        List<StreakRecord> topStreaks = streakRepository.getTopStreaks(profileId, 3);
         List<String> podium = new ArrayList<>();
 
         for (StreakRecord record : topStreaks) {
             String start = record.startDate().format(DATE_FORMATTER);
             String end = record.endDate().format(DATE_FORMATTER);
             String daysText = record.durationDays() == 1 ? " dia" : " dias";
-
-            // Ex: "15 dias — 01/05 a 15/05"
             podium.add(String.format("%02d%s — %s a %s", record.durationDays(), daysText, start, end));
         }
         return podium;
     }
 
-    // --- LÓGICA DE STREAK E PERSISTÊNCIA ---
+    // ==========================================================================
+    // STREAK
+    // ==========================================================================
+
     private int calculateAndProcessCurrentStreak(Long profileId) {
         LocalDate today = LocalDate.now();
         LocalDate dateToCheck = today;
 
         boolean focusedToday = hasFocusOnDate(profileId, today);
 
-        // Se não focou hoje E também não focou ontem, a streak atual é zero e nenhuma
-        // quebrou agora
         if (!focusedToday && !hasFocusOnDate(profileId, today.minusDays(1))) {
             return 0;
         }
 
-        // Se não focou hoje, mas focou ontem, a streak quebrou hoje. Vamos contar a
-        // partir de ontem.
         if (!focusedToday) {
             dateToCheck = today.minusDays(1);
         }
 
         int streak = 0;
-        LocalDate endDate = dateToCheck; // O dia mais recente da sequência
+        LocalDate endDate = dateToCheck;
         LocalDate startDate = dateToCheck;
 
-        // Varre para trás contando os dias consecutivos de foco
         while (hasFocusOnDate(profileId, dateToCheck)) {
             streak++;
-            startDate = dateToCheck; // Guarda o dia mais antigo até aqui
-            dateToCheck = dateToCheck.minusDays(1); // Decremento correto para evitar loop!
+            startDate = dateToCheck;
+            dateToCheck = dateToCheck.minusDays(1);
         }
 
-        // Se a streak quebrou hoje (!focusedToday), processamos e persistimos o pódio
-        // se ela merecer vaga
         if (!focusedToday && streak > 0) {
             processFinalizedStreakRanking(profileId, streak, startDate, endDate);
-            return 0; // Retorna 0 para a UI porque hoje a streak está zerada
+            return 0;
         }
 
-        // Se ele focou hoje, retorna o tamanho atual da sequência ativa
         return streak;
     }
 
-    private void processFinalizedStreakRanking(Long profileId, int finishedStreak, LocalDate startDate,
-            LocalDate endDate) {
+    private void processFinalizedStreakRanking(Long profileId, int finishedStreak,
+            LocalDate startDate, LocalDate endDate) {
         int totalRecords = streakRepository.countRecords(profileId);
 
-        // Se a tabela tem posições vazias (menos de 5), salva direto
         if (totalRecords < 5) {
             streakRepository.save(new StreakRecord(null, profileId, finishedStreak, startDate, endDate));
         } else {
-            // Se está cheia, comparamos com a pior sequência do pódio de recordes
             StreakRecord minRecord = streakRepository.getMinStreak(profileId);
             if (minRecord != null && finishedStreak > minRecord.durationDays()) {
-                // Remove o pior registro antigo...
                 streakRepository.delete(minRecord.id());
-                // ...e dá a vaga para o novo recorde!
                 streakRepository.save(new StreakRecord(null, profileId, finishedStreak, startDate, endDate));
             }
         }
     }
 
-    // --- MÉTODOS AUXILIARES ---
+    // ==========================================================================
+    // AUXILIARES
+    // ==========================================================================
 
     private boolean hasFocusOnDate(Long profileId, LocalDate date) {
         return sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
@@ -224,7 +293,9 @@ public class StatsService {
         return String.format("%02dh %02dm", totalSeconds / 3600, (totalSeconds % 3600) / 60);
     }
 
-    // --- GRÁFICOS (INTACTOS) ---
+    // ==========================================================================
+    // GRÁFICOS
+    // ==========================================================================
 
     private Map<String, Double> calculateFixedAnnualDistribution(Long profileId) {
         Map<String, Double> distribution = new LinkedHashMap<>();
@@ -250,7 +321,8 @@ public class StatsService {
             LocalDate end = start.plusDays(6);
             long seconds = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
                     profileId, start.atStartOfDay(), end.atTime(LocalTime.MAX));
-            String label = String.format("%s - %s", start.format(DATE_FORMATTER), end.format(DATE_FORMATTER));
+            String label = String.format("%s - %s",
+                    start.format(DATE_FORMATTER), end.format(DATE_FORMATTER));
             distribution.put(label, seconds / 3600.0);
         }
         return distribution;
@@ -264,7 +336,8 @@ public class StatsService {
             LocalDate date = now.minusDays(i);
             long seconds = sessionRepository.sumDurationSecondsByProfileIdAndPeriod(
                     profileId, date.atStartOfDay(), date.atTime(LocalTime.MAX));
-            String label = date.getDayOfWeek().getDisplayName(TextStyle.SHORT, PT_BR).replace(".", "").toUpperCase();
+            String label = date.getDayOfWeek()
+                    .getDisplayName(TextStyle.SHORT, PT_BR).replace(".", "").toUpperCase();
             distribution.put(label, seconds / 3600.0);
         }
         return distribution;

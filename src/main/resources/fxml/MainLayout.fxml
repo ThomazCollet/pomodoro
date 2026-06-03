@@ -5,20 +5,46 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.shape.Circle?>
 
-<BorderPane fx:id="mainContainer" prefHeight="700.0" prefWidth="1000.0" 
-            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+<BorderPane fx:id="mainContainer" prefHeight="700.0" prefWidth="1000.0"
+            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.thomazcollet.ui.controller.MainController">
-   
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- TOP BAR — barra global persistente com o sino de notificações       -->
+    <!-- Fica acima de TUDO (sidebar + conteúdo), altura mínima (44px)       -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <top>
+        <HBox fx:id="topBar" styleClass="top-bar" alignment="CENTER_RIGHT" minHeight="44.0" maxHeight="44.0">
+            <padding>
+                <Insets right="16.0" />
+            </padding>
+
+            <!-- Botão sino — o badge de contagem é injetado via código -->
+            <StackPane fx:id="bellContainer" styleClass="bell-container">
+                <Button fx:id="btnBell" text="🔔" styleClass="bell-button"
+                        onAction="#handleBellClick">
+                    <tooltip><Tooltip text="Notificações" /></tooltip>
+                </Button>
+                <!-- Badge vermelho de contagem — visível apenas quando unreadCount > 0 -->
+                <Label fx:id="bellBadge" text="0" styleClass="bell-badge"
+                       mouseTransparent="true" visible="false"
+                       managed="false" />
+            </StackPane>
+        </HBox>
+    </top>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <left>
         <VBox prefWidth="220.0" styleClass="sidebar" spacing="15.0" alignment="TOP_CENTER">
             <padding>
                 <Insets top="40.0" left="20.0" right="20.0" />
             </padding>
-            
+
             <StackPane fx:id="avatarContainer" alignment="CENTER" maxWidth="Infinity" styleClass="avatar-container">
                 <Circle fx:id="avatarCircle" radius="28.0" />
                 <Label fx:id="initialLabel" text="?" styleClass="avatar-text" mouseTransparent="true" />
-                <!-- hex sidebar badge injetado via código em setupAvatar() -->
                 <VBox.margin>
                     <Insets bottom="25.0" />
                 </VBox.margin>
@@ -29,25 +55,28 @@
                     <Insets bottom="10.0" />
                 </VBox.margin>
             </Label>
-            
+
             <Separator opacity="0.1" maxWidth="140.0" />
 
-            <Button fx:id="btnTimer" text="⏱   Timer" styleClass="menu-button" maxWidth="180.0" />
-            <Button fx:id="btnChallenges" text="🏆   Desafios" styleClass="menu-button" maxWidth="180.0" />
-            <Button fx:id="btnAchievements" text="🎖   Conquistas" styleClass="menu-button" maxWidth="180.0" onAction="#loadAchievementsView" />
-            <Button fx:id="btnStats" text="📊   Estatísticas" styleClass="menu-button" maxWidth="180.0" />
-            <Button fx:id="btnSettings" text="⚙   Configurações" styleClass="menu-button" maxWidth="180.0" />
-            
+            <Button fx:id="btnTimer"        text="⏱   Timer"          styleClass="menu-button" maxWidth="180.0" />
+            <Button fx:id="btnChallenges"   text="🏆   Desafios"       styleClass="menu-button" maxWidth="180.0" />
+            <Button fx:id="btnAchievements" text="🎖   Conquistas"     styleClass="menu-button" maxWidth="180.0" onAction="#loadAchievementsView" />
+            <Button fx:id="btnStats"        text="📊   Estatísticas"   styleClass="menu-button" maxWidth="180.0" />
+            <Button fx:id="btnSettings"     text="⚙   Configurações"  styleClass="menu-button" maxWidth="180.0" />
+
             <Region VBox.vgrow="ALWAYS" />
-            
+
             <Label text="Streak: 🔥 5 dias" styleClass="streak-label" />
         </VBox>
     </left>
 
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ÁREA DE CONTEÚDO                                                     -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <center>
         <StackPane fx:id="contentArea" styleClass="content-pane">
             <Label text="Selecione uma opção no menu" style="-fx-text-fill: white; -fx-font-size: 18px;" />
         </StackPane>
     </center>
-   
+
 </BorderPane>
