@@ -198,6 +198,10 @@ public class PomodoroService {
                 challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), minutesSpent);
             }
             incrementCycle();
+
+            if (sessionsInCycle == 0) {
+                notifyFullCycleCompleted();
+            }
         }
 
         SessionType nextType;

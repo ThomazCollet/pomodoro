@@ -1,9 +1,14 @@
-package com.thomazcollet.service; // Ajuste para o seu pacote de service
+package com.thomazcollet.service;
 
 import javafx.scene.media.AudioClip;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.URL;
 
 public class AudioService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AudioService.class);
 
     private AudioClip timerStartClip;
     private AudioClip timerEndClip;
@@ -35,7 +40,7 @@ public class AudioService {
             if (endUrl != null)
                 timerEndClip = new AudioClip(endUrl.toExternalForm());
         } catch (Exception e) {
-            System.err.println("Erro ao carregar arquivos de áudio: " + e.getMessage());
+            logger.error("Erro ao carregar arquivos de áudio.", e);
         }
     }
 
