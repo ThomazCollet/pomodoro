@@ -22,7 +22,10 @@ public class NotificationServiceTest {
     @BeforeEach
     public void setUp() {
         repositoryMock = mock(NotificationRepository.class);
-        notificationService = new NotificationService(repositoryMock);
+        // Construtor de pacote com despachante síncrono — evita a necessidade
+        // de inicializar o toolkit do JavaFX apenas para testar a lógica de
+        // negócio do serviço (ver NotificationService para detalhes).
+        notificationService = new NotificationService(repositoryMock, Runnable::run);
     }
 
     // ==========================================================================

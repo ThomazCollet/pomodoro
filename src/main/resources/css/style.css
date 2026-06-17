@@ -1069,9 +1069,12 @@
  * Fundo ligeiramente mais escuro que o conteúdo para criar "camada".
  */
 .history-header-block {
-    -fx-background-color: #181825;      /* Catppuccin Mantle — um passo mais escuro que Base */
-    -fx-background-radius: 10 10 0 0;  /* arredonda só os cantos superiores */
-    -fx-border-color: #313244;          /* Surface0 — linha de contorno sutil */
+    -fx-background-color: #181825;
+    /* Catppuccin Mantle — um passo mais escuro que Base */
+    -fx-background-radius: 10 10 0 0;
+    /* arredonda só os cantos superiores */
+    -fx-border-color: #313244;
+    /* Surface0 — linha de contorno sutil */
     -fx-border-radius: 10 10 0 0;
     -fx-border-width: 1;
     -fx-cursor: hand;
@@ -1080,8 +1083,10 @@
 
 /* Hover: feedback visual inequívoco de que é clicável */
 .history-header-block:hover {
-    -fx-background-color: #1e2030;      /* um tom acima, ainda discreto */
-    -fx-border-color: #45475a;          /* Surface1 — realça levemente a borda */
+    -fx-background-color: #1e2030;
+    /* um tom acima, ainda discreto */
+    -fx-border-color: #45475a;
+    /* Surface1 — realça levemente a borda */
 }
 
 /* Linha que contém ▶ + "CONCLUÍDOS" + Separator */
@@ -1092,7 +1097,8 @@
 
 /* Seta ▶ / ▼ */
 .history-toggle-icon {
-    -fx-text-fill: #6c7086;             /* Overlay0 — discreta */
+    -fx-text-fill: #6c7086;
+    /* Overlay0 — discreta */
     -fx-font-size: 10px;
     -fx-min-width: 14px;
 }
@@ -1107,7 +1113,8 @@
 
 /* Texto de estatísticas — fonte menor, apagada, abaixo do título */
 .history-summary-label {
-    -fx-text-fill: #585b70;             /* Overlay1 — mais apagado que o toggle icon */
+    -fx-text-fill: #585b70;
+    /* Overlay1 — mais apagado que o toggle icon */
     -fx-font-size: 11px;
     -fx-font-style: italic;
 }
@@ -1168,6 +1175,7 @@
     -fx-opacity: 0.92;
     -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.15), 8, 0, 0, 0);
 }
+
 /* ==========================================================================
    CORREÇÃO CIRÚRGICA DOS CONTADORES APAGADOS DO TOPO
    ========================================================================== */
@@ -1756,10 +1764,9 @@
     -fx-background-radius: 12;
     -fx-border-color: rgba(137, 180, 250, 0.20);
     -fx-border-radius: 12;
-    -fx-border-width: 1;
-    -fx-padding: 14 16 14 16;
+    -fx-border-width: 1 1 1 4;
+    -fx-padding: 12 14 10 12;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.50), 20, 0, 0, 8);
-    -fx-cursor: hand;
 }
 
 .toast-notification-title {
@@ -1771,4 +1778,71 @@
 .toast-notification-message {
     -fx-text-fill: #7f849c;
     -fx-font-size: 12px;
+}
+
+/* Faixa de cor lateral indicando o tipo da notificação */
+.toast-accent-gold {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #f9e2af;
+}
+
+.toast-accent-blue {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #89b4fa;
+}
+
+.toast-accent-green {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #a6e3a1;
+}
+
+.toast-accent-red {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #f38ba8;
+}
+
+/* Botão de fechar manual */
+.toast-close-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-padding: 2 5;
+    -fx-background-radius: 5;
+    -fx-min-width: 20px;
+    -fx-min-height: 20px;
+}
+
+.toast-close-button:hover {
+    -fx-background-color: #313244;
+    -fx-text-fill: #f38ba8;
+}
+
+/* Barra de progresso até o auto-dismiss */
+.toast-progress-bar {
+    -fx-pref-height: 4px;
+    -fx-min-height: 4px;
+    -fx-max-height: 4px;
+}
+
+.toast-progress-bar .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 2;
+}
+
+.toast-progress-bar .bar {
+    -fx-background-insets: 0;
+    -fx-background-radius: 2;
+}
+
+.toast-progress-blue .bar {
+    -fx-background-color: #89b4fa;
+}
+
+.toast-progress-gold .bar {
+    -fx-background-color: #f9e2af;
+}
+
+.toast-progress-green .bar {
+    -fx-background-color: #a6e3a1;
+}
+
+.toast-progress-red .bar {
+    -fx-background-color: #f38ba8;
 }

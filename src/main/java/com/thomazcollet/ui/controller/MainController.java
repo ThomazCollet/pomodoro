@@ -13,9 +13,11 @@ import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.infra.database.SQLiteStreakRecordRepository;
 import com.thomazcollet.service.*;
 import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
-import javafx.animation.SequentialTransition;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -55,30 +57,42 @@ public class MainController {
     // -----------------------------------------------------------------------
     // FXML — Layout principal
     // -----------------------------------------------------------------------
-    @FXML private StackPane  contentArea;
-    @FXML private StackPane  avatarContainer;
-    @FXML private HBox       topBar;
-    @FXML private StackPane  bellContainer;
-    @FXML private Button     btnBell;
-    @FXML private Label      bellBadge;
-    @FXML private Button     btnTimer;
-    @FXML private Button     btnStats;
-    @FXML private Button     btnChallenges;
-    @FXML private Button     btnAchievements;
-    @FXML private Circle     avatarCircle;
-    @FXML private Label      initialLabel;
+    @FXML
+    private StackPane contentArea;
+    @FXML
+    private StackPane avatarContainer;
+    @FXML
+    private HBox topBar;
+    @FXML
+    private StackPane bellContainer;
+    @FXML
+    private Button btnBell;
+    @FXML
+    private Label bellBadge;
+    @FXML
+    private Button btnTimer;
+    @FXML
+    private Button btnStats;
+    @FXML
+    private Button btnChallenges;
+    @FXML
+    private Button btnAchievements;
+    @FXML
+    private Circle avatarCircle;
+    @FXML
+    private Label initialLabel;
 
     // -----------------------------------------------------------------------
     // Services
     // -----------------------------------------------------------------------
-    private PomodoroService      pomodoroService;
-    private FocusSessionService  focusSessionService;
-    private ProfileService       profileService;
-    private StatsService         statsService;
-    private ChallengeService     challengeService;
-    private AchievementService   achievementService;
-    private AudioService         audioService;
-    private NotificationService  notificationService;  // NOVO
+    private PomodoroService pomodoroService;
+    private FocusSessionService focusSessionService;
+    private ProfileService profileService;
+    private StatsService statsService;
+    private ChallengeService challengeService;
+    private AchievementService achievementService;
+    private AudioService audioService;
+    private NotificationService notificationService; // NOVO
 
     private AchievementRepository achievementRepository;
 
@@ -89,12 +103,12 @@ public class MainController {
     private TimerController timerController;
 
     private Popup profilePopup;
-    private Popup notificationPopup;                    // NOVO
-    private long  lastPopupCloseTime    = 0;
-    private long  lastNotifPopupClose   = 0;            // NOVO
+    private Popup notificationPopup; // NOVO
+    private VBox toastStackContainer; // NOVO — pilha de toasts empilhados
+    private long lastPopupCloseTime = 0;
+    private long lastNotifPopupClose = 0; // NOVO
 
-    private static final DateTimeFormatter NOTIF_FORMATTER =
-            DateTimeFormatter.ofPattern("dd/MM HH:mm");
+    private static final DateTimeFormatter NOTIF_FORMATTER = DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
     // ==========================================================================
     // INICIALIZAÇÃO
@@ -105,17 +119,17 @@ public class MainController {
         initServices();
         setupAvatar();
         setupNavigation();
-        setupBell();           // NOVO
+        setupBell(); // NOVO
         setupNotificationToast(); // NOVO
         loadTimerView();
     }
 
     private void initServices() {
         try {
-            var sessionRepository      = new SQLiteFocusSessionRepository();
-            var profileRepository      = new SQLiteProfileRepository();
-            var challengeRepository    = new SQLiteChallengeRepository();
-            var streakRepository       = new SQLiteStreakRecordRepository();
+            var sessionRepository = new SQLiteFocusSessionRepository();
+            var profileRepository = new SQLiteProfileRepository();
+            var challengeRepository = new SQLiteChallengeRepository();
+            var streakRepository = new SQLiteStreakRecordRepository();
             var notificationRepository = new SQLiteNotificationRepository();
             this.achievementRepository = new SQLiteAchievementRepository();
 
@@ -123,14 +137,14 @@ public class MainController {
             this.notificationService = new NotificationService(notificationRepository);
 
             this.focusSessionService = new FocusSessionService(sessionRepository, profileRepository);
-            this.profileService      = new ProfileService(profileRepository);
-            this.statsService        = new StatsService(sessionRepository, profileRepository,
-                                            streakRepository, notificationService);
-            this.challengeService    = new ChallengeService(challengeRepository, profileRepository,
-                                            notificationService);
-            this.achievementService  = new AchievementService(achievementRepository, profileRepository,
-                                            List.of(), notificationService);
-            this.audioService        = new AudioService();
+            this.profileService = new ProfileService(profileRepository);
+            this.statsService = new StatsService(sessionRepository, profileRepository,
+                    streakRepository, notificationService);
+            this.challengeService = new ChallengeService(challengeRepository, profileRepository,
+                    notificationService);
+            this.achievementService = new AchievementService(achievementRepository, profileRepository,
+                    List.of(), notificationService);
+            this.audioService = new AudioService();
 
             profileService.ensureProfileExists();
 
@@ -156,12 +170,12 @@ public class MainController {
      * automaticamente, sem polling.
      */
     private void setupBell() {
-        if (notificationService == null) return;
+        if (notificationService == null)
+            return;
 
         // Badge: texto com o número de não lidas
         bellBadge.textProperty().bind(
-                notificationService.unreadCountProperty().asString()
-        );
+                notificationService.unreadCountProperty().asString());
 
         // Badge: visível apenas quando há não lidas
         notificationService.unreadCountProperty().addListener((obs, oldVal, newVal) -> {
@@ -199,7 +213,8 @@ public class MainController {
             return;
         }
         // Debounce para evitar reabrir imediatamente após fechar com autoHide
-        if (System.currentTimeMillis() - lastNotifPopupClose < 150) return;
+        if (System.currentTimeMillis() - lastNotifPopupClose < 150)
+            return;
 
         showNotificationPopover();
     }
@@ -209,7 +224,8 @@ public class MainController {
     // ==========================================================================
 
     private void showNotificationPopover() {
-        if (notificationService == null) return;
+        if (notificationService == null)
+            return;
 
         int profileId = profileService.getActiveProfile().getId().intValue();
         List<Notification> notifications = notificationService.getHistory(profileId);
@@ -243,14 +259,14 @@ public class MainController {
     /**
      * Constrói o VBox completo do popover de notificações.
      * Layout:
-     *   ┌─────────────────────────────────┐
-     *   │  🔔 Notificações          Limpar │
-     *   ├─────────────────────────────────┤
-     *   │  [item não lido — destaque]     │
-     *   │  [item não lido — destaque]     │
-     *   │  [item lido — opaco]            │
-     *   │  [item lido — opaco]            │
-     *   └─────────────────────────────────┘
+     * ┌─────────────────────────────────┐
+     * │ 🔔 Notificações Limpar │
+     * ├─────────────────────────────────┤
+     * │ [item não lido — destaque] │
+     * │ [item não lido — destaque] │
+     * │ [item lido — opaco] │
+     * │ [item lido — opaco] │
+     * └─────────────────────────────────┘
      */
     private VBox buildNotificationPopover(List<Notification> notifications) {
         VBox root = new VBox(0);
@@ -389,66 +405,165 @@ public class MainController {
      * quando a notificação vier de uma thread de serviço (ex: PomodoroService).
      */
     private void setupNotificationToast() {
-        if (notificationService == null) return;
+        if (notificationService == null)
+            return;
 
-        notificationService.setToastCallback(notification ->
-            Platform.runLater(() ->
-                showToastNotification(notification.getTitle(), notification.getMessage())
-            )
-        );
+        notificationService.setToastCallback(notification -> Platform
+                .runLater(() -> showToastNotification(notification.getTitle(), notification.getMessage())));
     }
 
     /**
-     * Exibe um toast no canto superior direito da área de conteúdo.
-     * Traz a janela para frente se estiver minimizada.
-     * Duração total: 300ms fade-in + 4s visível + 400ms fade-out.
+     * Duração padrão (em segundos) que um toast permanece visível antes do
+     * auto-dismiss, sincronizada com a animação da barra de progresso.
+     */
+    private static final double TOAST_VISIBLE_SECONDS = 4.0;
+
+    /**
+     * Exibe um toast no canto superior direito da área de conteúdo, empilhado
+     * sobre quaisquer toasts já visíveis. Traz a janela para frente se estiver
+     * minimizada.
      */
     private void showToastNotification(String title, String message) {
-        // Traz a janela para frente se minimizada
         if (contentArea.getScene() != null && contentArea.getScene().getWindow() instanceof Stage stage) {
-            if (stage.isIconified()) stage.setIconified(false);
+            if (stage.isIconified())
+                stage.setIconified(false);
             stage.toFront();
         }
 
-        // Container do toast
-        VBox toast = new VBox(4);
+        ensureToastStackAttached();
+        toastStackContainer.getChildren().add(buildToastNode(title, message));
+    }
+
+    /**
+     * Garante que o container de pilha de toasts exista e esteja anexado ao
+     * contentArea. Reanexa defensivamente caso a navegação entre views tenha
+     * substituído os filhos do contentArea enquanto um toast estava ativo.
+     */
+    private void ensureToastStackAttached() {
+        if (toastStackContainer == null) {
+            toastStackContainer = new VBox(10);
+            toastStackContainer.setMaxWidth(Region.USE_PREF_SIZE);
+            toastStackContainer.setMaxHeight(Region.USE_PREF_SIZE);
+            toastStackContainer.setPickOnBounds(false);
+            StackPane.setAlignment(toastStackContainer, Pos.TOP_RIGHT);
+            StackPane.setMargin(toastStackContainer, new Insets(12, 12, 0, 0));
+        }
+        if (!contentArea.getChildren().contains(toastStackContainer)) {
+            contentArea.getChildren().add(toastStackContainer);
+        }
+    }
+
+    /**
+     * Constrói um nó de toast compacto (altura ajustada ao conteúdo — nunca
+     * estica para ocupar o contentArea), com faixa de cor indicando o tipo,
+     * botão de fechar manual e barra de progresso até o auto-dismiss.
+     */
+    private VBox buildToastNode(String title, String message) {
+        String colorKey = resolveToastColorKey(title);
+
+        VBox toast = new VBox(6);
+        toast.setMinWidth(300);
         toast.setMaxWidth(300);
+        toast.setMaxHeight(Region.USE_PREF_SIZE); // impede o StackPane de esticar o toast
         toast.setPickOnBounds(false);
-        toast.getStyleClass().add("toast-notification");
+        toast.getStyleClass().addAll("toast-notification", "toast-accent-" + colorKey);
         toast.setOpacity(0);
+
+        HBox headerRow = new HBox(8);
+        headerRow.setAlignment(Pos.TOP_LEFT);
 
         Label lblTitle = new Label(title);
         lblTitle.getStyleClass().add("toast-notification-title");
         lblTitle.setWrapText(true);
+        HBox.setHgrow(lblTitle, Priority.ALWAYS);
+
+        Button btnClose = new Button("✕");
+        btnClose.getStyleClass().add("toast-close-button");
+        btnClose.setFocusTraversable(false);
+
+        headerRow.getChildren().addAll(lblTitle, btnClose);
 
         Label lblMsg = new Label(message);
         lblMsg.getStyleClass().add("toast-notification-message");
         lblMsg.setWrapText(true);
-        lblMsg.setMaxWidth(270);
 
-        toast.getChildren().addAll(lblTitle, lblMsg);
+        ProgressBar progressBar = new ProgressBar(1.0);
+        progressBar.getStyleClass().addAll("toast-progress-bar", "toast-progress-" + colorKey);
+        progressBar.setMaxWidth(Double.MAX_VALUE);
 
-        StackPane.setAlignment(toast, Pos.TOP_RIGHT);
-        StackPane.setMargin(toast, new Insets(12, 12, 0, 0));
-        contentArea.getChildren().add(toast);
+        toast.getChildren().addAll(headerRow, lblMsg, progressBar);
 
-        // Animação sequencial
+        Timeline progressTimeline = new Timeline(
+                new KeyFrame(Duration.ZERO, new KeyValue(progressBar.progressProperty(), 1.0)),
+                new KeyFrame(Duration.seconds(TOAST_VISIBLE_SECONDS),
+                        new KeyValue(progressBar.progressProperty(), 0.0)));
+
+        PauseTransition autoDismiss = new PauseTransition(Duration.seconds(TOAST_VISIBLE_SECONDS));
+        autoDismiss.setOnFinished(e -> dismissToast(toast));
+
+        btnClose.setOnAction(e -> {
+            progressTimeline.stop();
+            autoDismiss.stop();
+            dismissToast(toast);
+        });
+
         FadeTransition fadeIn = new FadeTransition(Duration.millis(280), toast);
-        fadeIn.setFromValue(0); fadeIn.setToValue(1);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
 
-        // Leve slide para baixo ao entrar
         TranslateTransition slideIn = new TranslateTransition(Duration.millis(280), toast);
-        slideIn.setFromY(-8); slideIn.setToY(0);
+        slideIn.setFromX(24);
+        slideIn.setToX(0);
 
-        ParallelTransition enter = new ParallelTransition(fadeIn, slideIn);
+        new ParallelTransition(fadeIn, slideIn).play();
+        progressTimeline.play();
+        autoDismiss.play();
 
-        PauseTransition hold = new PauseTransition(Duration.seconds(4));
+        return toast;
+    }
 
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(350), toast);
-        fadeOut.setFromValue(1); fadeOut.setToValue(0);
-        fadeOut.setOnFinished(e -> contentArea.getChildren().remove(toast));
+    /**
+     * Remove um toast da pilha com fade-out suave. Usado tanto pelo
+     * auto-dismiss quanto pelo fechamento manual via botão.
+     */
+    private void dismissToast(VBox toast) {
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(220), toast);
+        fadeOut.setFromValue(toast.getOpacity());
+        fadeOut.setToValue(0);
+        fadeOut.setOnFinished(e -> {
+            if (toastStackContainer != null) {
+                toastStackContainer.getChildren().remove(toast);
+            }
+        });
+        fadeOut.play();
+    }
 
-        new SequentialTransition(enter, hold, fadeOut).play();
+    /**
+     * Classifica o título da notificação em uma cor de identidade visual,
+     * apenas para fins de apresentação — não altera o modelo de domínio.
+     * Mapeamento: ouro = conquistas/ciclo completo, verde = metas/desafios
+     * concluídos, vermelho = desafio encerrado sem sucesso, azul = demais
+     * casos (rank-up, lembretes informativos).
+     */
+    private String resolveToastColorKey(String title) {
+        if (title == null) {
+            return "blue";
+        }
+        String normalized = title.toLowerCase();
+
+        if (normalized.contains("conquista desbloqueada") || normalized.contains("ciclo pomodoro completo")) {
+            return "gold";
+        }
+        if (normalized.contains("desafio encerrado")) {
+            return "red";
+        }
+        if (normalized.contains("desafio concluído")
+                || normalized.contains("meta diária")
+                || normalized.contains("meta semanal")
+                || normalized.contains("meta mensal")) {
+            return "green";
+        }
+        return "blue";
     }
 
     // ==========================================================================
@@ -499,7 +614,7 @@ public class MainController {
                             focusSessionService,
                             challengeService,
                             audioService,
-                            notificationService);  // passa o notificationService
+                            notificationService); // passa o notificationService
                 }
                 timerController.setPomodoroService(pomodoroService);
                 viewCache.put("timer", root);
@@ -528,7 +643,8 @@ public class MainController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ChallengeView.fxml"));
             loader.setControllerFactory(param -> {
-                if (param == ChallengeController.class) return new ChallengeController(challengeService);
+                if (param == ChallengeController.class)
+                    return new ChallengeController(challengeService);
                 return null;
             });
             Parent challengesView = loader.load();
@@ -577,7 +693,8 @@ public class MainController {
             profilePopup.hide();
             return;
         }
-        if (System.currentTimeMillis() - lastPopupCloseTime < 150) return;
+        if (System.currentTimeMillis() - lastPopupCloseTime < 150)
+            return;
         showProfilePopover();
     }
 
@@ -638,10 +755,10 @@ public class MainController {
         grid.setAlignment(Pos.CENTER);
         grid.setHgap(20);
         grid.setVgap(12);
-        addStat(grid, "Streak Atual",   "🔥 " + currentStreak + "d",      0, 0);
-        addStat(grid, "Recorde Máximo", "🏆 " + bestStreakDays + "d",      1, 0);
-        addStat(grid, "Foco Total",     profile.getTotalFocusSessions() + " ses.", 0, 1);
-        addStat(grid, "Experiência",    profile.getXp() + " XP",           1, 1);
+        addStat(grid, "Streak Atual", "🔥 " + currentStreak + "d", 0, 0);
+        addStat(grid, "Recorde Máximo", "🏆 " + bestStreakDays + "d", 1, 0);
+        addStat(grid, "Foco Total", profile.getTotalFocusSessions() + " ses.", 0, 1);
+        addStat(grid, "Experiência", profile.getXp() + " XP", 1, 1);
 
         Button btnSync = new Button("Sincronizar Dados");
         btnSync.getStyleClass().add("sync-button");
@@ -668,16 +785,50 @@ public class MainController {
                     radius + radius * Math.sin(angleRad));
         }
 
-        Color fill; Color glowColor; String letterColor;
+        Color fill;
+        Color glowColor;
+        String letterColor;
         switch (rank) {
-            case E  -> { fill = Color.web("#313244"); glowColor = null;             letterColor = "#a6adc8"; }
-            case D  -> { fill = Color.web("#4c1d95"); glowColor = Color.web("#7c3aed"); letterColor = "#ddd6fe"; }
-            case C  -> { fill = Color.web("#1e3a8a"); glowColor = Color.web("#3b82f6"); letterColor = "#bfdbfe"; }
-            case B  -> { fill = Color.web("#134e4a"); glowColor = Color.web("#0d9488"); letterColor = "#99f6e4"; }
-            case A  -> { fill = Color.web("#14532d"); glowColor = Color.web("#22c55e"); letterColor = "#bbf7d0"; }
-            case S  -> { fill = Color.web("#78350f"); glowColor = Color.web("#f59e0b"); letterColor = "#fde68a"; }
-            case SS -> { fill = Color.web("#1e293b"); glowColor = Color.web("#94a3b8"); letterColor = "#e2e8f0"; }
-            default -> { fill = Color.web("#313244"); glowColor = null;             letterColor = "#a6adc8"; }
+            case E -> {
+                fill = Color.web("#313244");
+                glowColor = null;
+                letterColor = "#a6adc8";
+            }
+            case D -> {
+                fill = Color.web("#4c1d95");
+                glowColor = Color.web("#7c3aed");
+                letterColor = "#ddd6fe";
+            }
+            case C -> {
+                fill = Color.web("#1e3a8a");
+                glowColor = Color.web("#3b82f6");
+                letterColor = "#bfdbfe";
+            }
+            case B -> {
+                fill = Color.web("#134e4a");
+                glowColor = Color.web("#0d9488");
+                letterColor = "#99f6e4";
+            }
+            case A -> {
+                fill = Color.web("#14532d");
+                glowColor = Color.web("#22c55e");
+                letterColor = "#bbf7d0";
+            }
+            case S -> {
+                fill = Color.web("#78350f");
+                glowColor = Color.web("#f59e0b");
+                letterColor = "#fde68a";
+            }
+            case SS -> {
+                fill = Color.web("#1e293b");
+                glowColor = Color.web("#94a3b8");
+                letterColor = "#e2e8f0";
+            }
+            default -> {
+                fill = Color.web("#313244");
+                glowColor = null;
+                letterColor = "#a6adc8";
+            }
         }
 
         hex.setFill(fill);
@@ -703,7 +854,11 @@ public class MainController {
         container.setMaxSize(radius * 2, radius * 2);
 
         if (radius > 20) {
-            String accent = switch (rank) { case S -> "★"; case SS -> "♛"; default -> null; };
+            String accent = switch (rank) {
+                case S -> "★";
+                case SS -> "♛";
+                default -> null;
+            };
             if (accent != null) {
                 Label lblAccent = new Label(accent);
                 String accentColor = rank == RankingType.SS ? "#94a3b8" : "#fbbf24";
@@ -734,9 +889,11 @@ public class MainController {
 
     private void playEntranceAnimation(VBox node) {
         FadeTransition fade = new FadeTransition(Duration.millis(200), node);
-        fade.setFromValue(0); fade.setToValue(1);
+        fade.setFromValue(0);
+        fade.setToValue(1);
         TranslateTransition slide = new TranslateTransition(Duration.millis(200), node);
-        slide.setFromX(-15); slide.setToX(0);
+        slide.setFromX(-15);
+        slide.setToX(0);
         new ParallelTransition(fade, slide).play();
     }
 

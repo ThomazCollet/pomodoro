@@ -2,6 +2,7 @@ package com.thomazcollet.service;
 
 import com.thomazcollet.domain.model.Notification;
 import com.thomazcollet.domain.repository.NotificationRepository;
+import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.scene.media.AudioClip;
@@ -43,6 +44,17 @@ public class NotificationService {
     private AudioClip notificationSound;
 
     // -----------------------------------------------------------------------
+    // Despachante de mutações de propriedades JavaFX (unreadCountProperty).
+    // Em produção, sempre Platform::runLater — garante que o bind() com o
+    // badge do sino na UI só seja tocado na FX Application Thread, mesmo
+    // quando send()/loadUnreadCount()/markAllAsRead() são chamados de uma
+    // thread de fundo (ex: a tarefa agendada do PomodoroService).
+    // Injetável via construtor de pacote para permitir testes unitários
+    // síncronos sem precisar inicializar o toolkit do JavaFX.
+    // -----------------------------------------------------------------------
+    private final Consumer<Runnable> uiDispatcher;
+
+    // -----------------------------------------------------------------------
     // Callback para a UI exibir toast/snackbar em tempo real.
     // Configurado pelo MainController após a criação do serviço.
     // Recebe o objeto Notification completo para que a UI possa formatar
@@ -60,7 +72,18 @@ public class NotificationService {
     private LocalDate lastGoalCheckDate = LocalDate.now();
 
     public NotificationService(NotificationRepository notificationRepository) {
+        this(notificationRepository, Platform::runLater);
+    }
+
+    /**
+     * Construtor de visibilidade de pacote — permite injetar um despachante
+     * síncrono (ex: {@code Runnable::run}) em testes unitários, evitando a
+     * necessidade de inicializar o toolkit do JavaFX apenas para validar a
+     * lógica de negócio do serviço.
+     */
+    NotificationService(NotificationRepository notificationRepository, Consumer<Runnable> uiDispatcher) {
         this.notificationRepository = notificationRepository;
+        this.uiDispatcher = uiDispatcher;
         initializeSound();
     }
 
@@ -112,7 +135,7 @@ public class NotificationService {
         Notification notification = new Notification(profileId, title, message);
         notificationRepository.save(notification);
 
-        unreadCountProperty.set(unreadCountProperty.get() + 1);
+        uiDispatcher.accept(() -> unreadCountProperty.set(unreadCountProperty.get() + 1));
 
         playSound();
         fireToast(notification);
@@ -170,7 +193,7 @@ public class NotificationService {
      */
     public void loadUnreadCount(int profileId) {
         int count = notificationRepository.findUnreadByProfileId(profileId).size();
-        unreadCountProperty.set(count);
+        uiDispatcher.accept(() -> unreadCountProperty.set(count));
         logger.debug("Contador de não lidas carregado: {} para o perfil ID {}.", count, profileId);
     }
 
@@ -186,7 +209,7 @@ public class NotificationService {
      */
     public void markAllAsRead(int profileId) {
         notificationRepository.markAllAsRead(profileId);
-        unreadCountProperty.set(0);
+        uiDispatcher.accept(() -> unreadCountProperty.set(0));
         logger.debug("Todas as notificações do perfil {} marcadas como lidas.", profileId);
     }
 
