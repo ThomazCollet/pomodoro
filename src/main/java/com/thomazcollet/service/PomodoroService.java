@@ -204,6 +204,12 @@ public class PomodoroService {
             }
         }
 
+        // CORREÇÃO: o skip já tratava a sessão como "concluída" para fins de XP
+        // de desafios, mas nunca persistia isso no FocusSessionRepository — a
+        // sessão ativa ficava com completed=0 para sempre, e por isso nunca
+        // aparecia nas estatísticas (que filtram completed=1 em toda consulta).
+        focusSessionService.finalizeCurrentSession(totalSessionDuration, true);
+
         SessionType nextType;
         if (currentSessionType == SessionType.FOCUS) {
             nextType = (sessionsInCycle == 0) ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;

@@ -53,6 +53,8 @@ public class StatsController {
     private Label lblMaxStreak;
     @FXML
     private Label lblRecordToday;
+    @FXML
+    private Label lblRecordWeek;
 
     @FXML
     private GridPane heatmapGrid;
@@ -125,6 +127,8 @@ public class StatsController {
             lblMaxStreak.setText("Recorde: " + currentStats.bestStreakDays() + " dias");
         if (lblRecordToday != null)
             lblRecordToday.setText(currentStats.recordDayTime());
+        if (lblRecordWeek != null)
+            lblRecordWeek.setText(currentStats.recordWeekTime());
     }
 
     private void setupToggleGroup() {
@@ -426,14 +430,15 @@ public class StatsController {
     }
 
     // Paleta do heatmap — Catppuccin Mocha, rampa verde + Sky para dias supremos.
-    // Índices: 0=vazio  1=rastro(<30m)  2=leve(30m–2h)  3=bom(2–4h)  4=ótimo(4–6h)  5=supremo(≥6h)
+    // Índices: 0=vazio 1=rastro(<30m) 2=leve(30m–2h) 3=bom(2–4h) 4=ótimo(4–6h)
+    // 5=supremo(≥6h)
     private static final String[] HEATMAP_COLORS = {
-        "#1e2030", // 0 — vazio      (funde com o fundo #1e1e2e)
-        "#2d4a3e", // 1 — rastro     (verde bem escuro)
-        "#40724f", // 2 — leve       (verde médio-escuro)
-        "#5a9e64", // 3 — bom        (verde médio)
-        "#a6e3a1", // 4 — ótimo      (Catppuccin Green claro)
-        "#89dceb"  // 5 — supremo    (Catppuccin Sky — destaque especial ≥ 6h)
+            "#1e2030", // 0 — vazio (funde com o fundo #1e1e2e)
+            "#2d4a3e", // 1 — rastro (verde bem escuro)
+            "#40724f", // 2 — leve (verde médio-escuro)
+            "#5a9e64", // 3 — bom (verde médio)
+            "#a6e3a1", // 4 — ótimo (Catppuccin Green claro)
+            "#89dceb" // 5 — supremo (Catppuccin Sky — destaque especial ≥ 6h)
     };
 
     private void renderHeatmap(Map<LocalDate, Long> dailyData) {
@@ -475,20 +480,25 @@ public class StatsController {
     /**
      * Mapeia segundos de foco para um dos 6 níveis da paleta do heatmap.
      *
-     *  0 — vazio    :  = 0 s
-     *  1 — rastro   :  1 s  –  1 799 s   (< 30 min)
-     *  2 — leve     :  1 800 s – 7 199 s  (30 min – 2 h)
-     *  3 — bom      :  7 200 s – 14 399 s (2 h – 4 h)
-     *  4 — ótimo    : 14 400 s – 21 599 s (4 h – 6 h)
-     *  5 — supremo  : ≥ 21 600 s          (6 h ou mais)
+     * 0 — vazio : = 0 s
+     * 1 — rastro : 1 s – 1 799 s (< 30 min)
+     * 2 — leve : 1 800 s – 7 199 s (30 min – 2 h)
+     * 3 — bom : 7 200 s – 14 399 s (2 h – 4 h)
+     * 4 — ótimo : 14 400 s – 21 599 s (4 h – 6 h)
+     * 5 — supremo : ≥ 21 600 s (6 h ou mais)
      */
     private String getColorForSeconds(long seconds) {
-        if (seconds == 0)      return HEATMAP_COLORS[0];
-        if (seconds < 1800)    return HEATMAP_COLORS[1];
-        if (seconds < 7200)    return HEATMAP_COLORS[2];
-        if (seconds < 14400)   return HEATMAP_COLORS[3];
-        if (seconds < 21600)   return HEATMAP_COLORS[4];
-        return                        HEATMAP_COLORS[5];
+        if (seconds == 0)
+            return HEATMAP_COLORS[0];
+        if (seconds < 1800)
+            return HEATMAP_COLORS[1];
+        if (seconds < 7200)
+            return HEATMAP_COLORS[2];
+        if (seconds < 14400)
+            return HEATMAP_COLORS[3];
+        if (seconds < 21600)
+            return HEATMAP_COLORS[4];
+        return HEATMAP_COLORS[5];
     }
 
     private String formatDuration(long totalSeconds) {

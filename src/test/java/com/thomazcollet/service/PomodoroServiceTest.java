@@ -95,6 +95,25 @@ class PomodoroServiceTest {
         verify(challengeService).addFocusMinutesToActiveChallenges(eq(1L), eq(25));
     }
 
+    @Test
+    @DisplayName("Deve finalizar a sessão de foco como concluída ao dar SKIP (corrige bug das estatísticas zeradas)")
+    void shouldFinalizeFocusSessionAsCompletedWhenSkipped() {
+        service.skip();
+
+        verify(focusSessionService).finalizeCurrentSession(eq(1500), eq(true));
+    }
+
+    @Test
+    @DisplayName("Deve finalizar também a sessão de pausa como concluída ao dar SKIP")
+    void shouldFinalizeBreakSessionAsCompletedWhenSkipped() {
+        service.skip(); // Foco -> Pausa Curta
+        reset(focusSessionService); // limpa a chamada de finalização do skip anterior
+
+        service.skip(); // Pausa Curta -> Foco
+
+        verify(focusSessionService).finalizeCurrentSession(eq(300), eq(true)); // 5min de short break = 300s
+    }
+
     // --- TESTES DE CICLO E FLUXO ---
 
     @Test

@@ -34,7 +34,7 @@
             <VBox styleClass="stats-card, card-accent-mauve" HBox.hgrow="ALWAYS">
                 <Label styleClass="stat-card-title" text="ESTA SEMANA" />
                 <Label fx:id="lblFocusWeek" styleClass="stat-card-value" text="28h 45m" />
-                <Label fx:id="lblRecordToday" styleClass="stat-card-record" text="Melhor Semana: 32h" />
+                <Label fx:id="lblRecordWeek" styleClass="stat-card-record" text="Melhor Semana: --" />
             </VBox>
         </HBox>
 

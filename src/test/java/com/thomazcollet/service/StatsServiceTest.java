@@ -117,6 +117,22 @@ class StatsServiceTest {
         }
 
         @Test
+        @DisplayName("Deve formatar corretamente o recorde histórico de melhor semana")
+        void shouldFormatBestWeekRecordCorrectly() {
+                // GIVEN: recorde semanal de 18000s (05h 00m) vindo do repositório
+                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
+                                .thenReturn(0L);
+                when(sessionRepository.findMaxFocusSecondsInAGivenWeek(testProfile.getId()))
+                                .thenReturn(18000);
+
+                // WHEN
+                FocusStatistics stats = statsService.getUserStatistics(testProfile);
+
+                // THEN
+                assertEquals("Melhor Semana: 05h 00m", stats.recordWeekTime());
+        }
+
+        @Test
         @DisplayName("Deve atualizar recorde de foco diário quando o tempo de hoje for superior")
         void shouldUpdateMaxFocusDayWhenTodayIsHigher() {
                 // GIVEN

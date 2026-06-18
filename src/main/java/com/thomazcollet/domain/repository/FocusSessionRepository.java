@@ -69,6 +69,13 @@ public interface FocusSessionRepository {
     int findMaxFocusMinutesInAGivenDay(Long profileId);
 
     /**
+     * Busca o recorde histórico de segundos focados em uma única semana
+     * (agrupada por ano + número da semana) por um perfil. Usado para o
+     * card "Recorde: Melhor Semana" da aba de Estatísticas.
+     */
+    int findMaxFocusSecondsInAGivenWeek(Long profileId);
+
+    /**
      * Conta o total acumulado de sessões de foco completadas com sucesso por um
      * perfil.
      * Atende à linha: "Completar ciclos pomodoro completos".
