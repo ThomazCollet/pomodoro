@@ -36,6 +36,11 @@ public class DatabaseInitializer {
                     daily_goal_seconds INTEGER NOT NULL DEFAULT 5400,
                     weekly_goal_seconds INTEGER NOT NULL DEFAULT 27000,
                     monthly_goal_seconds INTEGER NOT NULL DEFAULT 108000,
+                    audio_volume INTEGER NOT NULL DEFAULT 100,
+                    notifications_enabled BOOLEAN NOT NULL DEFAULT 1,
+                    language TEXT NOT NULL DEFAULT 'pt_BR',
+                    streak_rule TEXT NOT NULL DEFAULT 'ALL_DAYS'
+                        CHECK(streak_rule IN ('ALL_DAYS','EXCEPT_SUNDAY','WEEKDAYS_ONLY')),
                     created_at DATETIME DEFAULT (datetime('now', 'localtime'))
                 );
 
@@ -147,6 +152,32 @@ public class DatabaseInitializer {
         try {
             stmt.execute("ALTER TABLE profiles ADD COLUMN monthly_goal_seconds INTEGER NOT NULL DEFAULT 108000;");
             logger.info("Migração: Coluna 'monthly_goal_seconds' adicionada com sucesso.");
+        } catch (SQLException e) {
+        }
+
+        // Novas colunas de configurações (Settings — Fase 0)
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN audio_volume INTEGER NOT NULL DEFAULT 100;");
+            logger.info("Migração: Coluna 'audio_volume' adicionada com sucesso.");
+        } catch (SQLException e) {
+            // já existe
+        }
+
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN notifications_enabled BOOLEAN NOT NULL DEFAULT 1;");
+            logger.info("Migração: Coluna 'notifications_enabled' adicionada com sucesso.");
+        } catch (SQLException e) {
+        }
+
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN language TEXT NOT NULL DEFAULT 'pt_BR';");
+            logger.info("Migração: Coluna 'language' adicionada com sucesso.");
+        } catch (SQLException e) {
+        }
+
+        try {
+            stmt.execute("ALTER TABLE profiles ADD COLUMN streak_rule TEXT NOT NULL DEFAULT 'ALL_DAYS';");
+            logger.info("Migração: Coluna 'streak_rule' adicionada com sucesso.");
         } catch (SQLException e) {
         }
 

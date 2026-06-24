@@ -1,6 +1,7 @@
 package com.thomazcollet.infra.database;
 
 import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.domain.model.StreakRule;
 import com.thomazcollet.domain.repository.ProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +15,28 @@ public class SQLiteProfileRepository implements ProfileRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(SQLiteProfileRepository.class);
 
+    /**
+     * Persiste um perfil NOVO (sem ID) no banco e atribui o ID gerado de volta
+     * ao objeto. Para atualizar um perfil existente, use os métodos granulares
+     * updateProfileInfo, updateDurations, updateGoals e updateSettings.
+     *
+     * @throws IllegalStateException se chamado com um perfil que já possui ID.
+     */
     @Override
     public void save(Profile profile) {
+        if (profile.getId() != null) {
+            throw new IllegalStateException(
+                    "save() só deve ser usado para novos perfis. " +
+                            "Use os métodos update* para atualizar um perfil existente. Profile ID: "
+                            + profile.getId());
+        }
+
         String sql = """
                 INSERT INTO profiles (username, image_path, work_duration, short_break, long_break,
                                     max_focus_day_seconds, total_focus_sessions, xp,
-                                    daily_goal_seconds, weekly_goal_seconds, monthly_goal_seconds)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    daily_goal_seconds, weekly_goal_seconds, monthly_goal_seconds,
+                                    audio_volume, notifications_enabled, language, streak_rule)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -37,6 +53,12 @@ public class SQLiteProfileRepository implements ProfileRepository {
             pstmt.setInt(9, profile.getDailyGoalSeconds());
             pstmt.setInt(10, profile.getWeeklyGoalSeconds());
             pstmt.setInt(11, profile.getMonthlyGoalSeconds());
+            pstmt.setInt(12, profile.getAudioVolume());
+            pstmt.setBoolean(13, profile.isNotificationsEnabled());
+            pstmt.setString(14, profile.getLanguage());
+            pstmt.setString(15, profile.getStreakRule() != null
+                    ? profile.getStreakRule().name()
+                    : "ALL_DAYS");
 
             pstmt.executeUpdate();
 
@@ -161,6 +183,67 @@ public class SQLiteProfileRepository implements ProfileRepository {
     }
 
     @Override
+    public void updateProfileInfo(Long profileId, String username, String imagePath) {
+        String sql = "UPDATE profiles SET username = ?, image_path = ? WHERE id = ?";
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, imagePath);
+            pstmt.setLong(3, profileId);
+            pstmt.executeUpdate();
+            logger.info("Informações do perfil ID {} atualizadas.", profileId);
+        } catch (SQLException e) {
+            logger.error("Erro ao atualizar informações do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao atualizar informações do perfil", e);
+        }
+    }
+
+    @Override
+    public void updateDurations(Long profileId, int workDuration, int shortBreak, int longBreak) {
+        String sql = """
+                UPDATE profiles
+                SET work_duration = ?, short_break = ?, long_break = ?
+                WHERE id = ?
+                """;
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, workDuration);
+            pstmt.setInt(2, shortBreak);
+            pstmt.setInt(3, longBreak);
+            pstmt.setLong(4, profileId);
+            pstmt.executeUpdate();
+            logger.info("Durações do perfil ID {} atualizadas: foco={}m, curta={}m, longa={}m.",
+                    profileId, workDuration, shortBreak, longBreak);
+        } catch (SQLException e) {
+            logger.error("Erro ao atualizar durações do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao atualizar durações do perfil", e);
+        }
+    }
+
+    @Override
+    public void updateSettings(Long profileId, int audioVolume, boolean notificationsEnabled,
+            String language, String streakRule) {
+        String sql = """
+                UPDATE profiles
+                SET audio_volume = ?, notifications_enabled = ?, language = ?, streak_rule = ?
+                WHERE id = ?
+                """;
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, audioVolume);
+            pstmt.setBoolean(2, notificationsEnabled);
+            pstmt.setString(3, language);
+            pstmt.setString(4, streakRule);
+            pstmt.setLong(5, profileId);
+            pstmt.executeUpdate();
+            logger.info("Configurações do perfil ID {} atualizadas.", profileId);
+        } catch (SQLException e) {
+            logger.error("Erro ao atualizar configurações do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao atualizar configurações do perfil", e);
+        }
+    }
+
+    @Override
     public void delete(Long id) {
         String sql = "DELETE FROM profiles WHERE id = ?";
         try (Connection conn = DatabaseInitializer.getConnection();
@@ -175,6 +258,15 @@ public class SQLiteProfileRepository implements ProfileRepository {
     }
 
     private Profile mapResultSetToProfile(ResultSet rs) throws SQLException {
+        String streakRuleStr = rs.getString("streak_rule");
+        StreakRule streakRule;
+        try {
+            streakRule = (streakRuleStr != null) ? StreakRule.valueOf(streakRuleStr) : StreakRule.ALL_DAYS;
+        } catch (IllegalArgumentException e) {
+            logger.warn("Valor desconhecido de streak_rule '{}', usando ALL_DAYS como fallback.", streakRuleStr);
+            streakRule = StreakRule.ALL_DAYS;
+        }
+
         return new Profile(
                 rs.getLong("id"),
                 rs.getString("username"),
@@ -188,6 +280,10 @@ public class SQLiteProfileRepository implements ProfileRepository {
                 rs.getInt("daily_goal_seconds"),
                 rs.getInt("weekly_goal_seconds"),
                 rs.getInt("monthly_goal_seconds"),
+                rs.getInt("audio_volume"),
+                rs.getBoolean("notifications_enabled"),
+                rs.getString("language") != null ? rs.getString("language") : "pt_BR",
+                streakRule,
                 rs.getTimestamp("created_at").toLocalDateTime().withNano(0));
     }
 }

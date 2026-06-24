@@ -25,21 +25,29 @@ public class Profile {
     // ATRIBUTO DE PROGRESSÃO DE RANKING
     private int xp;
 
-    // 🆕 ATRIBUTOS DE METAS DE PRODUTIVIDADE (CONSOLIDAÇÃO E METAS)
+    // 🆕 METAS DE PRODUTIVIDADE
     private int dailyGoalSeconds;
     private int weeklyGoalSeconds;
     private int monthlyGoalSeconds;
+
+    // 🆕 CONFIGURAÇÕES (Settings)
+    private int audioVolume; // 0–100
+    private boolean notificationsEnabled;
+    private String language; // ex: "pt_BR", "en_US" — infraestrutura para tradução futura
+    private StreakRule streakRule;
 
     public Profile() {
     }
 
     /**
      * Construtor completo para reconstrução de objetos vindos da camada de
-     * persistência (Incluindo Marcos, XP e Metas).
+     * persistência.
      */
     public Profile(Long id, String username, String imagePath, int workDuration, int shortBreak, int longBreak,
             int maxFocusDaySeconds, int totalFocusSessions, int xp,
-            int dailyGoalSeconds, int weeklyGoalSeconds, int monthlyGoalSeconds, LocalDateTime createdAt) {
+            int dailyGoalSeconds, int weeklyGoalSeconds, int monthlyGoalSeconds,
+            int audioVolume, boolean notificationsEnabled, String language, StreakRule streakRule,
+            LocalDateTime createdAt) {
         this.id = id;
         this.createdAt = createdAt;
         this.setUsername(username);
@@ -53,6 +61,10 @@ public class Profile {
         this.setDailyGoalSeconds(dailyGoalSeconds);
         this.setWeeklyGoalSeconds(weeklyGoalSeconds);
         this.setMonthlyGoalSeconds(monthlyGoalSeconds);
+        this.setAudioVolume(audioVolume);
+        this.setNotificationsEnabled(notificationsEnabled);
+        this.setLanguage(language);
+        this.setStreakRule(streakRule);
     }
 
     /**
@@ -69,6 +81,10 @@ public class Profile {
         this.dailyGoalSeconds = 5400;
         this.weeklyGoalSeconds = 27000;
         this.monthlyGoalSeconds = 108000;
+        this.audioVolume = 100;
+        this.notificationsEnabled = true;
+        this.language = "pt_BR";
+        this.streakRule = StreakRule.ALL_DAYS;
     }
 
     // --- COMPORTAMENTO DE DOMÍNIO RICO ---
@@ -234,6 +250,43 @@ public class Profile {
             throw new IllegalArgumentException("A data de criação não pode estar no futuro.");
         }
         this.createdAt = createdAt;
+    }
+
+    // --- GETTERS E SETTERS DE CONFIGURAÇÕES ---
+
+    public int getAudioVolume() {
+        return audioVolume;
+    }
+
+    public void setAudioVolume(int audioVolume) {
+        if (audioVolume < 0 || audioVolume > 100) {
+            throw new IllegalArgumentException("O volume deve estar entre 0 e 100.");
+        }
+        this.audioVolume = audioVolume;
+    }
+
+    public boolean isNotificationsEnabled() {
+        return notificationsEnabled;
+    }
+
+    public void setNotificationsEnabled(boolean notificationsEnabled) {
+        this.notificationsEnabled = notificationsEnabled;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = (language != null && !language.isBlank()) ? language.trim() : "pt_BR";
+    }
+
+    public StreakRule getStreakRule() {
+        return streakRule;
+    }
+
+    public void setStreakRule(StreakRule streakRule) {
+        this.streakRule = (streakRule != null) ? streakRule : StreakRule.ALL_DAYS;
     }
 
     // --- MÉTODOS DE OBJETO ---

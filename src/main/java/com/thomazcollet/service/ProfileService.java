@@ -19,12 +19,10 @@ public class ProfileService {
             "#FF5733", "#33FF57", "#3357FF", "#F333FF",
             "#FF33A1", "#33FFF6", "#F6FF33", "#A133FF"
     };
-    
 
     public ProfileService(ProfileRepository repository) {
         this.repository = repository;
     }
-
 
     /**
      * Inicializa o sistema de perfis.
@@ -83,15 +81,29 @@ public class ProfileService {
     }
 
     /**
-     * Permite atualizar o perfil ativo.
+     * Persiste todas as alterações do perfil ativo de forma granular e segura,
+     * sem risco de criar um perfil duplicado. Cada aspecto do perfil é atualizado
+     * pelo seu método dedicado no repositório.
+     *
+     * @throws IllegalArgumentException se o perfil for nulo ou não tiver ID.
      */
     public void updateActiveProfile(Profile profile) {
         if (profile == null || profile.getId() == null) {
             throw new IllegalArgumentException("Perfil inválido para atualização.");
         }
-        repository.save(profile);
+
+        repository.updateProfileInfo(profile.getId(), profile.getUsername(), profile.getImagePath());
+        repository.updateDurations(profile.getId(),
+                profile.getWorkDuration(), profile.getShortBreak(), profile.getLongBreak());
+        repository.updateGoals(profile.getId(),
+                profile.getDailyGoalSeconds(), profile.getWeeklyGoalSeconds(), profile.getMonthlyGoalSeconds());
+        repository.updateSettings(profile.getId(),
+                profile.getAudioVolume(), profile.isNotificationsEnabled(),
+                profile.getLanguage(),
+                profile.getStreakRule() != null ? profile.getStreakRule().name() : "ALL_DAYS");
+
         this.activeProfile = profile;
-        logger.info("Perfil '{}' atualizado com sucesso.", profile.getUsername());
+        logger.info("Perfil '{}' (ID: {}) atualizado com sucesso.", profile.getUsername(), profile.getId());
     }
 
     /**

@@ -1764,9 +1764,10 @@
     -fx-background-radius: 12;
     -fx-border-color: rgba(137, 180, 250, 0.20);
     -fx-border-radius: 12;
-    -fx-border-width: 1 1 1 4;
-    -fx-padding: 12 14 10 12;
+    -fx-border-width: 1;
+    -fx-padding: 14 16 14 16;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.50), 20, 0, 0, 8);
+    -fx-cursor: hand;
 }
 
 .toast-notification-title {
@@ -1780,69 +1781,273 @@
     -fx-font-size: 12px;
 }
 
-/* Faixa de cor lateral indicando o tipo da notificação */
-.toast-accent-gold {
-    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #f9e2af;
+/* ==========================================================================
+   TELA DE CONFIGURAÇÕES (SettingsView)
+   ========================================================================== */
+
+.settings-root {
+    -fx-background-color: #1e1e2e;
 }
 
-.toast-accent-blue {
-    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #89b4fa;
+/* Cabeçalho da página */
+.settings-page-header {
+    -fx-padding: 0 0 4 0;
 }
 
-.toast-accent-green {
-    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #a6e3a1;
+/* Seção genérica — card com fundo Surface0 */
+.settings-section {
+    -fx-background-color: #313244;
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(137, 180, 250, 0.08);
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 22 24 18 24;
+    -fx-spacing: 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.18), 8, 0, 0, 4);
 }
 
-.toast-accent-red {
-    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #f38ba8;
+/* Espaçamento entre seções */
+.settings-section+.settings-section {
+    -fx-translate-y: 0;
 }
 
-/* Botão de fechar manual */
-.toast-close-button {
-    -fx-background-color: transparent;
+/* Título de cada seção */
+.settings-section-title {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 14 0;
+}
+
+/* Label de campo */
+.settings-field-label {
+    -fx-text-fill: #a6adc8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Dica / descrição secundária */
+.settings-field-hint {
     -fx-text-fill: #6c7086;
     -fx-font-size: 11px;
-    -fx-cursor: hand;
-    -fx-padding: 2 5;
-    -fx-background-radius: 5;
-    -fx-min-width: 20px;
-    -fx-min-height: 20px;
+    -fx-padding: 2 0 0 0;
 }
 
-.toast-close-button:hover {
-    -fx-background-color: #313244;
+/* Mensagem de erro inline */
+.settings-field-error {
     -fx-text-fill: #f38ba8;
+    -fx-font-size: 11px;
 }
 
-/* Barra de progresso até o auto-dismiss */
-.toast-progress-bar {
+/* Rótulo de unidade (h, min, %) */
+.settings-unit-label {
+    -fx-text-fill: #9399b2;
+    -fx-font-size: 12px;
+}
+
+/* Linha inferior com o botão Salvar */
+.settings-save-row {
+    -fx-padding: 16 0 0 0;
+}
+
+/* Botão Salvar padrão */
+.settings-save-button {
+    -fx-background-color: #313244;
+    -fx-text-fill: #89b4fa;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #89b4fa;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 18;
+    -fx-cursor: hand;
+}
+
+.settings-save-button:hover {
+    -fx-background-color: rgba(137, 180, 250, 0.12);
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.25), 6, 0, 0, 0);
+}
+
+.settings-save-button:disabled {
+    -fx-opacity: 0.55;
+}
+
+/* Botão de link discreto (ex: "Alterar foto") */
+.settings-link-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #89b4fa;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-padding: 2 0;
+    -fx-border-color: transparent;
+}
+
+.settings-link-button:hover {
+    -fx-text-fill: #b4befe;
+}
+
+/* Avatar na tela de Settings */
+.settings-avatar-container {
+    -fx-cursor: hand;
+    -fx-pref-width: 76px;
+    -fx-pref-height: 76px;
+    -fx-max-width: 76px;
+    -fx-max-height: 76px;
+}
+
+.settings-avatar-container:hover {
+    -fx-opacity: 0.85;
+}
+
+.settings-avatar-text {
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI Black", sans-serif;
+    -fx-font-size: 28px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0, 0, 1);
+}
+
+/* Rádio buttons */
+.settings-radio {
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.settings-radio:selected {
+    -fx-text-fill: #89b4fa;
+}
+
+/* Slider de volume */
+.settings-slider .track {
+    -fx-background-color: #45475a;
+    -fx-background-radius: 4;
     -fx-pref-height: 4px;
-    -fx-min-height: 4px;
-    -fx-max-height: 4px;
 }
 
-.toast-progress-bar .track {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-background-radius: 2;
-}
-
-.toast-progress-bar .bar {
-    -fx-background-insets: 0;
-    -fx-background-radius: 2;
-}
-
-.toast-progress-blue .bar {
+.settings-slider .thumb {
     -fx-background-color: #89b4fa;
+    -fx-background-radius: 50%;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-cursor: hand;
 }
 
-.toast-progress-gold .bar {
-    -fx-background-color: #f9e2af;
+.settings-slider .thumb:hover {
+    -fx-background-color: #b4befe;
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.4), 6, 0, 0, 0);
 }
 
-.toast-progress-green .bar {
-    -fx-background-color: #a6e3a1;
+.settings-slider .axis {
+    -fx-tick-label-fill: #6c7086;
+    -fx-font-size: 10px;
 }
 
-.toast-progress-red .bar {
-    -fx-background-color: #f38ba8;
+/* Toggle de Notificações */
+.settings-toggle {
+    -fx-background-radius: 20;
+    -fx-padding: 6 16;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-min-width: 130px;
+}
+
+.settings-toggle-on {
+    -fx-background-color: rgba(166, 227, 161, 0.15);
+    -fx-text-fill: #a6e3a1;
+    -fx-border-color: #a6e3a1;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+.settings-toggle-on:hover {
+    -fx-background-color: rgba(166, 227, 161, 0.25);
+}
+
+.settings-toggle-off {
+    -fx-background-color: rgba(108, 112, 134, 0.15);
+    -fx-text-fill: #6c7086;
+    -fx-border-color: #6c7086;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+.settings-toggle-off:hover {
+    -fx-background-color: rgba(108, 112, 134, 0.25);
+}
+
+/* ComboBox de idioma */
+.settings-combo {
+    -fx-background-color: #1e1e2e;
+    -fx-background-radius: 8;
+    -fx-border-color: #45475a;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.settings-combo .list-cell {
+    -fx-text-fill: #cdd6f4;
+    -fx-background-color: #1e1e2e;
+    -fx-font-size: 13px;
+}
+
+.settings-combo:focused {
+    -fx-border-color: #89b4fa;
+}
+
+.settings-combo .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.settings-combo .arrow {
+    -fx-background-color: #9399b2;
+}
+
+/* Seção Zona de Risco */
+.settings-section-danger {
+    -fx-border-color: rgba(243, 139, 168, 0.20);
+}
+
+.settings-section-title-danger {
+    -fx-text-fill: #f38ba8;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 14 0;
+}
+
+.settings-danger-button {
+    -fx-background-color: rgba(243, 139, 168, 0.10);
+    -fx-text-fill: #f38ba8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(243, 139, 168, 0.50);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 18;
+    -fx-cursor: hand;
+}
+
+.settings-danger-button:hover {
+    -fx-background-color: rgba(243, 139, 168, 0.22);
+    -fx-border-color: #f38ba8;
+}
+
+.settings-danger-button-strong {
+    -fx-background-color: rgba(243, 139, 168, 0.18);
+    -fx-text-fill: #f38ba8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #f38ba8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1.5;
+    -fx-padding: 7 18;
+    -fx-cursor: hand;
+}
+
+.settings-danger-button-strong:hover {
+    -fx-background-color: rgba(243, 139, 168, 0.32);
+    -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.35), 8, 0, 0, 0);
 }

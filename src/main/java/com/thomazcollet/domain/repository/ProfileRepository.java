@@ -18,8 +18,26 @@ public interface ProfileRepository {
     void updateXp(Long profileId, int newXp);
 
     /**
-     * 🆕 Atualiza as metas de foco (diária, semanal e mensal) de um perfil
-     * específico.
+     * Atualiza as metas de foco (diária, semanal e mensal) de um perfil.
      */
     void updateGoals(Long profileId, int dailySeconds, int weeklySeconds, int monthlySeconds);
+
+    /**
+     * Atualiza as informações básicas de identidade do perfil.
+     * Substitui o antigo save() para atualizações — evita o bug de INSERT
+     * duplicado.
+     */
+    void updateProfileInfo(Long profileId, String username, String imagePath);
+
+    /**
+     * Atualiza as durações de foco e pausas do perfil.
+     */
+    void updateDurations(Long profileId, int workDuration, int shortBreak, int longBreak);
+
+    /**
+     * Atualiza as preferências de configuração do perfil:
+     * volume de áudio, estado de notificações, idioma e regra de streak.
+     */
+    void updateSettings(Long profileId, int audioVolume, boolean notificationsEnabled,
+            String language, String streakRule);
 }

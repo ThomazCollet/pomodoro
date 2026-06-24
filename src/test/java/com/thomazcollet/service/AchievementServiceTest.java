@@ -297,11 +297,21 @@ class AchievementServiceTest {
         public void updateStats(Long profileId, int maxFocusDaySeconds, int totalSessions) {
         }
 
-        // 🆕 SOLUÇÃO: Implementação do novo contrato adicionado ao ProfileRepository
         @Override
         public void updateGoals(Long profileId, int dailySeconds, int weeklySeconds, int monthlySeconds) {
-            // Comportamento vazio seguro (noop) apenas para satisfazer as regras de
-            // compilação do teste
+        }
+
+        @Override
+        public void updateProfileInfo(Long profileId, String username, String imagePath) {
+        }
+
+        @Override
+        public void updateDurations(Long profileId, int workDuration, int shortBreak, int longBreak) {
+        }
+
+        @Override
+        public void updateSettings(Long profileId, int audioVolume, boolean notificationsEnabled,
+                String language, String streakRule) {
         }
     }
 

@@ -1,5 +1,6 @@
 package com.thomazcollet.ui.controller;
 
+import com.thomazcollet.ui.controller.SettingsController;
 import com.thomazcollet.domain.dto.FocusStatistics;
 import com.thomazcollet.domain.model.Notification;
 import com.thomazcollet.domain.model.Profile;
@@ -13,11 +14,9 @@ import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.infra.database.SQLiteStreakRecordRepository;
 import com.thomazcollet.service.*;
 import javafx.animation.FadeTransition;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
+import javafx.animation.SequentialTransition;
 import javafx.animation.PauseTransition;
-import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -78,6 +77,8 @@ public class MainController {
     @FXML
     private Button btnAchievements;
     @FXML
+    private Button btnSettings;
+    @FXML
     private Circle avatarCircle;
     @FXML
     private Label initialLabel;
@@ -104,7 +105,6 @@ public class MainController {
 
     private Popup profilePopup;
     private Popup notificationPopup; // NOVO
-    private VBox toastStackContainer; // NOVO — pilha de toasts empilhados
     private long lastPopupCloseTime = 0;
     private long lastNotifPopupClose = 0; // NOVO
 
@@ -413,157 +413,60 @@ public class MainController {
     }
 
     /**
-     * Duração padrão (em segundos) que um toast permanece visível antes do
-     * auto-dismiss, sincronizada com a animação da barra de progresso.
-     */
-    private static final double TOAST_VISIBLE_SECONDS = 4.0;
-
-    /**
-     * Exibe um toast no canto superior direito da área de conteúdo, empilhado
-     * sobre quaisquer toasts já visíveis. Traz a janela para frente se estiver
-     * minimizada.
+     * Exibe um toast no canto superior direito da área de conteúdo.
+     * Traz a janela para frente se estiver minimizada.
+     * Duração total: 300ms fade-in + 4s visível + 400ms fade-out.
      */
     private void showToastNotification(String title, String message) {
+        // Traz a janela para frente se minimizada
         if (contentArea.getScene() != null && contentArea.getScene().getWindow() instanceof Stage stage) {
             if (stage.isIconified())
                 stage.setIconified(false);
             stage.toFront();
         }
 
-        ensureToastStackAttached();
-        toastStackContainer.getChildren().add(buildToastNode(title, message));
-    }
-
-    /**
-     * Garante que o container de pilha de toasts exista e esteja anexado ao
-     * contentArea. Reanexa defensivamente caso a navegação entre views tenha
-     * substituído os filhos do contentArea enquanto um toast estava ativo.
-     */
-    private void ensureToastStackAttached() {
-        if (toastStackContainer == null) {
-            toastStackContainer = new VBox(10);
-            toastStackContainer.setMaxWidth(Region.USE_PREF_SIZE);
-            toastStackContainer.setMaxHeight(Region.USE_PREF_SIZE);
-            toastStackContainer.setPickOnBounds(false);
-            StackPane.setAlignment(toastStackContainer, Pos.TOP_RIGHT);
-            StackPane.setMargin(toastStackContainer, new Insets(12, 12, 0, 0));
-        }
-        if (!contentArea.getChildren().contains(toastStackContainer)) {
-            contentArea.getChildren().add(toastStackContainer);
-        }
-    }
-
-    /**
-     * Constrói um nó de toast compacto (altura ajustada ao conteúdo — nunca
-     * estica para ocupar o contentArea), com faixa de cor indicando o tipo,
-     * botão de fechar manual e barra de progresso até o auto-dismiss.
-     */
-    private VBox buildToastNode(String title, String message) {
-        String colorKey = resolveToastColorKey(title);
-
-        VBox toast = new VBox(6);
-        toast.setMinWidth(300);
+        // Container do toast
+        VBox toast = new VBox(4);
         toast.setMaxWidth(300);
-        toast.setMaxHeight(Region.USE_PREF_SIZE); // impede o StackPane de esticar o toast
         toast.setPickOnBounds(false);
-        toast.getStyleClass().addAll("toast-notification", "toast-accent-" + colorKey);
+        toast.getStyleClass().add("toast-notification");
         toast.setOpacity(0);
-
-        HBox headerRow = new HBox(8);
-        headerRow.setAlignment(Pos.TOP_LEFT);
 
         Label lblTitle = new Label(title);
         lblTitle.getStyleClass().add("toast-notification-title");
         lblTitle.setWrapText(true);
-        HBox.setHgrow(lblTitle, Priority.ALWAYS);
-
-        Button btnClose = new Button("✕");
-        btnClose.getStyleClass().add("toast-close-button");
-        btnClose.setFocusTraversable(false);
-
-        headerRow.getChildren().addAll(lblTitle, btnClose);
 
         Label lblMsg = new Label(message);
         lblMsg.getStyleClass().add("toast-notification-message");
         lblMsg.setWrapText(true);
+        lblMsg.setMaxWidth(270);
 
-        ProgressBar progressBar = new ProgressBar(1.0);
-        progressBar.getStyleClass().addAll("toast-progress-bar", "toast-progress-" + colorKey);
-        progressBar.setMaxWidth(Double.MAX_VALUE);
+        toast.getChildren().addAll(lblTitle, lblMsg);
 
-        toast.getChildren().addAll(headerRow, lblMsg, progressBar);
+        StackPane.setAlignment(toast, Pos.TOP_RIGHT);
+        StackPane.setMargin(toast, new Insets(12, 12, 0, 0));
+        contentArea.getChildren().add(toast);
 
-        Timeline progressTimeline = new Timeline(
-                new KeyFrame(Duration.ZERO, new KeyValue(progressBar.progressProperty(), 1.0)),
-                new KeyFrame(Duration.seconds(TOAST_VISIBLE_SECONDS),
-                        new KeyValue(progressBar.progressProperty(), 0.0)));
-
-        PauseTransition autoDismiss = new PauseTransition(Duration.seconds(TOAST_VISIBLE_SECONDS));
-        autoDismiss.setOnFinished(e -> dismissToast(toast));
-
-        btnClose.setOnAction(e -> {
-            progressTimeline.stop();
-            autoDismiss.stop();
-            dismissToast(toast);
-        });
-
+        // Animação sequencial
         FadeTransition fadeIn = new FadeTransition(Duration.millis(280), toast);
         fadeIn.setFromValue(0);
         fadeIn.setToValue(1);
 
+        // Leve slide para baixo ao entrar
         TranslateTransition slideIn = new TranslateTransition(Duration.millis(280), toast);
-        slideIn.setFromX(24);
-        slideIn.setToX(0);
+        slideIn.setFromY(-8);
+        slideIn.setToY(0);
 
-        new ParallelTransition(fadeIn, slideIn).play();
-        progressTimeline.play();
-        autoDismiss.play();
+        ParallelTransition enter = new ParallelTransition(fadeIn, slideIn);
 
-        return toast;
-    }
+        PauseTransition hold = new PauseTransition(Duration.seconds(4));
 
-    /**
-     * Remove um toast da pilha com fade-out suave. Usado tanto pelo
-     * auto-dismiss quanto pelo fechamento manual via botão.
-     */
-    private void dismissToast(VBox toast) {
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(220), toast);
-        fadeOut.setFromValue(toast.getOpacity());
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(350), toast);
+        fadeOut.setFromValue(1);
         fadeOut.setToValue(0);
-        fadeOut.setOnFinished(e -> {
-            if (toastStackContainer != null) {
-                toastStackContainer.getChildren().remove(toast);
-            }
-        });
-        fadeOut.play();
-    }
+        fadeOut.setOnFinished(e -> contentArea.getChildren().remove(toast));
 
-    /**
-     * Classifica o título da notificação em uma cor de identidade visual,
-     * apenas para fins de apresentação — não altera o modelo de domínio.
-     * Mapeamento: ouro = conquistas/ciclo completo, verde = metas/desafios
-     * concluídos, vermelho = desafio encerrado sem sucesso, azul = demais
-     * casos (rank-up, lembretes informativos).
-     */
-    private String resolveToastColorKey(String title) {
-        if (title == null) {
-            return "blue";
-        }
-        String normalized = title.toLowerCase();
-
-        if (normalized.contains("conquista desbloqueada") || normalized.contains("ciclo pomodoro completo")) {
-            return "gold";
-        }
-        if (normalized.contains("desafio encerrado")) {
-            return "red";
-        }
-        if (normalized.contains("desafio concluído")
-                || normalized.contains("meta diária")
-                || normalized.contains("meta semanal")
-                || normalized.contains("meta mensal")) {
-            return "green";
-        }
-        return "blue";
+        new SequentialTransition(enter, hold, fadeOut).play();
     }
 
     // ==========================================================================
@@ -575,6 +478,7 @@ public class MainController {
         btnStats.setOnAction(e -> loadStatsView());
         btnChallenges.setOnAction(e -> loadChallengesView());
         btnAchievements.setOnAction(e -> loadAchievementsView());
+        btnSettings.setOnAction(e -> loadSettingsView());
         avatarContainer.setOnMouseClicked(this::handleAvatarClick);
         avatarContainer.setCursor(javafx.scene.Cursor.HAND);
     }
@@ -677,7 +581,21 @@ public class MainController {
         btnStats.getStyleClass().remove("nav-button-active");
         btnChallenges.getStyleClass().remove("nav-button-active");
         btnAchievements.getStyleClass().remove("nav-button-active");
+        btnSettings.getStyleClass().remove("nav-button-active");
         activeBtn.getStyleClass().add("nav-button-active");
+    }
+
+    private void loadSettingsView() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
+            Parent settingsView = loader.load();
+            SettingsController controller = loader.getController();
+            controller.initData(profileService, audioService);
+            updateContentArea(settingsView);
+            updateNavStyles(btnSettings);
+        } catch (IOException e) {
+            logger.error("Erro ao carregar SettingsView: ", e);
+        }
     }
 
     private void updateContentArea(Parent view) {

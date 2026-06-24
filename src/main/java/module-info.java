@@ -24,8 +24,8 @@ module com.thomazcollet.pomodoro {
 
     // --- Exportação da API ---
     exports com.thomazcollet;
-    exports com.thomazcollet.ui.controller;
     exports com.thomazcollet.domain.model;
     exports com.thomazcollet.domain.exception;
     exports com.thomazcollet.service;
+    exports com.thomazcollet.ui.controller;
 }
