@@ -92,4 +92,33 @@ class AudioServiceTest {
 
         assertDoesNotThrow(() -> audioService.playTimerStart());
     }
+
+    @Test
+    @DisplayName("setVolume deve normalizar e aplicar o volume nos dois clips")
+    void shouldNormalizeAndApplyVolumeOnBothClips() {
+        audioService.setVolume(50);
+
+        assertEquals(50, audioService.getVolume());
+        verify(timerStartClip, times(1)).setVolume(0.5);
+        verify(timerEndClip, times(1)).setVolume(0.5);
+    }
+
+    @Test
+    @DisplayName("setVolume deve fixar valores fora do range nos extremos (0 e 100)")
+    void shouldClampVolumeToValidRange() {
+        audioService.setVolume(-10);
+        assertEquals(0, audioService.getVolume());
+
+        audioService.setVolume(150);
+        assertEquals(100, audioService.getVolume());
+    }
+
+    @Test
+    @DisplayName("setVolume não deve quebrar se os clips forem nulos")
+    void shouldHandleNullClipsInSetVolumeGracefully() {
+        ReflectionTestUtils.setField(audioService, "timerStartClip", null);
+        ReflectionTestUtils.setField(audioService, "timerEndClip", null);
+
+        assertDoesNotThrow(() -> audioService.setVolume(80));
+    }
 }

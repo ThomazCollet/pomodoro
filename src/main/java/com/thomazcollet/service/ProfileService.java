@@ -3,6 +3,7 @@ package com.thomazcollet.service;
 import com.thomazcollet.domain.exception.ProfileInitializationException;
 import com.thomazcollet.domain.exception.ProfileNotFoundException;
 import com.thomazcollet.domain.model.Profile;
+import com.thomazcollet.domain.model.StreakRule;
 import com.thomazcollet.domain.repository.ProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +20,12 @@ public class ProfileService {
             "#FF5733", "#33FF57", "#3357FF", "#F333FF",
             "#FF33A1", "#33FFF6", "#F6FF33", "#A133FF"
     };
+    
 
     public ProfileService(ProfileRepository repository) {
         this.repository = repository;
     }
+
 
     /**
      * Inicializa o sistema de perfis.
@@ -104,6 +107,51 @@ public class ProfileService {
 
         this.activeProfile = profile;
         logger.info("Perfil '{}' (ID: {}) atualizado com sucesso.", profile.getUsername(), profile.getId());
+    }
+
+    /**
+     * Persiste e aplica em memória as metas de foco do perfil ativo.
+     */
+    public void saveGoals(int dailySeconds, int weeklySeconds, int monthlySeconds) {
+        Profile p = getActiveProfile();
+        p.setDailyGoalSeconds(dailySeconds);
+        p.setWeeklyGoalSeconds(weeklySeconds);
+        p.setMonthlyGoalSeconds(monthlySeconds);
+        repository.updateGoals(p.getId(), dailySeconds, weeklySeconds, monthlySeconds);
+        logger.info("Metas atualizadas: diária={}s, semanal={}s, mensal={}s.",
+                dailySeconds, weeklySeconds, monthlySeconds);
+    }
+
+    /**
+     * Persiste e aplica em memória as durações de foco e pausas do perfil ativo.
+     * A validação (ex: longBreak > shortBreak) é aplicada pelos setters de
+     * {@link Profile} — lança {@link IllegalArgumentException} se inválido.
+     */
+    public void saveDurations(int workDuration, int shortBreak, int longBreak) {
+        Profile p = getActiveProfile();
+        p.setWorkDuration(workDuration);
+        p.setShortBreak(shortBreak);
+        p.setLongBreak(longBreak);
+        repository.updateDurations(p.getId(), workDuration, shortBreak, longBreak);
+        logger.info("Durações atualizadas: foco={}m, curta={}m, longa={}m.",
+                workDuration, shortBreak, longBreak);
+    }
+
+    /**
+     * Persiste e aplica em memória as preferências de configuração do perfil ativo.
+     * Para atualizar apenas um campo, passe os demais valores atuais do perfil.
+     */
+    public void saveSettings(int audioVolume, boolean notificationsEnabled,
+                             String language, StreakRule streakRule) {
+        Profile p = getActiveProfile();
+        p.setAudioVolume(audioVolume);
+        p.setNotificationsEnabled(notificationsEnabled);
+        p.setLanguage(language);
+        p.setStreakRule(streakRule);
+        repository.updateSettings(p.getId(), audioVolume, notificationsEnabled,
+                language, streakRule != null ? streakRule.name() : "ALL_DAYS");
+        logger.info("Configurações atualizadas: volume={}, notif={}, lang={}.",
+                audioVolume, notificationsEnabled, language);
     }
 
     /**

@@ -3,14 +3,17 @@ package com.thomazcollet.ui.controller;
 import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.model.StreakRule;
 import com.thomazcollet.service.AudioService;
+import com.thomazcollet.service.NotificationService;
+import com.thomazcollet.service.PomodoroService;
 import com.thomazcollet.service.ProfileService;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,14 +25,20 @@ import java.util.Map;
  * Controller da tela de Configurações.
  *
  * <p>
- * <b>Fase 1 — esqueleto:</b> todos os campos carregam os dados reais do
- * perfil ativo e a navegação funciona. Os botões "Salvar" de cada seção ainda
- * não persistem nada — cada seção será fiada nas fases seguintes, conforme
- * o roteiro de implementação definido.
+ * Fases implementadas:
+ * <ul>
+ * <li>Fase 1 — esqueleto e carregamento de dados reais.</li>
+ * <li>Fase 2 — seção de Metas (diária, semanal, mensal).</li>
+ * <li>Fase 3 — volume de áudio, notificações e idioma.</li>
+ * <li>Fase 4 — durações de foco e pausas.</li>
+ * </ul>
  *
  * <p>
- * Métodos marcados com {@code // TODO Fase N} indicam onde a lógica de
- * persistência de cada seção deverá ser adicionada.
+ * Pendente:
+ * <ul>
+ * <li>Fase 5 — avatar e username (FileChooser + cópia gerenciada).</li>
+ * <li>Fase final — Zona de Risco (limpar histórico / resetar progresso).</li>
+ * </ul>
  */
 public class SettingsController {
 
@@ -44,8 +53,6 @@ public class SettingsController {
     private TextField txtUsername;
     @FXML
     private Label lblUsernameError;
-    @FXML
-    private Button btnChangeAvatar;
     @FXML
     private Button btnSaveProfile;
 
@@ -74,6 +81,8 @@ public class SettingsController {
     private Spinner<Integer> spnShortBreak;
     @FXML
     private Spinner<Integer> spnLongBreak;
+    @FXML
+    private Label lblFocusError;
     @FXML
     private Button btnSaveFocus;
 
@@ -106,8 +115,9 @@ public class SettingsController {
     // ── Dependências ────────────────────────────────────────────────────────
     private ProfileService profileService;
     private AudioService audioService;
+    private NotificationService notificationService;
+    private PomodoroService pomodoroService; // nullable — pode ser nulo se o timer nunca foi aberto
 
-    // Mapa ordenado: rótulo visível → código interno
     private static final Map<String, String> LANGUAGE_OPTIONS = new LinkedHashMap<>();
     static {
         LANGUAGE_OPTIONS.put("Português (Brasil)", "pt_BR");
@@ -119,22 +129,20 @@ public class SettingsController {
     // INICIALIZAÇÃO
     // ==========================================================================
 
-    /**
-     * Chamado pelo MainController após carregar o FXML, passando as dependências
-     * necessárias e disparando o preenchimento dos campos.
-     */
-    public void initData(ProfileService profileService, AudioService audioService) {
+    public void initData(ProfileService profileService,
+            AudioService audioService,
+            NotificationService notificationService,
+            PomodoroService pomodoroService) {
         this.profileService = profileService;
         this.audioService = audioService;
+        this.notificationService = notificationService;
+        this.pomodoroService = pomodoroService; // pode ser nulo
         setupStaticComponents();
         loadProfileData();
     }
 
-    /**
-     * Configura componentes que não dependem do perfil (spinners, rádios, etc.).
-     */
     private void setupStaticComponents() {
-        // Spinners de metas
+        // Metas
         spnDailyGoalHours.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 1));
         spnDailyGoalMinutes.setValueFactory(
@@ -144,7 +152,7 @@ public class SettingsController {
         spnMonthlyGoalHours.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 744, 30));
 
-        // Spinners de foco
+        // Foco
         spnWorkDuration.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, 25));
         spnShortBreak.setValueFactory(
@@ -152,62 +160,58 @@ public class SettingsController {
         spnLongBreak.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, 15));
 
-        // Grupo de rádio para modo de foco
         ToggleGroup focusGroup = new ToggleGroup();
         rdoFocusDefault.setToggleGroup(focusGroup);
         rdoFocusCustom.setToggleGroup(focusGroup);
 
-        // Slider de volume — atualiza label em tempo real
+        // Áudio
         sliderVolume.valueProperty()
                 .addListener((obs, oldVal, newVal) -> lblVolumeValue.setText(newVal.intValue() + "%"));
 
-        // ComboBox de idioma
+        // Idioma
         cmbLanguage.getItems().addAll(LANGUAGE_OPTIONS.keySet());
     }
 
-    /** Preenche todos os campos com os valores reais do perfil ativo. */
     private void loadProfileData() {
         if (profileService == null)
             return;
-
         Profile p = profileService.getActiveProfile();
 
-        // ── Perfil ──
+        // Perfil
         txtUsername.setText(p.getUsername());
         settingsAvatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
         settingsAvatarInitial.setText(profileService.getProfileInitial());
 
-        // ── Metas ──
-        int dailyTotalSeconds = p.getDailyGoalSeconds();
-        spnDailyGoalHours.getValueFactory().setValue(dailyTotalSeconds / 3600);
-        spnDailyGoalMinutes.getValueFactory().setValue((dailyTotalSeconds % 3600) / 60);
+        // Metas
+        int daily = p.getDailyGoalSeconds();
+        spnDailyGoalHours.getValueFactory().setValue(daily / 3600);
+        spnDailyGoalMinutes.getValueFactory().setValue((daily % 3600) / 60);
         spnWeeklyGoalHours.getValueFactory().setValue(p.getWeeklyGoalSeconds() / 3600);
         spnMonthlyGoalHours.getValueFactory().setValue(p.getMonthlyGoalSeconds() / 3600);
 
-        // ── Foco ──
+        // Foco
         boolean isDefault = p.getWorkDuration() == 25
                 && p.getShortBreak() == 5
                 && p.getLongBreak() == 15;
         rdoFocusDefault.setSelected(isDefault);
         rdoFocusCustom.setSelected(!isDefault);
         boxFocusCustomFields.setDisable(isDefault);
-
         spnWorkDuration.getValueFactory().setValue(p.getWorkDuration());
         spnShortBreak.getValueFactory().setValue(p.getShortBreak());
         spnLongBreak.getValueFactory().setValue(p.getLongBreak());
 
-        // ── Áudio ──
+        // Áudio
         sliderVolume.setValue(p.getAudioVolume());
         lblVolumeValue.setText(p.getAudioVolume() + "%");
 
-        // ── Notificações ──
+        // Notificações
         tglNotifications.setSelected(p.isNotificationsEnabled());
         updateNotificationsToggleText(p.isNotificationsEnabled());
 
-        // ── Idioma ──
-        String currentLanguage = p.getLanguage() != null ? p.getLanguage() : "pt_BR";
+        // Idioma
+        String currentLang = p.getLanguage() != null ? p.getLanguage() : "pt_BR";
         LANGUAGE_OPTIONS.entrySet().stream()
-                .filter(e -> e.getValue().equals(currentLanguage))
+                .filter(e -> e.getValue().equals(currentLang))
                 .findFirst()
                 .ifPresentOrElse(
                         e -> cmbLanguage.setValue(e.getKey()),
@@ -215,47 +219,95 @@ public class SettingsController {
     }
 
     // ==========================================================================
-    // HANDLERS — SEÇÃO PERFIL
-    // ==========================================================================
-
-    @FXML
-    private void handleChangeAvatar() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Escolher foto de perfil");
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Imagens", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-
-        File chosen = chooser.showOpenDialog(btnChangeAvatar.getScene().getWindow());
-        if (chosen != null) {
-            logger.info("Avatar selecionado: {}", chosen.getAbsolutePath());
-            // TODO Fase 5: copiar arquivo para data/avatars/, atualizar preview e persistir
-        }
-    }
-
-    @FXML
-    private void handleSaveProfile() {
-        lblUsernameError.setVisible(false);
-        lblUsernameError.setManaged(false);
-        // TODO Fase 5: validar txtUsername, chamar profileService.saveProfileInfo(),
-        // atualizar avatar/inicial na sidebar
-        logger.debug("handleSaveProfile() chamado — persistência será implementada na Fase 5.");
-        showSavedFeedback(btnSaveProfile, "Salvar Perfil");
-    }
-
-    // ==========================================================================
-    // HANDLERS — SEÇÃO METAS
+    // HANDLERS — FASE 2: METAS
     // ==========================================================================
 
     @FXML
     private void handleSaveGoals() {
-        // TODO Fase 2: ler spinners, converter para segundos, chamar
-        // profileService.saveGoals()
-        logger.debug("handleSaveGoals() chamado — persistência será implementada na Fase 2.");
-        showSavedFeedback(btnSaveGoals, "Salvar Metas");
+        int dailySeconds = spnDailyGoalHours.getValue() * 3600
+                + spnDailyGoalMinutes.getValue() * 60;
+        int weeklySeconds = spnWeeklyGoalHours.getValue() * 3600;
+        int monthlySeconds = spnMonthlyGoalHours.getValue() * 3600;
+
+        try {
+            profileService.saveGoals(dailySeconds, weeklySeconds, monthlySeconds);
+            showSavedFeedback(btnSaveGoals, "Salvar Metas");
+            logger.info("Metas salvas pelo usuário.");
+        } catch (Exception e) {
+            logger.error("Erro ao salvar metas.", e);
+        }
     }
 
     // ==========================================================================
-    // HANDLERS — SEÇÃO FOCO
+    // HANDLERS — FASE 3: ÁUDIO, NOTIFICAÇÕES E IDIOMA
+    // ==========================================================================
+
+    @FXML
+    private void handleSaveAudio() {
+        int volume = (int) sliderVolume.getValue();
+        Profile p = profileService.getActiveProfile();
+
+        // Aplica imediatamente no serviço de áudio
+        audioService.setVolume(volume);
+
+        // Persiste apenas o volume; os demais campos de settings ficam inalterados
+        profileService.saveSettings(
+                volume,
+                p.isNotificationsEnabled(),
+                p.getLanguage(),
+                p.getStreakRule());
+
+        showSavedFeedback(btnSaveAudio, "Salvar Áudio");
+        logger.info("Volume salvo: {}%.", volume);
+    }
+
+    @FXML
+    private void handleNotificationsToggle() {
+        updateNotificationsToggleText(tglNotifications.isSelected());
+    }
+
+    @FXML
+    private void handleSaveNotifications() {
+        boolean enabled = tglNotifications.isSelected();
+        Profile p = profileService.getActiveProfile();
+
+        // Aplica imediatamente no serviço de notificações
+        if (notificationService != null) {
+            notificationService.setEnabled(enabled);
+        }
+
+        // Persiste; os demais campos ficam inalterados
+        profileService.saveSettings(
+                p.getAudioVolume(),
+                enabled,
+                p.getLanguage(),
+                p.getStreakRule());
+
+        showSavedFeedback(btnSaveNotifications, "Salvar Notificações");
+        logger.info("Notificações {}.", enabled ? "ativadas" : "desativadas");
+    }
+
+    @FXML
+    private void handleSaveLanguage() {
+        String selectedLabel = cmbLanguage.getValue();
+        if (selectedLabel == null)
+            return;
+
+        String langCode = LANGUAGE_OPTIONS.getOrDefault(selectedLabel, "pt_BR");
+        Profile p = profileService.getActiveProfile();
+
+        profileService.saveSettings(
+                p.getAudioVolume(),
+                p.isNotificationsEnabled(),
+                langCode,
+                p.getStreakRule());
+
+        showSavedFeedback(btnSaveLanguage, "Salvar Idioma");
+        logger.info("Idioma salvo: {}.", langCode);
+    }
+
+    // ==========================================================================
+    // HANDLERS — FASE 4: DURAÇÕES DE FOCO
     // ==========================================================================
 
     @FXML
@@ -268,72 +320,76 @@ public class SettingsController {
             spnShortBreak.getValueFactory().setValue(5);
             spnLongBreak.getValueFactory().setValue(15);
         }
+        hideFocusError();
     }
 
     @FXML
     private void handleSaveFocus() {
-        // TODO Fase 4: validar regra longBreak > shortBreak, chamar
-        // profileService.saveDurations(),
-        // notificar PomodoroService via pomodoroService.updateProfile()
-        logger.debug("handleSaveFocus() chamado — persistência será implementada na Fase 4.");
+        hideFocusError();
+        int work = spnWorkDuration.getValue();
+        int small = spnShortBreak.getValue();
+        int large = spnLongBreak.getValue();
+
+        try {
+            profileService.saveDurations(work, small, large);
+        } catch (IllegalArgumentException e) {
+            // Ex: longBreak <= shortBreak — mostra o erro inline sem diálogo
+            showFocusError(e.getMessage());
+            return;
+        }
+
+        // Notifica o PomodoroService para que ele recarregue as durações em memória.
+        // Se o timer nunca foi aberto (pomodoroService == null), as novas durações
+        // serão lidas do Profile quando o PomodoroService for criado.
+        if (pomodoroService != null) {
+            pomodoroService.updateProfile(profileService.getActiveProfile());
+        }
+
         showSavedFeedback(btnSaveFocus, "Salvar Configurações de Foco");
+        logger.info("Durações salvas: foco={}m, curta={}m, longa={}m.", work, small, large);
     }
 
     // ==========================================================================
-    // HANDLERS — SEÇÃO ÁUDIO
+    // HANDLERS — PERFIL (Fase 5 — TODO)
     // ==========================================================================
 
     @FXML
-    private void handleSaveAudio() {
-        // TODO Fase 3: chamar audioService.setVolume(),
-        // profileService.saveAudioVolume()
-        logger.debug("handleSaveAudio() chamado — persistência será implementada na Fase 3.");
-        showSavedFeedback(btnSaveAudio, "Salvar Áudio");
-    }
-
-    // ==========================================================================
-    // HANDLERS — SEÇÃO NOTIFICAÇÕES
-    // ==========================================================================
-
-    @FXML
-    private void handleNotificationsToggle() {
-        updateNotificationsToggleText(tglNotifications.isSelected());
+    private void handleChangeAvatar() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Escolher foto de perfil");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Imagens", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+        File chosen = chooser.showOpenDialog(btnSaveProfile.getScene().getWindow());
+        if (chosen != null) {
+            logger.info("Avatar selecionado (pendente Fase 5): {}", chosen.getAbsolutePath());
+            // TODO Fase 5: copiar para data/avatars/, atualizar preview, persistir
+        }
     }
 
     @FXML
-    private void handleSaveNotifications() {
-        // TODO Fase 3: chamar profileService.saveNotificationsEnabled(),
-        // notificationService.setEnabled()
-        logger.debug("handleSaveNotifications() chamado — persistência será implementada na Fase 3.");
-        showSavedFeedback(btnSaveNotifications, "Salvar Notificações");
+    private void handleSaveProfile() {
+        lblUsernameError.setVisible(false);
+        lblUsernameError.setManaged(false);
+        // TODO Fase 5: validar txtUsername, persistir e atualizar avatar/inicial na
+        // sidebar
+        showSavedFeedback(btnSaveProfile, "Salvar Perfil");
     }
 
     // ==========================================================================
-    // HANDLERS — SEÇÃO IDIOMA
-    // ==========================================================================
-
-    @FXML
-    private void handleSaveLanguage() {
-        // TODO Fase 3: resolver código do idioma via LANGUAGE_OPTIONS, chamar
-        // profileService.saveLanguage()
-        logger.debug("handleSaveLanguage() chamado — persistência será implementada na Fase 3.");
-        showSavedFeedback(btnSaveLanguage, "Salvar Idioma");
-    }
-
-    // ==========================================================================
-    // HANDLERS — ZONA DE RISCO
+    // HANDLERS — ZONA DE RISCO (Fase final — TODO)
     // ==========================================================================
 
     @FXML
     private void handleClearHistory() {
-        // TODO Fase final: confirmar com diálogo, chamar focusSessionService.clearAll()
-        logger.debug("handleClearHistory() chamado — persistência será implementada na fase final.");
+        // TODO Fase final: confirmar via DialogHelper, chamar
+        // focusSessionService.clearAll()
+        logger.debug("handleClearHistory() — pendente fase final.");
     }
 
     @FXML
     private void handleResetProgress() {
-        // TODO Fase final: confirmar dupla (diálogo + campo de digitação), resetar tudo
-        logger.debug("handleResetProgress() chamado — persistência será implementada na fase final.");
+        // TODO Fase final: confirmar dupla, resetar tudo
+        logger.debug("handleResetProgress() — pendente fase final.");
     }
 
     // ==========================================================================
@@ -346,15 +402,25 @@ public class SettingsController {
         tglNotifications.getStyleClass().add(enabled ? "settings-toggle-on" : "settings-toggle-off");
     }
 
-    /**
-     * Feedback visual temporário de "salvo" no botão — sem toast (já é uma tela
-     * de configurações, não uma ação de domínio).
-     */
+    private void showFocusError(String message) {
+        if (lblFocusError == null)
+            return;
+        lblFocusError.setText(message);
+        lblFocusError.setVisible(true);
+        lblFocusError.setManaged(true);
+    }
+
+    private void hideFocusError() {
+        if (lblFocusError == null)
+            return;
+        lblFocusError.setVisible(false);
+        lblFocusError.setManaged(false);
+    }
+
     private void showSavedFeedback(Button btn, String originalText) {
         btn.setText("✓ Salvo");
         btn.setDisable(true);
-        javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(
-                javafx.util.Duration.seconds(1.8));
+        PauseTransition pause = new PauseTransition(Duration.seconds(1.8));
         pause.setOnFinished(e -> {
             btn.setText(originalText);
             btn.setDisable(false);

@@ -134,6 +134,9 @@
                 </VBox>
             </HBox>
 
+            <Label fx:id="lblFocusError" styleClass="settings-field-error"
+                   visible="false" managed="false" wrapText="true"/>
+
             <HBox alignment="CENTER_RIGHT" styleClass="settings-save-row">
                 <Button fx:id="btnSaveFocus" text="Salvar Configurações de Foco"
                         styleClass="settings-save-button"

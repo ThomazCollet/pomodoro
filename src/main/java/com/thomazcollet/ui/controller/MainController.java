@@ -154,6 +154,10 @@ public class MainController {
             challengeService.checkAndNotifyNoActiveChallenges(
                     profileService.getActiveProfile().getId());
 
+            // Aplica as preferências persistidas no perfil agora que ele está carregado
+            audioService.setVolume(profileService.getActiveProfile().getAudioVolume());
+            notificationService.setEnabled(profileService.getActiveProfile().isNotificationsEnabled());
+
             logger.info("Todos os serviços inicializados com sucesso.");
         } catch (Exception e) {
             logger.error("Erro crítico ao inicializar serviços core: ", e);
@@ -590,7 +594,7 @@ public class MainController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
             Parent settingsView = loader.load();
             SettingsController controller = loader.getController();
-            controller.initData(profileService, audioService);
+            controller.initData(profileService, audioService, notificationService, pomodoroService);
             updateContentArea(settingsView);
             updateNavStyles(btnSettings);
         } catch (IOException e) {

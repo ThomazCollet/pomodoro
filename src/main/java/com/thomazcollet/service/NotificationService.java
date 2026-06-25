@@ -37,39 +37,43 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    // Propriedade reativa do JavaFX que a Sidebar/Sino irá escutar para atualizar
-    // o contador automaticamente
+    // Propriedade reativa — o badge do sino a escuta para atualizar automaticamente
     private final IntegerProperty unreadCountProperty = new SimpleIntegerProperty(0);
 
     private AudioClip notificationSound;
 
     // -----------------------------------------------------------------------
     // Despachante de mutações de propriedades JavaFX (unreadCountProperty).
-    // Em produção, sempre Platform::runLater — garante que o bind() com o
-    // badge do sino na UI só seja tocado na FX Application Thread, mesmo
-    // quando send()/loadUnreadCount()/markAllAsRead() são chamados de uma
-    // thread de fundo (ex: a tarefa agendada do PomodoroService).
-    // Injetável via construtor de pacote para permitir testes unitários
-    // síncronos sem precisar inicializar o toolkit do JavaFX.
+    // Em produção: Platform::runLater — garante que o bind() com o badge do
+    // sino só seja tocado na FX Application Thread, mesmo quando send() é
+    // chamado de uma thread de fundo (ex: tarefa agendada do PomodoroService).
+    // Injetável via construtor de pacote para testes unitários síncronos sem
+    // inicializar o toolkit do JavaFX.
     // -----------------------------------------------------------------------
     private final Consumer<Runnable> uiDispatcher;
 
     // -----------------------------------------------------------------------
+    // Quando false, send() persiste no banco e atualiza o badge normalmente,
+    // mas suprime toast e som em tempo real.
+    // Controlado pela preferência "Notificações" na tela de Configurações.
+    // -----------------------------------------------------------------------
+    private boolean enabled = true;
+
+    // -----------------------------------------------------------------------
     // Callback para a UI exibir toast/snackbar em tempo real.
     // Configurado pelo MainController após a criação do serviço.
-    // Recebe o objeto Notification completo para que a UI possa formatar
-    // título + mensagem da forma que desejar.
     // -----------------------------------------------------------------------
     private Consumer<Notification> toastCallback;
 
     // -----------------------------------------------------------------------
     // Proteção anti-spam para metas de período (diária, semanal, mensal).
-    // Armazena a data da última vez que cada tipo de meta foi notificado.
-    // Chaves: "daily_<profileId>", "weekly_<profileId>", "monthly_<profileId>"
-    // Resetado automaticamente quando a data muda (verificação lazy).
     // -----------------------------------------------------------------------
     private final Set<String> goalNotifiedToday = new HashSet<>();
     private LocalDate lastGoalCheckDate = LocalDate.now();
+
+    // ==========================================================================
+    // CONSTRUTORES
+    // ==========================================================================
 
     public NotificationService(NotificationRepository notificationRepository) {
         this(notificationRepository, Platform::runLater);
@@ -78,10 +82,10 @@ public class NotificationService {
     /**
      * Construtor de visibilidade de pacote — permite injetar um despachante
      * síncrono (ex: {@code Runnable::run}) em testes unitários, evitando a
-     * necessidade de inicializar o toolkit do JavaFX apenas para validar a
-     * lógica de negócio do serviço.
+     * necessidade de inicializar o toolkit do JavaFX.
      */
-    NotificationService(NotificationRepository notificationRepository, Consumer<Runnable> uiDispatcher) {
+    NotificationService(NotificationRepository notificationRepository,
+            Consumer<Runnable> uiDispatcher) {
         this.notificationRepository = notificationRepository;
         this.uiDispatcher = uiDispatcher;
         initializeSound();
@@ -91,14 +95,21 @@ public class NotificationService {
     // CONFIGURAÇÃO
     // ==========================================================================
 
-    /**
-     * Registra o callback que a UI (MainController) usa para exibir o toast.
-     * Deve ser chamado uma única vez durante a inicialização do controller.
-     *
-     * @param callback Consumer que recebe a notificação e exibe o toast na tela.
-     */
     public void setToastCallback(Consumer<Notification> callback) {
         this.toastCallback = callback;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    /**
+     * Ativa ou desativa toasts e sons em tempo real.
+     * A persistência no banco e o badge do sino continuam funcionando normalmente.
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        logger.info("Notificações em tempo real {}.", enabled ? "ativadas" : "desativadas");
     }
 
     // ==========================================================================
@@ -123,40 +134,22 @@ public class NotificationService {
     // ENVIO DE NOTIFICAÇÕES
     // ==========================================================================
 
-    /**
-     * Envia uma nova notificação: persiste no banco, incrementa o contador
-     * reativo, dispara o toast na UI e toca o som.
-     *
-     * @param profileId ID do perfil que receberá a notificação.
-     * @param title     Título curto (ex: "🏆 Conquista desbloqueada!").
-     * @param message   Mensagem amigável com detalhes.
-     */
     public void send(int profileId, String title, String message) {
         Notification notification = new Notification(profileId, title, message);
         notificationRepository.save(notification);
 
         uiDispatcher.accept(() -> unreadCountProperty.set(unreadCountProperty.get() + 1));
 
-        playSound();
-        fireToast(notification);
+        if (enabled) {
+            playSound();
+            fireToast(notification);
+        }
 
         logger.info("Notificação enviada: [{}] — {}", title, message);
     }
 
-    /**
-     * Versão protegida contra spam para notificações de metas de período.
-     * Garante que a mesma meta (diária/semanal/mensal) só seja notificada
-     * uma vez por dia por perfil.
-     *
-     * @param profileId ID do perfil.
-     * @param goalType  Identificador do tipo de meta: "daily", "weekly" ou
-     *                  "monthly".
-     * @param title     Título da notificação.
-     * @param message   Mensagem da notificação.
-     * @return {@code true} se a notificação foi enviada; {@code false} se já foi
-     *         enviada hoje para este tipo de meta.
-     */
-    public boolean sendGoalNotification(int profileId, String goalType, String title, String message) {
+    public boolean sendGoalNotification(int profileId, String goalType,
+            String title, String message) {
         refreshGoalGuardIfNeeded();
 
         String guardKey = goalType + "_" + profileId;
@@ -170,10 +163,6 @@ public class NotificationService {
         return true;
     }
 
-    /**
-     * Reseta o conjunto de metas notificadas quando a data do dia muda.
-     * Chamado de forma lazy antes de qualquer verificação de meta.
-     */
     private void refreshGoalGuardIfNeeded() {
         LocalDate today = LocalDate.now();
         if (!today.equals(lastGoalCheckDate)) {
@@ -187,35 +176,22 @@ public class NotificationService {
     // CARREGAMENTO E GERENCIAMENTO
     // ==========================================================================
 
-    /**
-     * Inicializa o contador de não lidas com base no banco de dados.
-     * Deve ser chamado assim que o perfil for carregado na inicialização do app.
-     */
     public void loadUnreadCount(int profileId) {
         int count = notificationRepository.findUnreadByProfileId(profileId).size();
         uiDispatcher.accept(() -> unreadCountProperty.set(count));
         logger.debug("Contador de não lidas carregado: {} para o perfil ID {}.", count, profileId);
     }
 
-    /**
-     * Busca o histórico completo de notificações do usuário (para o popup do sino).
-     */
     public List<Notification> getHistory(int profileId) {
         return notificationRepository.findByProfileId(profileId);
     }
 
-    /**
-     * Marca todas as notificações do usuário como lidas e zera o contador da UI.
-     */
     public void markAllAsRead(int profileId) {
         notificationRepository.markAllAsRead(profileId);
         uiDispatcher.accept(() -> unreadCountProperty.set(0));
         logger.debug("Todas as notificações do perfil {} marcadas como lidas.", profileId);
     }
 
-    /**
-     * Remove notificações antigas para evitar acúmulo no SQLite.
-     */
     public void clearOldNotifications(int days) {
         notificationRepository.deleteOlderThanDays(days);
     }
@@ -225,19 +201,17 @@ public class NotificationService {
     // ==========================================================================
 
     private void playSound() {
-        if (notificationSound != null) {
+        if (notificationSound != null)
             notificationSound.play();
-        }
     }
 
     private void fireToast(Notification notification) {
-        if (toastCallback != null) {
+        if (toastCallback != null)
             toastCallback.accept(notification);
-        }
     }
 
     // ==========================================================================
-    // GETTERS PARA A VIEW (JavaFX Properties)
+    // GETTERS PARA A VIEW
     // ==========================================================================
 
     public IntegerProperty unreadCountProperty() {
