@@ -198,17 +198,7 @@ public class PomodoroService {
                 challengeService.addFocusMinutesToActiveChallenges(currentProfile.getId(), minutesSpent);
             }
             incrementCycle();
-
-            if (sessionsInCycle == 0) {
-                notifyFullCycleCompleted();
-            }
         }
-
-        // CORREÇÃO: o skip já tratava a sessão como "concluída" para fins de XP
-        // de desafios, mas nunca persistia isso no FocusSessionRepository — a
-        // sessão ativa ficava com completed=0 para sempre, e por isso nunca
-        // aparecia nas estatísticas (que filtram completed=1 em toda consulta).
-        focusSessionService.finalizeCurrentSession(totalSessionDuration, true);
 
         SessionType nextType;
         if (currentSessionType == SessionType.FOCUS) {
@@ -267,6 +257,11 @@ public class PomodoroService {
 
         if (timerState == TimerState.STOPPED) {
             prepareSession(currentSessionType);
+            // Notifica os listeners para que o display atualize imediatamente,
+            // sem precisar reiniciar a aplicação.
+            for (TimerChangeListener listener : listeners) {
+                listener.onTick(remainingSeconds);
+            }
         }
         logger.info("Perfil atualizado no serviço. Novas durações aplicadas.");
     }

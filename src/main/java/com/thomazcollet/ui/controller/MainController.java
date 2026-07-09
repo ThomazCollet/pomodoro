@@ -1,6 +1,5 @@
 package com.thomazcollet.ui.controller;
 
-import com.thomazcollet.ui.controller.SettingsController;
 import com.thomazcollet.domain.dto.FocusStatistics;
 import com.thomazcollet.domain.model.Notification;
 import com.thomazcollet.domain.model.Profile;
@@ -13,6 +12,7 @@ import com.thomazcollet.infra.database.SQLiteNotificationRepository;
 import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.infra.database.SQLiteStreakRecordRepository;
 import com.thomazcollet.service.*;
+import com.thomazcollet.ui.controller.SettingsController;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
 import javafx.animation.SequentialTransition;
@@ -154,9 +154,10 @@ public class MainController {
             challengeService.checkAndNotifyNoActiveChallenges(
                     profileService.getActiveProfile().getId());
 
-            // Aplica as preferências persistidas no perfil agora que ele está carregado
+            // Aplica as preferências persistidas no perfil agora que está carregado
             audioService.setVolume(profileService.getActiveProfile().getAudioVolume());
-            notificationService.setEnabled(profileService.getActiveProfile().isNotificationsEnabled());
+            notificationService.setEnabled(
+                    profileService.getActiveProfile().isNotificationsEnabled());
 
             logger.info("Todos os serviços inicializados com sucesso.");
         } catch (Exception e) {
@@ -594,12 +595,29 @@ public class MainController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/SettingsView.fxml"));
             Parent settingsView = loader.load();
             SettingsController controller = loader.getController();
-            controller.initData(profileService, audioService, notificationService, pomodoroService);
+            controller.initData(
+                    profileService,
+                    audioService,
+                    notificationService,
+                    pomodoroService,
+                    this::refreshSidebar);
             updateContentArea(settingsView);
             updateNavStyles(btnSettings);
         } catch (IOException e) {
             logger.error("Erro ao carregar SettingsView: ", e);
         }
+    }
+
+    /**
+     * Atualiza a inicial e a cor do avatar na sidebar imediatamente após uma
+     * alteração de username/avatar nas Configurações — sem reiniciar o app.
+     * O badge de ranking não é recriado aqui (mudança de rank requer XP, não
+     * alteração de nome) para evitar duplicação de filhos no StackPane.
+     */
+    private void refreshSidebar() {
+        avatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
+        initialLabel.setText(profileService.getProfileInitial());
+        logger.debug("Sidebar atualizada após alteração de perfil.");
     }
 
     private void updateContentArea(Parent view) {

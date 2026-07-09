@@ -31,7 +31,7 @@
                 <VBox spacing="10.0" alignment="CENTER" minWidth="100.0">
                     <StackPane fx:id="settingsAvatarContainer" styleClass="settings-avatar-container">
                         <Circle fx:id="settingsAvatarCircle" radius="38.0"/>
-                        <Label fx:id="settingsAvatarInitial" text="?" styleClass="settings-avatar-text"
+                        <Label fx:id="settingsAvatarInitial" text="?" styleClass="avatar-text"
                                mouseTransparent="true"/>
                     </StackPane>
                     <Button fx:id="btnChangeAvatar" text="Alterar foto"

@@ -732,23 +732,22 @@
 
 /* Estilização do Campo de Texto */
 .dark-input {
-    -fx-background-color: #313244;
-    /* Surface0 */
+    -fx-control-inner-background: #313244;
+    -fx-background-color: -fx-control-inner-background;
     -fx-text-fill: #cdd6f4;
-    /* Text */
     -fx-prompt-text-fill: #6c7086;
-    /* Overlay0 */
+    -fx-highlight-fill: #89b4fa;
+    -fx-highlight-text-fill: #1e1e2e;
     -fx-background-radius: 8;
     -fx-border-color: #45475a;
-    /* Surface1 */
     -fx-border-radius: 8;
     -fx-padding: 8;
 }
 
 .dark-input:focused {
+    -fx-control-inner-background: #45475a;
+    -fx-background-color: -fx-control-inner-background;
     -fx-border-color: #89b4fa;
-    /* Blue ao focar */
-    -fx-background-color: #45475a;
 }
 
 /* Atualização para os Spinners */
@@ -756,8 +755,24 @@
     -fx-background-color: #313244;
     -fx-background-radius: 8;
     -fx-border-color: #45475a;
-    /* Borda sutil para definir o campo */
     -fx-border-radius: 8;
+}
+
+/* Campo de texto interno do Spinner — corrige o fundo branco do tema Modena */
+.spinner .text-input {
+    -fx-control-inner-background: #313244;
+    -fx-background-color: -fx-control-inner-background;
+    -fx-text-fill: #cdd6f4;
+    -fx-highlight-fill: #89b4fa;
+    -fx-highlight-text-fill: #1e1e2e;
+    -fx-background-radius: 6 0 0 6;
+    -fx-border-color: transparent;
+    -fx-padding: 5 8;
+}
+
+.spinner .text-input:focused {
+    -fx-control-inner-background: #45475a;
+    -fx-background-color: -fx-control-inner-background;
 }
 
 /* Removemos a cor de fundo padrão das setas para não achatar */
@@ -1789,7 +1804,6 @@
     -fx-background-color: #1e1e2e;
 }
 
-/* Cabeçalho da página */
 .settings-page-header {
     -fx-padding: 0 0 4 0;
 }
@@ -1806,12 +1820,6 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.18), 8, 0, 0, 4);
 }
 
-/* Espaçamento entre seções */
-.settings-section+.settings-section {
-    -fx-translate-y: 0;
-}
-
-/* Título de cada seção */
 .settings-section-title {
     -fx-text-fill: #cdd6f4;
     -fx-font-size: 14px;
@@ -1819,40 +1827,35 @@
     -fx-padding: 0 0 14 0;
 }
 
-/* Label de campo */
 .settings-field-label {
     -fx-text-fill: #a6adc8;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
-/* Dica / descrição secundária */
 .settings-field-hint {
     -fx-text-fill: #6c7086;
     -fx-font-size: 11px;
     -fx-padding: 2 0 0 0;
 }
 
-/* Mensagem de erro inline */
 .settings-field-error {
     -fx-text-fill: #f38ba8;
     -fx-font-size: 11px;
 }
 
-/* Rótulo de unidade (h, min, %) */
 .settings-unit-label {
     -fx-text-fill: #9399b2;
     -fx-font-size: 12px;
 }
 
-/* Linha inferior com o botão Salvar */
 .settings-save-row {
     -fx-padding: 16 0 0 0;
 }
 
-/* Botão Salvar padrão */
+/* Botão Salvar padrão — borda azul, fundo escuro */
 .settings-save-button {
-    -fx-background-color: #313244;
+    -fx-background-color: #1e1e2e;
     -fx-text-fill: #89b4fa;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
@@ -1900,13 +1903,6 @@
     -fx-opacity: 0.85;
 }
 
-.settings-avatar-text {
-    -fx-text-fill: white;
-    -fx-font-family: "Segoe UI Black", sans-serif;
-    -fx-font-size: 28px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 5, 0, 0, 1);
-}
-
 /* Rádio buttons */
 .settings-radio {
     -fx-text-fill: #cdd6f4;
@@ -1931,11 +1927,12 @@
     -fx-pref-width: 16px;
     -fx-pref-height: 16px;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.3), 4, 0, 0, 0);
 }
 
 .settings-slider .thumb:hover {
     -fx-background-color: #b4befe;
-    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.4), 6, 0, 0, 0);
+    -fx-effect: dropshadow(three-pass-box, rgba(137, 180, 250, 0.5), 8, 0, 0, 0);
 }
 
 .settings-slider .axis {
@@ -2050,4 +2047,81 @@
 .settings-danger-button-strong:hover {
     -fx-background-color: rgba(243, 139, 168, 0.32);
     -fx-effect: dropshadow(three-pass-box, rgba(243, 139, 168, 0.35), 8, 0, 0, 0);
+}
+
+/* ==========================================================================
+   TOAST ACCENT — faixas de cor lateral por tipo de notificação
+   ========================================================================== */
+
+.toast-notification {
+    -fx-background-color: #24273a;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-width: 1 1 1 4;
+    -fx-padding: 12 14 10 12;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.50), 20, 0, 0, 8);
+}
+
+.toast-accent-gold {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #f9e2af;
+}
+
+.toast-accent-blue {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #89b4fa;
+}
+
+.toast-accent-green {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #a6e3a1;
+}
+
+.toast-accent-red {
+    -fx-border-color: rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) rgba(137, 180, 250, 0.20) #f38ba8;
+}
+
+.toast-close-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-padding: 2 5;
+    -fx-background-radius: 5;
+    -fx-min-width: 20px;
+    -fx-min-height: 20px;
+}
+
+.toast-close-button:hover {
+    -fx-background-color: #313244;
+    -fx-text-fill: #f38ba8;
+}
+
+.toast-progress-bar {
+    -fx-pref-height: 4px;
+    -fx-min-height: 4px;
+    -fx-max-height: 4px;
+}
+
+.toast-progress-bar .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 2;
+}
+
+.toast-progress-bar .bar {
+    -fx-background-insets: 0;
+    -fx-background-radius: 2;
+}
+
+.toast-progress-blue .bar {
+    -fx-background-color: #89b4fa;
+}
+
+.toast-progress-gold .bar {
+    -fx-background-color: #f9e2af;
+}
+
+.toast-progress-green .bar {
+    -fx-background-color: #a6e3a1;
+}
+
+.toast-progress-red .bar {
+    -fx-background-color: #f38ba8;
 }

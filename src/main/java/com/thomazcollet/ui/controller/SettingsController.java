@@ -6,13 +6,13 @@ import com.thomazcollet.service.AudioService;
 import com.thomazcollet.service.NotificationService;
 import com.thomazcollet.service.PomodoroService;
 import com.thomazcollet.service.ProfileService;
+import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
-import javafx.animation.PauseTransition;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +31,8 @@ import java.util.Map;
  * <li>Fase 2 — seção de Metas (diária, semanal, mensal).</li>
  * <li>Fase 3 — volume de áudio, notificações e idioma.</li>
  * <li>Fase 4 — durações de foco e pausas.</li>
- * </ul>
- *
- * <p>
- * Pendente:
- * <ul>
- * <li>Fase 5 — avatar e username (FileChooser + cópia gerenciada).</li>
- * <li>Fase final — Zona de Risco (limpar histórico / resetar progresso).</li>
+ * <li>Fase 5 (parcial) — username salvo e sidebar atualizada em tempo real.
+ * Avatar via FileChooser ainda pendente.</li>
  * </ul>
  */
 public class SettingsController {
@@ -116,7 +111,14 @@ public class SettingsController {
     private ProfileService profileService;
     private AudioService audioService;
     private NotificationService notificationService;
-    private PomodoroService pomodoroService; // nullable — pode ser nulo se o timer nunca foi aberto
+    private PomodoroService pomodoroService;
+
+    /**
+     * Callback invocado após salvar informações de perfil (username/avatar).
+     * O MainController registra este callback para atualizar a sidebar
+     * imediatamente, sem reiniciar o app.
+     */
+    private Runnable onSidebarUpdateNeeded;
 
     private static final Map<String, String> LANGUAGE_OPTIONS = new LinkedHashMap<>();
     static {
@@ -132,17 +134,18 @@ public class SettingsController {
     public void initData(ProfileService profileService,
             AudioService audioService,
             NotificationService notificationService,
-            PomodoroService pomodoroService) {
+            PomodoroService pomodoroService,
+            Runnable onSidebarUpdateNeeded) {
         this.profileService = profileService;
         this.audioService = audioService;
         this.notificationService = notificationService;
-        this.pomodoroService = pomodoroService; // pode ser nulo
+        this.pomodoroService = pomodoroService;
+        this.onSidebarUpdateNeeded = onSidebarUpdateNeeded;
         setupStaticComponents();
         loadProfileData();
     }
 
     private void setupStaticComponents() {
-        // Metas
         spnDailyGoalHours.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 1));
         spnDailyGoalMinutes.setValueFactory(
@@ -152,7 +155,6 @@ public class SettingsController {
         spnMonthlyGoalHours.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 744, 30));
 
-        // Foco
         spnWorkDuration.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 60, 25));
         spnShortBreak.setValueFactory(
@@ -164,11 +166,9 @@ public class SettingsController {
         rdoFocusDefault.setToggleGroup(focusGroup);
         rdoFocusCustom.setToggleGroup(focusGroup);
 
-        // Áudio
         sliderVolume.valueProperty()
                 .addListener((obs, oldVal, newVal) -> lblVolumeValue.setText(newVal.intValue() + "%"));
 
-        // Idioma
         cmbLanguage.getItems().addAll(LANGUAGE_OPTIONS.keySet());
     }
 
@@ -219,6 +219,56 @@ public class SettingsController {
     }
 
     // ==========================================================================
+    // HANDLERS — PERFIL (Fase 5 parcial: username salvo, avatar pendente)
+    // ==========================================================================
+
+    @FXML
+    private void handleChangeAvatar() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Escolher foto de perfil");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Imagens", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+        File chosen = chooser.showOpenDialog(btnSaveProfile.getScene().getWindow());
+        if (chosen != null) {
+            logger.info("Avatar selecionado (pendente Fase 5 completa): {}", chosen.getAbsolutePath());
+            // TODO Fase 5: copiar para data/avatars/, atualizar preview, persistir
+        }
+    }
+
+    @FXML
+    private void handleSaveProfile() {
+        hideUsernameError();
+        String newUsername = txtUsername.getText();
+
+        if (newUsername == null || newUsername.isBlank()) {
+            showUsernameError("O nome não pode estar vazio.");
+            return;
+        }
+        if (newUsername.trim().length() > 20) {
+            showUsernameError("O nome deve ter no máximo 20 caracteres.");
+            return;
+        }
+
+        try {
+            profileService.saveProfileInfo(newUsername, null);
+
+            // Atualiza o avatar inicial imediatamente na própria tela de configurações
+            settingsAvatarInitial.setText(profileService.getProfileInitial());
+            settingsAvatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
+
+            // Notifica o MainController para atualizar a sidebar sem reiniciar
+            if (onSidebarUpdateNeeded != null) {
+                onSidebarUpdateNeeded.run();
+            }
+
+            showSavedFeedback(btnSaveProfile, "Salvar Perfil");
+            logger.info("Username atualizado para: '{}'.", newUsername.trim());
+        } catch (IllegalArgumentException e) {
+            showUsernameError(e.getMessage());
+        }
+    }
+
+    // ==========================================================================
     // HANDLERS — FASE 2: METAS
     // ==========================================================================
 
@@ -231,6 +281,8 @@ public class SettingsController {
 
         try {
             profileService.saveGoals(dailySeconds, weeklySeconds, monthlySeconds);
+            // Metas são lidas pelo StatsController ao abrir a aba — aplica imediatamente
+            // na próxima visita. Nenhum reinício necessário.
             showSavedFeedback(btnSaveGoals, "Salvar Metas");
             logger.info("Metas salvas pelo usuário.");
         } catch (Exception e) {
@@ -247,15 +299,9 @@ public class SettingsController {
         int volume = (int) sliderVolume.getValue();
         Profile p = profileService.getActiveProfile();
 
-        // Aplica imediatamente no serviço de áudio
         audioService.setVolume(volume);
-
-        // Persiste apenas o volume; os demais campos de settings ficam inalterados
-        profileService.saveSettings(
-                volume,
-                p.isNotificationsEnabled(),
-                p.getLanguage(),
-                p.getStreakRule());
+        profileService.saveSettings(volume, p.isNotificationsEnabled(),
+                p.getLanguage(), p.getStreakRule());
 
         showSavedFeedback(btnSaveAudio, "Salvar Áudio");
         logger.info("Volume salvo: {}%.", volume);
@@ -271,17 +317,10 @@ public class SettingsController {
         boolean enabled = tglNotifications.isSelected();
         Profile p = profileService.getActiveProfile();
 
-        // Aplica imediatamente no serviço de notificações
-        if (notificationService != null) {
+        if (notificationService != null)
             notificationService.setEnabled(enabled);
-        }
-
-        // Persiste; os demais campos ficam inalterados
-        profileService.saveSettings(
-                p.getAudioVolume(),
-                enabled,
-                p.getLanguage(),
-                p.getStreakRule());
+        profileService.saveSettings(p.getAudioVolume(), enabled,
+                p.getLanguage(), p.getStreakRule());
 
         showSavedFeedback(btnSaveNotifications, "Salvar Notificações");
         logger.info("Notificações {}.", enabled ? "ativadas" : "desativadas");
@@ -296,11 +335,8 @@ public class SettingsController {
         String langCode = LANGUAGE_OPTIONS.getOrDefault(selectedLabel, "pt_BR");
         Profile p = profileService.getActiveProfile();
 
-        profileService.saveSettings(
-                p.getAudioVolume(),
-                p.isNotificationsEnabled(),
-                langCode,
-                p.getStreakRule());
+        profileService.saveSettings(p.getAudioVolume(), p.isNotificationsEnabled(),
+                langCode, p.getStreakRule());
 
         showSavedFeedback(btnSaveLanguage, "Salvar Idioma");
         logger.info("Idioma salvo: {}.", langCode);
@@ -314,7 +350,6 @@ public class SettingsController {
     private void handleFocusModeChanged() {
         boolean custom = rdoFocusCustom.isSelected();
         boxFocusCustomFields.setDisable(!custom);
-
         if (!custom) {
             spnWorkDuration.getValueFactory().setValue(25);
             spnShortBreak.getValueFactory().setValue(5);
@@ -333,14 +368,12 @@ public class SettingsController {
         try {
             profileService.saveDurations(work, small, large);
         } catch (IllegalArgumentException e) {
-            // Ex: longBreak <= shortBreak — mostra o erro inline sem diálogo
             showFocusError(e.getMessage());
             return;
         }
 
-        // Notifica o PomodoroService para que ele recarregue as durações em memória.
-        // Se o timer nunca foi aberto (pomodoroService == null), as novas durações
-        // serão lidas do Profile quando o PomodoroService for criado.
+        // Aplica imediatamente no PomodoroService — o TimerController
+        // receberá onTick() e atualizará o display sem reiniciar.
         if (pomodoroService != null) {
             pomodoroService.updateProfile(profileService.getActiveProfile());
         }
@@ -350,45 +383,16 @@ public class SettingsController {
     }
 
     // ==========================================================================
-    // HANDLERS — PERFIL (Fase 5 — TODO)
-    // ==========================================================================
-
-    @FXML
-    private void handleChangeAvatar() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Escolher foto de perfil");
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Imagens", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-        File chosen = chooser.showOpenDialog(btnSaveProfile.getScene().getWindow());
-        if (chosen != null) {
-            logger.info("Avatar selecionado (pendente Fase 5): {}", chosen.getAbsolutePath());
-            // TODO Fase 5: copiar para data/avatars/, atualizar preview, persistir
-        }
-    }
-
-    @FXML
-    private void handleSaveProfile() {
-        lblUsernameError.setVisible(false);
-        lblUsernameError.setManaged(false);
-        // TODO Fase 5: validar txtUsername, persistir e atualizar avatar/inicial na
-        // sidebar
-        showSavedFeedback(btnSaveProfile, "Salvar Perfil");
-    }
-
-    // ==========================================================================
     // HANDLERS — ZONA DE RISCO (Fase final — TODO)
     // ==========================================================================
 
     @FXML
     private void handleClearHistory() {
-        // TODO Fase final: confirmar via DialogHelper, chamar
-        // focusSessionService.clearAll()
         logger.debug("handleClearHistory() — pendente fase final.");
     }
 
     @FXML
     private void handleResetProgress() {
-        // TODO Fase final: confirmar dupla, resetar tudo
         logger.debug("handleResetProgress() — pendente fase final.");
     }
 
@@ -400,6 +404,21 @@ public class SettingsController {
         tglNotifications.setText(enabled ? "Ativadas ✓" : "Desativadas");
         tglNotifications.getStyleClass().removeAll("settings-toggle-on", "settings-toggle-off");
         tglNotifications.getStyleClass().add(enabled ? "settings-toggle-on" : "settings-toggle-off");
+    }
+
+    private void showUsernameError(String message) {
+        if (lblUsernameError == null)
+            return;
+        lblUsernameError.setText(message);
+        lblUsernameError.setVisible(true);
+        lblUsernameError.setManaged(true);
+    }
+
+    private void hideUsernameError() {
+        if (lblUsernameError == null)
+            return;
+        lblUsernameError.setVisible(false);
+        lblUsernameError.setManaged(false);
     }
 
     private void showFocusError(String message) {
