@@ -297,6 +297,7 @@ class AchievementServiceTest {
         public void updateStats(Long profileId, int maxFocusDaySeconds, int totalSessions) {
         }
 
+        // 🆕 SOLUÇÃO: Implementação do novo contrato adicionado ao ProfileRepository
         @Override
         public void updateGoals(Long profileId, int dailySeconds, int weeklySeconds, int monthlySeconds) {
         }
@@ -377,6 +378,13 @@ class AchievementServiceTest {
                 case "BRONZE" -> 18;
                 default -> 0;
             };
+        }
+
+        @Override
+        public void deleteAllByProfileId(Long profileId) {
+            savedAchievements.clear();
+            newlySaved.clear();
+            unlockedKeys.clear();
         }
     }
 

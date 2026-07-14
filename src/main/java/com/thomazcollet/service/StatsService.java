@@ -101,8 +101,8 @@ public class StatsService {
                     formatDuration(secondsToday),
                     "Recorde: " + formatDuration(profile.getMaxFocusDaySeconds()),
                     formatDuration(secondsThisWeek),
-                    "Melhor Semana: "
-                            + formatDuration(sessionRepository.findMaxFocusSecondsInAGivenWeek(profile.getId())),
+                    "Melhor Semana: " + formatDuration(
+                            sessionRepository.findMaxFocusSecondsInAGivenWeek(profile.getId())),
                     heatmapData,
                     calculateRollingDailyDistribution(profile.getId()),
                     calculateEightWeeksDistribution(profile.getId()),

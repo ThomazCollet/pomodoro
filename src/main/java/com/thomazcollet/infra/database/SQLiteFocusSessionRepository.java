@@ -27,18 +27,6 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
 
     @Override
     public void save(FocusSession session) {
-        if (session.getId() != null) {
-            updateExisting(session);
-            return;
-        }
-        insertNew(session);
-    }
-
-    /**
-     * Insere a sessão recém-criada (sem ID ainda) e atribui o ID gerado de
-     * volta ao objeto em memória.
-     */
-    private void insertNew(FocusSession session) {
         String sql = """
                 INSERT INTO focus_sessions (profile_id, type, start_timestamp, end_timestamp, duration_seconds, completed)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -47,7 +35,14 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
         try (Connection conn = DatabaseInitializer.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            bindSessionParams(pstmt, session);
+            pstmt.setLong(1, session.getProfileId());
+            pstmt.setString(2, session.getType().name());
+            pstmt.setString(3, session.getStartTimestamp().format(SQLITE_FORMATTER));
+            pstmt.setString(4,
+                    session.getEndTimestamp() != null ? session.getEndTimestamp().format(SQLITE_FORMATTER) : null);
+            pstmt.setInt(5, session.getDurationSeconds());
+            pstmt.setBoolean(6, session.isCompleted());
+
             pstmt.executeUpdate();
 
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -59,44 +54,6 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
             logger.error("Erro ao persistir FocusSession", e);
             throw new RuntimeException("Falha na persistência da sessão", e);
         }
-    }
-
-    /**
-     * CORREÇÃO: antes desta correção, finalizeCurrentSession() chamava save()
-     * novamente sobre uma sessão que já tinha ID, e isso resultava em um
-     * segundo INSERT (linha duplicada/fantasma) em vez de atualizar a linha
-     * original criada em startSession(). Agora a mesma linha é atualizada no
-     * lugar, eliminando as linhas órfãs com completed=0 e duration_seconds=0
-     * que ficavam acumulando no banco a cada sessão.
-     */
-    private void updateExisting(FocusSession session) {
-        String sql = """
-                UPDATE focus_sessions
-                SET profile_id = ?, type = ?, start_timestamp = ?, end_timestamp = ?,
-                    duration_seconds = ?, completed = ?
-                WHERE id = ?
-                """;
-
-        try (Connection conn = DatabaseInitializer.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            bindSessionParams(pstmt, session);
-            pstmt.setLong(7, session.getId());
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            logger.error("Erro ao atualizar FocusSession ID: {}", session.getId(), e);
-            throw new RuntimeException("Falha ao atualizar a sessão", e);
-        }
-    }
-
-    private void bindSessionParams(PreparedStatement pstmt, FocusSession session) throws SQLException {
-        pstmt.setLong(1, session.getProfileId());
-        pstmt.setString(2, session.getType().name());
-        pstmt.setString(3, session.getStartTimestamp().format(SQLITE_FORMATTER));
-        pstmt.setString(4,
-                session.getEndTimestamp() != null ? session.getEndTimestamp().format(SQLITE_FORMATTER) : null);
-        pstmt.setInt(5, session.getDurationSeconds());
-        pstmt.setBoolean(6, session.isCompleted());
     }
 
     @Override
@@ -274,13 +231,10 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
 
         try (Connection conn = DatabaseInitializer.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setLong(1, profileId);
-
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
+                if (rs.next())
                     return (int) rs.getLong(1);
-                }
             }
         } catch (SQLException e) {
             logger.error("Erro ao buscar o recorde semanal de foco para o perfil: {}", profileId, e);
@@ -479,5 +433,19 @@ public class SQLiteFocusSessionRepository implements FocusSessionRepository {
             logger.error("Erro ao buscar o pódio de recordes mensais para o perfil: {}", profileId, e);
         }
         return podium;
+    }
+
+    @Override
+    public void deleteAllByProfileId(Long profileId) {
+        String sql = "DELETE FROM focus_sessions WHERE profile_id = ?";
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, profileId);
+            int rows = pstmt.executeUpdate();
+            logger.info("{} sessões de foco removidas para o perfil ID {}.", rows, profileId);
+        } catch (SQLException e) {
+            logger.error("Erro ao deletar sessões do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao limpar histórico de foco", e);
+        }
     }
 }

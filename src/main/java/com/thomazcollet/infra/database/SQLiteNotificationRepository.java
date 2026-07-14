@@ -116,6 +116,19 @@ public class SQLiteNotificationRepository implements NotificationRepository {
      * Método auxiliar para converter uma linha do banco SQLite em um objeto de
      * Domínio Notification.
      */
+    @Override
+    public void deleteAllByProfileId(int profileId) {
+        String sql = "DELETE FROM notifications WHERE profile_id = ?";
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, profileId);
+            int rows = pstmt.executeUpdate();
+            logger.info("{} notificações removidas para o perfil ID {}.", rows, profileId);
+        } catch (SQLException e) {
+            logger.error("Erro ao deletar notificações do perfil ID: {}", profileId, e);
+        }
+    }
+
     private Notification mapResultSetToNotification(ResultSet rs) throws SQLException {
         int id = rs.getInt("id");
         int profileId = rs.getInt("profile_id");

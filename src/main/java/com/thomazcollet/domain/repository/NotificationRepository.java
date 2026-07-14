@@ -1,4 +1,4 @@
-package com.thomazcollet.domain.repository; 
+package com.thomazcollet.domain.repository;
 
 import com.thomazcollet.domain.model.Notification; // vamos criar essa model logo em seguida
 import java.util.List;
@@ -30,4 +30,7 @@ public interface NotificationRepository {
      * Opcional: Remove notificações muito antigas para não acumular lixo no banco.
      */
     void deleteOlderThanDays(int days);
+
+    /** Remove todas as notificações de um perfil. Usado pelo reset de progresso. */
+    void deleteAllByProfileId(int profileId);
 }

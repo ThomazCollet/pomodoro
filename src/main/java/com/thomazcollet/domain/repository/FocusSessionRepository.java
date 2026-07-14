@@ -71,7 +71,7 @@ public interface FocusSessionRepository {
     /**
      * Busca o recorde histórico de segundos focados em uma única semana
      * (agrupada por ano + número da semana) por um perfil. Usado para o
-     * card "Recorde: Melhor Semana" da aba de Estatísticas.
+     * card "Melhor Semana" da aba de Estatísticas.
      */
     int findMaxFocusSecondsInAGivenWeek(Long profileId);
 
@@ -106,4 +106,10 @@ public interface FocusSessionRepository {
      * Busca os 3 meses com maior tempo de foco acumulado na história do perfil.
      */
     List<MonthlyPodiumEntry> getTop3MonthlyFocusRecords(Long profileId);
+
+    /**
+     * Remove todas as sessões de foco de um perfil específico.
+     * Usado pela operação "Limpar Histórico de Foco" na Zona de Risco.
+     */
+    void deleteAllByProfileId(Long profileId);
 }

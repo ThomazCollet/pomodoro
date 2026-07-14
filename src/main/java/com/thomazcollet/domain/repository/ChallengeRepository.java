@@ -52,4 +52,7 @@ public interface ChallengeRepository {
      * de horas.
      */
     boolean hasCompletedIntensityChallenge(Long profileId, int minDays, int minTargetHours);
+
+    /** Remove todos os desafios de um perfil. Usado pelo reset de progresso. */
+    void deleteAllByProfileId(Long profileId);
 }

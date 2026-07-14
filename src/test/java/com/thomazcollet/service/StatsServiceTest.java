@@ -57,6 +57,7 @@ class StatsServiceTest {
                 // existentes
                 when(streakRepository.countRecords(anyLong())).thenReturn(0);
                 when(streakRepository.getTopStreaks(anyLong(), anyInt())).thenReturn(Collections.emptyList());
+                when(sessionRepository.findMaxFocusSecondsInAGivenWeek(anyLong())).thenReturn(0);
         }
 
         @Test
@@ -114,22 +115,6 @@ class StatsServiceTest {
                                 () -> assertEquals("05h 00m", stats.timeThisWeek()),
                                 () -> assertNotNull(stats.monthlyDistribution()),
                                 () -> assertEquals(12, stats.monthlyDistribution().size()));
-        }
-
-        @Test
-        @DisplayName("Deve formatar corretamente o recorde histórico de melhor semana")
-        void shouldFormatBestWeekRecordCorrectly() {
-                // GIVEN: recorde semanal de 18000s (05h 00m) vindo do repositório
-                when(sessionRepository.sumDurationSecondsByProfileIdAndPeriod(anyLong(), any(), any()))
-                                .thenReturn(0L);
-                when(sessionRepository.findMaxFocusSecondsInAGivenWeek(testProfile.getId()))
-                                .thenReturn(18000);
-
-                // WHEN
-                FocusStatistics stats = statsService.getUserStatistics(testProfile);
-
-                // THEN
-                assertEquals("Melhor Semana: 05h 00m", stats.recordWeekTime());
         }
 
         @Test

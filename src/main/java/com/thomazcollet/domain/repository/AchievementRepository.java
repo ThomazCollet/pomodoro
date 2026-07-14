@@ -49,4 +49,7 @@ public interface AchievementRepository {
      * AchievementCountEvaluator).
      */
     int countTotalDefinedByTier(String tier);
+
+    /** Remove todas as conquistas de um perfil. Usado pelo reset de progresso. */
+    void deleteAllByProfileId(Long profileId);
 }

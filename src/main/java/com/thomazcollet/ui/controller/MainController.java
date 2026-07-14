@@ -13,6 +13,9 @@ import com.thomazcollet.infra.database.SQLiteProfileRepository;
 import com.thomazcollet.infra.database.SQLiteStreakRecordRepository;
 import com.thomazcollet.service.*;
 import com.thomazcollet.ui.controller.SettingsController;
+import javafx.scene.image.Image;
+import javafx.scene.paint.ImagePattern;
+import java.io.File;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
 import javafx.animation.SequentialTransition;
@@ -93,7 +96,8 @@ public class MainController {
     private ChallengeService challengeService;
     private AchievementService achievementService;
     private AudioService audioService;
-    private NotificationService notificationService; // NOVO
+    private NotificationService notificationService;
+    private DataResetService dataResetService; // NOVO
 
     private AchievementRepository achievementRepository;
 
@@ -145,6 +149,10 @@ public class MainController {
             this.achievementService = new AchievementService(achievementRepository, profileRepository,
                     List.of(), notificationService);
             this.audioService = new AudioService();
+            this.dataResetService = new DataResetService(
+                    sessionRepository, achievementRepository,
+                    challengeRepository, streakRepository,
+                    notificationRepository, profileRepository);
 
             profileService.ensureProfileExists();
 
@@ -489,9 +497,7 @@ public class MainController {
     }
 
     private void setupAvatar() {
-        String hexColor = profileService.getAvatarColor();
-        avatarCircle.setFill(Paint.valueOf(hexColor));
-        initialLabel.setText(profileService.getProfileInitial());
+        applyAvatarFill(avatarCircle, initialLabel, profileService);
 
         Profile activeProfile = profileService.getActiveProfile();
         RankingType currentRank = RankingType.fromXp(activeProfile.getXp());
@@ -501,6 +507,30 @@ public class MainController {
         StackPane.setAlignment(sidebarHex, Pos.BOTTOM_RIGHT);
         StackPane.setMargin(sidebarHex, new Insets(0, 44, -4, 0));
         avatarContainer.getChildren().add(sidebarHex);
+    }
+
+    /**
+     * Aplica o fill correto no círculo do avatar: ImagePattern se o perfil tiver
+     * um caminho de imagem válido no disco, cor por hash como fallback.
+     * Mostra ou oculta o label da inicial conforme o caso.
+     */
+    static void applyAvatarFill(Circle circle, Label initialLabel, ProfileService profileService) {
+        String imagePath = profileService.getActiveProfile().getImagePath();
+        if (imagePath != null && !imagePath.isBlank() && new File(imagePath).exists()) {
+            Image img = new Image(new File(imagePath).toURI().toString());
+            circle.setFill(new ImagePattern(img));
+            if (initialLabel != null) {
+                initialLabel.setVisible(false);
+                initialLabel.setManaged(false);
+            }
+        } else {
+            circle.setFill(Paint.valueOf(profileService.getAvatarColor()));
+            if (initialLabel != null) {
+                initialLabel.setText(profileService.getProfileInitial());
+                initialLabel.setVisible(true);
+                initialLabel.setManaged(true);
+            }
+        }
     }
 
     // ==========================================================================
@@ -600,6 +630,7 @@ public class MainController {
                     audioService,
                     notificationService,
                     pomodoroService,
+                    dataResetService,
                     this::refreshSidebar);
             updateContentArea(settingsView);
             updateNavStyles(btnSettings);
@@ -615,8 +646,7 @@ public class MainController {
      * alteração de nome) para evitar duplicação de filhos no StackPane.
      */
     private void refreshSidebar() {
-        avatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
-        initialLabel.setText(profileService.getProfileInitial());
+        applyAvatarFill(avatarCircle, initialLabel, profileService);
         logger.debug("Sidebar atualizada após alteração de perfil.");
     }
 
@@ -675,9 +705,10 @@ public class MainController {
         }
 
         StackPane headerAvatar = new StackPane();
-        Circle bigCircle = new Circle(40, avatarCircle.getFill());
+        Circle bigCircle = new Circle(40);
         Label bigInitial = new Label(profileService.getProfileInitial());
         bigInitial.setStyle("-fx-font-size: 26px; -fx-text-fill: white; -fx-font-weight: bold;");
+        applyAvatarFill(bigCircle, bigInitial, profileService);
         headerAvatar.getChildren().addAll(bigCircle, bigInitial);
 
         Label lblName = new Label(profile.getUsername());

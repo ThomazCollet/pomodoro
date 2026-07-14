@@ -185,4 +185,18 @@ public class SQLiteAchievementRepository implements AchievementRepository {
 
         return achievement;
     }
+
+    @Override
+    public void deleteAllByProfileId(Long profileId) {
+        String sql = "DELETE FROM achievements WHERE profile_id = ?";
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, profileId);
+            int rows = pstmt.executeUpdate();
+            logger.info("{} conquistas removidas para o perfil ID {}.", rows, profileId);
+        } catch (SQLException e) {
+            logger.error("Erro ao deletar conquistas do perfil ID: {}", profileId, e);
+            throw new RuntimeException("Falha ao limpar conquistas", e);
+        }
+    }
 }

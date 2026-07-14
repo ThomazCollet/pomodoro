@@ -2125,3 +2125,46 @@
 .toast-progress-red .bar {
     -fx-background-color: #f38ba8;
 }
+
+/* ==========================================================================
+   DANGER CONFIRM DIALOG — diálogo de confirmação de ações destrutivas
+   ========================================================================== */
+
+.danger-confirm-dialog {
+    -fx-border-color: rgba(243, 139, 168, 0.45);
+}
+
+.danger-countdown-label {
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
+}
+
+.danger-confirm-button-disabled {
+    -fx-background-color: rgba(243, 139, 168, 0.10);
+    -fx-text-fill: #6c7086;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #45475a;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 18;
+}
+
+.danger-cancel-button {
+    -fx-background-color: #313244;
+    -fx-text-fill: #cdd6f4;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #45475a;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 18;
+    -fx-cursor: hand;
+}
+
+.danger-cancel-button:hover {
+    -fx-background-color: #45475a;
+}

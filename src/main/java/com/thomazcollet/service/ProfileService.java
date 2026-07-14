@@ -176,4 +176,20 @@ public class ProfileService {
         String name = getActiveProfile().getUsername();
         return name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase();
     }
+
+    /**
+     * Recarrega o perfil ativo diretamente do banco de dados, descartando o
+     * objeto em memória. Usado após operações de reset para garantir que o
+     * estado em memória reflita os valores zerados no banco.
+     */
+    public Profile reloadActiveProfile() {
+        if (activeProfile == null || activeProfile.getId() == null) {
+            throw new ProfileNotFoundException("Nenhum perfil ativo para recarregar.");
+        }
+        this.activeProfile = repository.findById(activeProfile.getId())
+                .orElseThrow(() -> new ProfileNotFoundException(
+                        "Perfil ID " + activeProfile.getId() + " não encontrado no banco."));
+        logger.info("Perfil '{}' recarregado do banco.", activeProfile.getUsername());
+        return activeProfile;
+    }
 }

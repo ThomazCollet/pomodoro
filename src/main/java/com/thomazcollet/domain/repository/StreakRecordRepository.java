@@ -18,4 +18,10 @@ public interface StreakRecordRepository {
      * Essencial para a lógica de controle do tamanho do pódio (ex: limite de 5).
      */
     int countRecords(Long profileId);
+
+    /**
+     * Remove todos os registros de streak de um perfil. Usado pelo reset de
+     * histórico.
+     */
+    void deleteAllByProfileId(Long profileId);
 }

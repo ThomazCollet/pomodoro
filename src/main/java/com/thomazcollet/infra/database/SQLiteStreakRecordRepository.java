@@ -2,6 +2,8 @@ package com.thomazcollet.infra.database;
 
 import com.thomazcollet.domain.dto.StreakRecord;
 import com.thomazcollet.domain.repository.StreakRecordRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.time.LocalDate;
@@ -9,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SQLiteStreakRecordRepository implements StreakRecordRepository {
+
+    private static final Logger logger = LoggerFactory.getLogger(SQLiteStreakRecordRepository.class);
 
     @Override
     public void save(StreakRecord record) {
@@ -101,5 +105,18 @@ public class SQLiteStreakRecordRepository implements StreakRecordRepository {
                 rs.getInt("duration_days"),
                 LocalDate.parse(rs.getString("start_date")),
                 LocalDate.parse(rs.getString("end_date")));
+    }
+
+    @Override
+    public void deleteAllByProfileId(Long profileId) {
+        String sql = "DELETE FROM streak_records WHERE profile_id = ?";
+        try (Connection conn = DatabaseInitializer.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, profileId);
+            int rows = stmt.executeUpdate();
+            logger.info("{} registros de streak removidos para o perfil ID {}.", rows, profileId);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao remover streaks do perfil: " + profileId, e);
+        }
     }
 }

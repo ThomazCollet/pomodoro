@@ -2,22 +2,32 @@ package com.thomazcollet.ui.controller;
 
 import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.model.StreakRule;
-import com.thomazcollet.service.AudioService;
-import com.thomazcollet.service.NotificationService;
-import com.thomazcollet.service.PomodoroService;
-import com.thomazcollet.service.ProfileService;
+import com.thomazcollet.service.*;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -28,16 +38,17 @@ import java.util.Map;
  * Fases implementadas:
  * <ul>
  * <li>Fase 1 — esqueleto e carregamento de dados reais.</li>
- * <li>Fase 2 — seção de Metas (diária, semanal, mensal).</li>
+ * <li>Fase 2 — seção de Metas.</li>
  * <li>Fase 3 — volume de áudio, notificações e idioma.</li>
  * <li>Fase 4 — durações de foco e pausas.</li>
- * <li>Fase 5 (parcial) — username salvo e sidebar atualizada em tempo real.
- * Avatar via FileChooser ainda pendente.</li>
+ * <li>Fase 5 — avatar (FileChooser + cópia gerenciada) e username.</li>
+ * <li>Fase final — Zona de Risco com countdown de segurança.</li>
  * </ul>
  */
 public class SettingsController {
 
     private static final Logger logger = LoggerFactory.getLogger(SettingsController.class);
+    private static final int DANGER_COUNTDOWN_SECONDS = 4;
 
     // ── Seção Perfil ────────────────────────────────────────────────────────
     @FXML
@@ -112,12 +123,7 @@ public class SettingsController {
     private AudioService audioService;
     private NotificationService notificationService;
     private PomodoroService pomodoroService;
-
-    /**
-     * Callback invocado após salvar informações de perfil (username/avatar).
-     * O MainController registra este callback para atualizar a sidebar
-     * imediatamente, sem reiniciar o app.
-     */
+    private DataResetService dataResetService;
     private Runnable onSidebarUpdateNeeded;
 
     private static final Map<String, String> LANGUAGE_OPTIONS = new LinkedHashMap<>();
@@ -135,11 +141,13 @@ public class SettingsController {
             AudioService audioService,
             NotificationService notificationService,
             PomodoroService pomodoroService,
+            DataResetService dataResetService,
             Runnable onSidebarUpdateNeeded) {
         this.profileService = profileService;
         this.audioService = audioService;
         this.notificationService = notificationService;
         this.pomodoroService = pomodoroService;
+        this.dataResetService = dataResetService;
         this.onSidebarUpdateNeeded = onSidebarUpdateNeeded;
         setupStaticComponents();
         loadProfileData();
@@ -177,10 +185,9 @@ public class SettingsController {
             return;
         Profile p = profileService.getActiveProfile();
 
-        // Perfil
+        // Perfil — avatar e username
         txtUsername.setText(p.getUsername());
-        settingsAvatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
-        settingsAvatarInitial.setText(profileService.getProfileInitial());
+        applyAvatarPreview(p.getImagePath());
 
         // Metas
         int daily = p.getDailyGoalSeconds();
@@ -219,7 +226,7 @@ public class SettingsController {
     }
 
     // ==========================================================================
-    // HANDLERS — PERFIL (Fase 5 parcial: username salvo, avatar pendente)
+    // HANDLERS — FASE 5: AVATAR E USERNAME
     // ==========================================================================
 
     @FXML
@@ -228,10 +235,37 @@ public class SettingsController {
         chooser.setTitle("Escolher foto de perfil");
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("Imagens", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+
         File chosen = chooser.showOpenDialog(btnSaveProfile.getScene().getWindow());
-        if (chosen != null) {
-            logger.info("Avatar selecionado (pendente Fase 5 completa): {}", chosen.getAbsolutePath());
-            // TODO Fase 5: copiar para data/avatars/, atualizar preview, persistir
+        if (chosen == null)
+            return;
+
+        try {
+            // Copia para pasta gerenciada pelo app — não depende da localização original
+            File avatarDir = new File("data/avatars");
+            if (!avatarDir.exists())
+                avatarDir.mkdirs();
+
+            String ext = getFileExtension(chosen.getName());
+            File dest = new File(avatarDir,
+                    "profile_" + profileService.getActiveProfile().getId() + "." + ext);
+
+            Files.copy(chosen.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            String destPath = dest.getAbsolutePath();
+            profileService.saveProfileInfo(
+                    profileService.getActiveProfile().getUsername(), destPath);
+
+            // Atualiza o preview na tela de configurações
+            applyAvatarPreview(destPath);
+
+            // Atualiza a sidebar imediatamente
+            if (onSidebarUpdateNeeded != null)
+                onSidebarUpdateNeeded.run();
+
+            logger.info("Avatar atualizado: {}", destPath);
+        } catch (Exception e) {
+            logger.error("Erro ao copiar arquivo de avatar.", e);
         }
     }
 
@@ -251,16 +285,8 @@ public class SettingsController {
 
         try {
             profileService.saveProfileInfo(newUsername, null);
-
-            // Atualiza o avatar inicial imediatamente na própria tela de configurações
-            settingsAvatarInitial.setText(profileService.getProfileInitial());
-            settingsAvatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
-
-            // Notifica o MainController para atualizar a sidebar sem reiniciar
-            if (onSidebarUpdateNeeded != null) {
+            if (onSidebarUpdateNeeded != null)
                 onSidebarUpdateNeeded.run();
-            }
-
             showSavedFeedback(btnSaveProfile, "Salvar Perfil");
             logger.info("Username atualizado para: '{}'.", newUsername.trim());
         } catch (IllegalArgumentException e) {
@@ -281,10 +307,7 @@ public class SettingsController {
 
         try {
             profileService.saveGoals(dailySeconds, weeklySeconds, monthlySeconds);
-            // Metas são lidas pelo StatsController ao abrir a aba — aplica imediatamente
-            // na próxima visita. Nenhum reinício necessário.
             showSavedFeedback(btnSaveGoals, "Salvar Metas");
-            logger.info("Metas salvas pelo usuário.");
         } catch (Exception e) {
             logger.error("Erro ao salvar metas.", e);
         }
@@ -298,13 +321,10 @@ public class SettingsController {
     private void handleSaveAudio() {
         int volume = (int) sliderVolume.getValue();
         Profile p = profileService.getActiveProfile();
-
         audioService.setVolume(volume);
         profileService.saveSettings(volume, p.isNotificationsEnabled(),
                 p.getLanguage(), p.getStreakRule());
-
         showSavedFeedback(btnSaveAudio, "Salvar Áudio");
-        logger.info("Volume salvo: {}%.", volume);
     }
 
     @FXML
@@ -316,14 +336,11 @@ public class SettingsController {
     private void handleSaveNotifications() {
         boolean enabled = tglNotifications.isSelected();
         Profile p = profileService.getActiveProfile();
-
         if (notificationService != null)
             notificationService.setEnabled(enabled);
         profileService.saveSettings(p.getAudioVolume(), enabled,
                 p.getLanguage(), p.getStreakRule());
-
         showSavedFeedback(btnSaveNotifications, "Salvar Notificações");
-        logger.info("Notificações {}.", enabled ? "ativadas" : "desativadas");
     }
 
     @FXML
@@ -331,15 +348,11 @@ public class SettingsController {
         String selectedLabel = cmbLanguage.getValue();
         if (selectedLabel == null)
             return;
-
         String langCode = LANGUAGE_OPTIONS.getOrDefault(selectedLabel, "pt_BR");
         Profile p = profileService.getActiveProfile();
-
         profileService.saveSettings(p.getAudioVolume(), p.isNotificationsEnabled(),
                 langCode, p.getStreakRule());
-
         showSavedFeedback(btnSaveLanguage, "Salvar Idioma");
-        logger.info("Idioma salvo: {}.", langCode);
     }
 
     // ==========================================================================
@@ -372,33 +385,178 @@ public class SettingsController {
             return;
         }
 
-        // Aplica imediatamente no PomodoroService — o TimerController
-        // receberá onTick() e atualizará o display sem reiniciar.
         if (pomodoroService != null) {
             pomodoroService.updateProfile(profileService.getActiveProfile());
         }
-
         showSavedFeedback(btnSaveFocus, "Salvar Configurações de Foco");
-        logger.info("Durações salvas: foco={}m, curta={}m, longa={}m.", work, small, large);
     }
 
     // ==========================================================================
-    // HANDLERS — ZONA DE RISCO (Fase final — TODO)
+    // HANDLERS — ZONA DE RISCO (com countdown de segurança)
     // ==========================================================================
 
     @FXML
     private void handleClearHistory() {
-        logger.debug("handleClearHistory() — pendente fase final.");
+        showCountdownConfirmation(
+                "⚠️ Limpar Histórico de Foco",
+                "Esta ação irá apagar permanentemente todas as suas sessões de foco, "
+                        + "streaks e estatísticas acumuladas.\n\n"
+                        + "Conquistas, desafios, notificações e XP serão preservados.",
+                DANGER_COUNTDOWN_SECONDS,
+                () -> {
+                    Long profileId = profileService.getActiveProfile().getId();
+                    dataResetService.clearFocusHistory(profileId);
+                    profileService.reloadActiveProfile();
+                    if (pomodoroService != null) {
+                        pomodoroService.updateProfile(profileService.getActiveProfile());
+                    }
+                    logger.info("Histórico de foco limpo pelo usuário.");
+                });
     }
 
     @FXML
     private void handleResetProgress() {
-        logger.debug("handleResetProgress() — pendente fase final.");
+        showCountdownConfirmation(
+                "⚠️ Resetar Todo o Progresso",
+                "Esta ação irá apagar PERMANENTEMENTE todo o seu progresso:\n\n"
+                        + "• Histórico de foco e estatísticas\n"
+                        + "• Todas as conquistas desbloqueadas\n"
+                        + "• Todos os desafios\n"
+                        + "• Notificações\n"
+                        + "• XP e ranking\n\n"
+                        + "Suas preferências de configuração serão preservadas.\n"
+                        + "Esta ação não pode ser desfeita.",
+                DANGER_COUNTDOWN_SECONDS,
+                () -> {
+                    Long profileId = profileService.getActiveProfile().getId();
+                    dataResetService.resetAllProgress(profileId);
+                    profileService.reloadActiveProfile();
+                    if (notificationService != null) {
+                        notificationService.loadUnreadCount(profileId.intValue());
+                    }
+                    if (pomodoroService != null) {
+                        pomodoroService.updateProfile(profileService.getActiveProfile());
+                    }
+                    logger.info("Progresso completo resetado pelo usuário.");
+                });
+    }
+
+    // ==========================================================================
+    // COUNTDOWN CONFIRMATION DIALOG
+    // ==========================================================================
+
+    /**
+     * Exibe um diálogo modal com countdown de segurança antes de permitir
+     * a confirmação de uma ação destrutiva. O botão "Confirmar" só fica
+     * disponível após o countdown zerar — impossibilitando cliques acidentais.
+     */
+    private void showCountdownConfirmation(String title, String message,
+            int seconds, Runnable onConfirmed) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.initStyle(StageStyle.UNDECORATED);
+
+        // ── Container principal ──
+        VBox root = new VBox(20);
+        root.getStyleClass().addAll("dialog-container", "danger-confirm-dialog");
+        root.setPadding(new Insets(28, 32, 24, 32));
+        root.setPrefWidth(460);
+        root.setMaxWidth(460);
+
+        // ── Título ──
+        Label lblTitle = new Label(title);
+        lblTitle.getStyleClass().add("settings-section-title-danger");
+        lblTitle.setWrapText(true);
+
+        // ── Mensagem ──
+        Label lblMessage = new Label(message);
+        lblMessage.setWrapText(true);
+        lblMessage.setStyle("-fx-text-fill: #a6adc8; -fx-font-size: 12px;");
+
+        // ── Countdown ──
+        Label lblCountdown = new Label(
+                "Aguarde " + seconds + " segundos para confirmar...");
+        lblCountdown.getStyleClass().add("danger-countdown-label");
+
+        // ── Botões ──
+        Button btnCancel = new Button("Cancelar");
+        btnCancel.getStyleClass().add("danger-cancel-button");
+
+        Button btnConfirm = new Button("Confirmar (" + seconds + ")");
+        btnConfirm.getStyleClass().add("settings-danger-button-strong");
+        btnConfirm.setDisable(true);
+
+        HBox buttons = new HBox(12, btnCancel, btnConfirm);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+
+        root.getChildren().addAll(lblTitle, lblMessage, lblCountdown, buttons);
+
+        Scene scene = new Scene(root);
+        String cssPath = getClass().getResource("/css/style.css").toExternalForm();
+        scene.getStylesheets().add(cssPath);
+        dialog.setScene(scene);
+
+        // ── Countdown timeline ──
+        int[] remaining = { seconds };
+        Timeline countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            remaining[0]--;
+            if (remaining[0] <= 0) {
+                btnConfirm.setText("Confirmar");
+                btnConfirm.setDisable(false);
+                lblCountdown.setVisible(false);
+                lblCountdown.setManaged(false);
+            } else {
+                btnConfirm.setText("Confirmar (" + remaining[0] + ")");
+                lblCountdown.setText("Aguarde " + remaining[0] + " segundos para confirmar...");
+            }
+        }));
+        countdown.setCycleCount(seconds);
+
+        btnConfirm.setOnAction(e -> {
+            countdown.stop();
+            dialog.close();
+            onConfirmed.run();
+        });
+
+        btnCancel.setOnAction(e -> {
+            countdown.stop();
+            dialog.close();
+        });
+
+        dialog.setOnHiding(e -> countdown.stop());
+
+        dialog.sizeToScene();
+        dialog.centerOnScreen();
+        countdown.play();
+        dialog.showAndWait();
     }
 
     // ==========================================================================
     // HELPERS
     // ==========================================================================
+
+    /**
+     * Aplica o avatar correto no círculo de preview da tela de configurações:
+     * ImagePattern se o caminho for válido, cor por hash como fallback.
+     */
+    private void applyAvatarPreview(String imagePath) {
+        if (imagePath != null && !imagePath.isBlank() && new File(imagePath).exists()) {
+            Image img = new Image(new File(imagePath).toURI().toString());
+            settingsAvatarCircle.setFill(new ImagePattern(img));
+            settingsAvatarInitial.setVisible(false);
+            settingsAvatarInitial.setManaged(false);
+        } else {
+            settingsAvatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
+            settingsAvatarInitial.setText(profileService.getProfileInitial());
+            settingsAvatarInitial.setVisible(true);
+            settingsAvatarInitial.setManaged(true);
+        }
+    }
+
+    private String getFileExtension(String filename) {
+        int dotIdx = filename.lastIndexOf('.');
+        return dotIdx > 0 ? filename.substring(dotIdx + 1).toLowerCase() : "png";
+    }
 
     private void updateNotificationsToggleText(boolean enabled) {
         tglNotifications.setText(enabled ? "Ativadas ✓" : "Desativadas");
