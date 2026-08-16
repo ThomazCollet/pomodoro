@@ -8,7 +8,7 @@
 
 <br/>
 
-<img src="./assets/prints/Main.png" alt="Tela Principal do Pomodoro Focus" width="85%" />
+<img src="./assets/prints/main.png" alt="Tela Principal do Pomodoro Focus" width="85%" />
 
 </div>
 
