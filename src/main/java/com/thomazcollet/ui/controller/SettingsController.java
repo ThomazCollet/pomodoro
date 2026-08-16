@@ -3,6 +3,7 @@ package com.thomazcollet.ui.controller;
 import com.thomazcollet.domain.model.Profile;
 import com.thomazcollet.domain.model.StreakRule;
 import com.thomazcollet.service.*;
+import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -11,9 +12,13 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
@@ -51,6 +56,8 @@ public class SettingsController {
     private static final int DANGER_COUNTDOWN_SECONDS = 4;
 
     // ── Seção Perfil ────────────────────────────────────────────────────────
+    @FXML
+    private StackPane settingsAvatarContainer;
     @FXML
     private Circle settingsAvatarCircle;
     @FXML
@@ -545,12 +552,67 @@ public class SettingsController {
             settingsAvatarCircle.setFill(new ImagePattern(img));
             settingsAvatarInitial.setVisible(false);
             settingsAvatarInitial.setManaged(false);
+
+            // Foto disponível — clique no círculo abre o lightbox
+            settingsAvatarContainer.setOnMouseClicked(e -> showAvatarLightbox(imagePath,
+                    profileService.getActiveProfile().getUsername()));
+            settingsAvatarContainer.setCursor(javafx.scene.Cursor.HAND);
         } else {
             settingsAvatarCircle.setFill(Paint.valueOf(profileService.getAvatarColor()));
             settingsAvatarInitial.setText(profileService.getProfileInitial());
             settingsAvatarInitial.setVisible(true);
             settingsAvatarInitial.setManaged(true);
+
+            // Sem foto — clique abre diretamente o seletor de arquivo
+            settingsAvatarContainer.setOnMouseClicked(e -> handleChangeAvatar());
         }
+    }
+
+    /**
+     * Exibe a foto de perfil ampliada em um Stage flutuante centralizado.
+     * Fecha ao clicar em qualquer lugar ou pressionar ESC.
+     */
+    private void showAvatarLightbox(String imagePath, String username) {
+        if (imagePath == null || imagePath.isBlank() || !new File(imagePath).exists())
+            return;
+
+        Stage lightbox = new Stage();
+        lightbox.initStyle(StageStyle.UNDECORATED);
+
+        Circle bigCircle = new Circle(130);
+        bigCircle.setFill(new ImagePattern(new Image(new File(imagePath).toURI().toString())));
+        bigCircle.setEffect(new DropShadow(24, Color.web("#000000", 0.55)));
+
+        Label lblName = new Label(username);
+        lblName.getStyleClass().add("popover-name");
+
+        Label lblHint = new Label("Clique em qualquer lugar para fechar  ·  ESC");
+        lblHint.setStyle("-fx-text-fill: #585b70; -fx-font-size: 10px;");
+
+        VBox content = new VBox(18, bigCircle, lblName, lblHint);
+        content.setAlignment(Pos.CENTER);
+        content.getStyleClass().add("avatar-lightbox");
+
+        Scene scene = new Scene(content);
+        scene.getStylesheets().add(
+                getClass().getResource("/css/style.css").toExternalForm());
+
+        content.setOnMouseClicked(e -> lightbox.close());
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE)
+                lightbox.close();
+        });
+
+        lightbox.setScene(scene);
+        lightbox.sizeToScene();
+        lightbox.centerOnScreen();
+
+        content.setOpacity(0);
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(200), content);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+        lightbox.show();
+        fadeIn.play();
     }
 
     private String getFileExtension(String filename) {

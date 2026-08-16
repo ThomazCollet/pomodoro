@@ -2168,3 +2168,18 @@
 .danger-cancel-button:hover {
     -fx-background-color: #45475a;
 }
+
+/* ==========================================================================
+   AVATAR LIGHTBOX — visualização ampliada da foto de perfil
+   ========================================================================== */
+
+.avatar-lightbox {
+    -fx-background-color: #181825;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(137, 180, 250, 0.15);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 36 44 28 44;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.65), 32, 0, 0, 0);
+    -fx-cursor: hand;
+}

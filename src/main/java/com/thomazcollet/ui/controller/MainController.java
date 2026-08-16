@@ -40,6 +40,8 @@ import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.scene.Scene;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -711,6 +713,14 @@ public class MainController {
         applyAvatarFill(bigCircle, bigInitial, profileService);
         headerAvatar.getChildren().addAll(bigCircle, bigInitial);
 
+        // Se há foto, clique no avatar do popup abre o lightbox
+        String popoverImagePath = profile.getImagePath();
+        if (popoverImagePath != null && !popoverImagePath.isBlank()
+                && new java.io.File(popoverImagePath).exists()) {
+            headerAvatar.setOnMouseClicked(e -> showAvatarLightbox(popoverImagePath, profile.getUsername()));
+            headerAvatar.setCursor(javafx.scene.Cursor.HAND);
+        }
+
         Label lblName = new Label(profile.getUsername());
         lblName.getStyleClass().add("popover-name");
 
@@ -846,6 +856,54 @@ public class MainController {
     // ==========================================================================
     // HELPERS
     // ==========================================================================
+
+    /**
+     * Exibe a foto de perfil ampliada em um Stage flutuante centralizado.
+     * Fecha ao clicar em qualquer lugar ou pressionar ESC.
+     */
+    private void showAvatarLightbox(String imagePath, String username) {
+        if (imagePath == null || imagePath.isBlank() || !new java.io.File(imagePath).exists())
+            return;
+
+        Stage lightbox = new Stage();
+        lightbox.initStyle(StageStyle.UNDECORATED);
+
+        javafx.scene.shape.Circle bigCircle = new javafx.scene.shape.Circle(130);
+        bigCircle.setFill(new javafx.scene.paint.ImagePattern(
+                new javafx.scene.image.Image(new java.io.File(imagePath).toURI().toString())));
+        bigCircle.setEffect(new DropShadow(24, Color.web("#000000", 0.55)));
+
+        Label lblName = new Label(username);
+        lblName.getStyleClass().add("popover-name");
+
+        Label lblHint = new Label("Clique em qualquer lugar para fechar  ·  ESC");
+        lblHint.setStyle("-fx-text-fill: #585b70; -fx-font-size: 10px;");
+
+        VBox content = new VBox(18, bigCircle, lblName, lblHint);
+        content.setAlignment(Pos.CENTER);
+        content.getStyleClass().add("avatar-lightbox");
+
+        Scene lightboxScene = new Scene(content);
+        lightboxScene.getStylesheets().add(
+                getClass().getResource("/css/style.css").toExternalForm());
+
+        content.setOnMouseClicked(e -> lightbox.close());
+        lightboxScene.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE)
+                lightbox.close();
+        });
+
+        lightbox.setScene(lightboxScene);
+        lightbox.sizeToScene();
+        lightbox.centerOnScreen();
+
+        content.setOpacity(0);
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(200), content);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+        lightbox.show();
+        fadeIn.play();
+    }
 
     private void addStat(GridPane grid, String label, String value, int col, int row) {
         VBox box = new VBox(2);
