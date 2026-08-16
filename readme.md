@@ -26,6 +26,8 @@ Todo o projeto foi desenhado com **separação de camadas** (domínio, serviço,
 
 <div align="center">
   <img src="./assets/gifs/main-demo.gif" alt="Demonstração da Tela Principal" width="85%" />
+  
+  <sub>▶️ *Clique na imagem para reproduzir o GIF*</sub>
 </div>
 
 ---
@@ -50,6 +52,8 @@ Todo o projeto foi desenhado com **separação de camadas** (domínio, serviço,
 
 <div align="center">
   <img src="./assets/gifs/stats-demo.gif" alt="Demonstração da Aba de Estatísticas" width="85%" />
+  
+  <sub>▶️ *Clique na imagem para reproduzir o GIF*</sub>
 </div>
 
 ---
@@ -77,6 +81,8 @@ Todo o projeto foi desenhado com **separação de camadas** (domínio, serviço,
 
 <div align="center">
   <img src="./assets/gifs/challenges-demo.gif" alt="Demonstração da Aba de Desafios" width="85%" />
+  
+  <sub>▶️ *Clique na imagem para reproduzir o GIF*</sub>
 </div>
 
 ---
@@ -103,6 +109,8 @@ Todo o projeto foi desenhado com **separação de camadas** (domínio, serviço,
 
 <div align="center">
   <img src="./assets/gifs/settings-demo.gif" alt="Demonstração da Aba de Configurações" width="85%" />
+  
+  <sub>▶️ *Clique na imagem para reproduzir o GIF*</sub>
 </div>
 
 ---
